@@ -126,6 +126,12 @@ Confirm Dart's global bin directory is on `PATH`. Add credentials to `local.prop
 | React Native (iOS) | `npx react-native run-ios` |
 | KMP | run both Android and iOS builds |
 
+**Deriving `<Workspace>` and `<Scheme>` for iOS / RN-iOS:**
+
+- `<Workspace>`: the `.xcworkspace` filename (without extension) in the project's `ios/` directory (or repo root for native iOS). If only an `.xcodeproj` exists, use `-project Foo.xcodeproj` instead of `-workspace`.
+- `<Scheme>`: run `xcodebuild -list -workspace <Workspace>.xcworkspace` and pick the app scheme — usually matches the workspace name. For RN, the scheme typically matches the app's display name in `app.json`.
+- If multiple workspaces or schemes exist, STOP and ask the user which to build — do not guess.
+
 STOP if the build fails. NEVER claim success on a broken build.
 
 ## 9. Hand off
