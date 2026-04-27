@@ -80,7 +80,13 @@ Default: shake gesture. Ask if user prefers floating button, two-finger swipe, o
 
 ## 5. Configure auto-masking
 
-Search the codebase for likely sensitive views: `password`, `email`, `cardNumber`, `ssn`, `cvv`. Suggest masking rules for matches. Apply on confirmation.
+Goal: identify likely-sensitive UI views and configure SDK-side masking. A naïve substring grep produces false positives (validators, comments, test fixtures), so the search must be narrowly scoped and every match must be user-confirmed.
+
+1. Grep for sensitive identifiers — but only in the platform's UI source files (`*.swift`, `*.kt`, `*.dart`, `*.tsx`, `*.jsx`), and only as identifiers, not free text in comments or string literals: `password`, `email`, `cardNumber`, `ssn`, `cvv`, `pin`, `dob`, `iban`.
+2. Filter out matches in: `*test*`, `*spec*`, `*mock*`, `*fixture*` paths; validator/regex utilities; and any path under `node_modules`, `Pods/`, `build/`.
+3. Show the user the filtered match list with file:line for each. Get **per-match** confirmation — do not apply masking rules in bulk.
+4. **REQUIRED:** call `luciq-docs` to fetch the masking API signature for the detected platform. Do NOT hardcode — the API has differed across platforms and changed across SDK versions.
+5. Apply masking config only for confirmed matches.
 
 ## 6. Bootstrap Luciq MCP server
 
