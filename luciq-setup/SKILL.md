@@ -136,3 +136,16 @@ Print:
 - ALWAYS show diffs before applying code edits.
 - ALWAYS confirm before running `pod install`, gradle syncs, build commands.
 - DO NOT hardcode SDK API signatures — **REQUIRED:** call `luciq-docs` to verify each one.
+
+## Red Flags — STOP and surface to the user
+
+If you catch yourself thinking any of these, you are about to ship a broken integration. STOP, surface to the user, do not proceed:
+
+- "The build failed but the SDK is installed, so it's probably fine" → it isn't. A failing build means a broken integration. Report the failure verbatim.
+- "I skipped calling `luciq-docs` because the docs probably haven't changed" → that's how you ship a stale signature. Always verify.
+- "I hardcoded the init signature from this file, it looked right" → this file is illustrative, not authoritative. `luciq-docs` is the source of truth.
+- "I committed the app token inline because it's just for local testing" → tokens leak via git history. Use env injection or a gitignored secrets file.
+- "I auto-applied the masking rules without showing the user the matches" → false positives are likely. Per-match confirmation is mandatory.
+- "`pod install` / `gradle sync` had warnings but the build went green" → warnings about Luciq specifically are not cosmetic. Read them, surface them.
+
+The pattern: every shortcut here trades "looks done" for "actually works." The skill's job is to actually work.
