@@ -1,16 +1,7 @@
 ---
 name: luciq-setup
-description: Install and configure the Luciq mobile observability SDK in any iOS, Android, Flutter, React Native, or KMP project. Auto-detects platform, edits build files (Podfile, build.gradle, pubspec.yaml, package.json), inserts the SDK init call at the right entry point, configures invocation events and auto-masking, bootstraps Luciq MCP authentication and the luciq_cli, and runs a smoke build. Use when the user says "add Luciq", "install Luciq SDK", "set up Luciq", or "initialize Luciq".
+description: Use when the user asks to add, install, set up, or initialize the Luciq mobile observability SDK in an iOS, Android, Flutter, React Native, or KMP project. First-time integration only — for SDK upgrades or Instabug→Luciq migration use luciq-migrate.
 ---
-
-<!--
-Triggers (things the user might say):
-- "add Luciq" / "add the Luciq SDK"
-- "install Luciq SDK" / "install Luciq in this project"
-- "set up Luciq" / "set up Luciq for [iOS / Android / Flutter / RN / KMP]"
-- "initialize Luciq"
-- "integrate Luciq into our app"
--->
 
 # Luciq SDK Installation
 
