@@ -7,6 +7,8 @@ description: Use when the user asks to add, install, set up, or initialize the L
 
 End-to-end first-time integration of the Luciq SDK in a mobile project.
 
+**REQUIRED SUB-SKILL:** This skill MUST invoke `luciq-docs` to verify every SDK API signature, package name, and MCP transport URL before applying edits. Hardcoded values in this file are illustrative only — they may be stale after SDK releases. Treat `luciq-docs` as the source of truth, not this file.
+
 ## Workflow checklist
 
 Copy this and check off as you go:
@@ -44,7 +46,7 @@ Check env (`LUCIQ_APP_TOKEN`). Otherwise ask the user. NEVER commit the token in
 
 ## 3. Per-platform recipe
 
-ALWAYS verify the exact init signature against `luciq-docs` before applying — Luciq's APIs evolved through the Instabug→Luciq rebrand.
+**REQUIRED:** call `luciq-docs` to verify the exact init signature and package name for the detected platform before applying — Luciq's APIs evolved through the Instabug→Luciq rebrand and any signature in this file may be stale.
 
 ### iOS
 1. Edit `Podfile`: add `pod 'Luciq'` to the main target
@@ -62,7 +64,7 @@ ALWAYS verify the exact init signature against `luciq-docs` before applying — 
 3. Edit `lib/main.dart` — call `Luciq.start(...)` before `runApp(...)`
 
 ### React Native
-1. Run `npm install` / `yarn add` for the Luciq RN package (verify exact name via `luciq-docs`)
+1. **REQUIRED:** call `luciq-docs` to fetch the exact RN package name, then run `npm install` / `yarn add` for it
 2. iOS: `cd ios && pod install`
 3. Android: verify autolinking
 4. Edit JS entry to call the start method early in app lifecycle
@@ -95,7 +97,7 @@ Add the Luciq MCP server to `~/.claude.json` (user-global) or `.mcp.json` (proje
 }
 ```
 
-Verify URL and transport against `luciq-docs` (these may evolve).
+**REQUIRED:** call `luciq-docs` to verify the MCP server URL and transport type before writing the config — both may have evolved since this file was last updated.
 
 After writing, prompt the user to restart Claude Code and complete the OAuth flow. Once authenticated, Luciq MCP tools become available qualified as `luciq:<tool_name>` (e.g. `luciq:list_crashes`).
 
@@ -133,4 +135,4 @@ Print:
 
 - ALWAYS show diffs before applying code edits.
 - ALWAYS confirm before running `pod install`, gradle syncs, build commands.
-- DO NOT hardcode SDK API signatures — verify via `luciq-docs`.
+- DO NOT hardcode SDK API signatures — **REQUIRED:** call `luciq-docs` to verify each one.
