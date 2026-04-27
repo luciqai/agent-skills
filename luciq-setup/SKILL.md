@@ -28,6 +28,20 @@ Setup Progress:
 
 STOP on any failed step — do not continue past a broken state.
 
+## When NOT to use this skill
+
+This skill is for first-time SDK integration only. Hand off to a sibling skill for any of the following:
+
+- **Upgrading an already-integrated Luciq SDK** → use `luciq-migrate`
+- **Migrating from Instabug to Luciq** → use `luciq-migrate`
+- **Investigating a crash, hang, regression, or rating drop** → use `luciq-debug`
+- **Pre/post-release health check (ship/hold/rollback)** → use `luciq-release-check`
+- **Tagging users with feature-flag enrollments** → use `luciq-feature-flags`
+- **Uploading symbols / deobfuscating stack traces** → use `luciq-symbolicate`
+- **Looking up an API signature without installing** → use `luciq-docs` directly
+
+If the user's request fits any of the above, STOP and route them to the right skill rather than running this one.
+
 ## 1. Detect platform
 
 Run a non-recursive Glob at workspace root only. Apply rules in this order — first match wins. Cross-platform projects contain native subfolders (`ios/Runner.xcodeproj`, `android/build.gradle`), so root-level markers MUST take priority over those.
