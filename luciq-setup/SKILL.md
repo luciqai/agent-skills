@@ -28,15 +28,15 @@ STOP on any failed step — do not continue past a broken state.
 
 ## 1. Detect platform
 
-Single Glob at workspace root: `{pubspec.yaml,package.json,*.xcodeproj,*.xcworkspace,build.gradle,build.gradle.kts,shared/build.gradle.kts}`. First match:
+Run a non-recursive Glob at workspace root only. Apply rules in this order — first match wins. Cross-platform projects contain native subfolders (`ios/Runner.xcodeproj`, `android/build.gradle`), so root-level markers MUST take priority over those.
 
-- `pubspec.yaml` → Flutter
-- `package.json` with `react-native` → React Native
-- `shared/build.gradle.kts` with `kotlin("multiplatform")` → KMP
-- `*.xcodeproj` / `*.xcworkspace` only → iOS
-- `build.gradle*` only → Android
+1. Root has `pubspec.yaml` → **Flutter** (skip iOS/Android subdirs even if present)
+2. Root has `package.json` containing `"react-native"` in `dependencies` → **React Native**
+3. Root has `shared/build.gradle.kts` with `kotlin("multiplatform")` → **KMP**
+4. Root has `*.xcworkspace` or `*.xcodeproj` (and none of the above) → **iOS**
+5. Root has `build.gradle` or `build.gradle.kts` (and none of the above) → **Android**
 
-Confirm with the user if ambiguous.
+If 2+ rules match unexpectedly (e.g. both `pubspec.yaml` and a top-level `*.xcodeproj`), STOP and ask the user to disambiguate — do not guess.
 
 ## 2. Acquire app token
 
