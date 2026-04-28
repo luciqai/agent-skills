@@ -8,45 +8,34 @@ Claude Code skills for the Luciq mobile observability SDK — real edits, MCP qu
 
 ## Install
 
-<details>
-<summary><strong>User-global</strong> — works in every project (recommended)</summary>
-
+**User-global** — works in every project (recommended)
 ```bash
 mkdir -p ~/.claude/skills
 cp -r agent-skills/luciq-* ~/.claude/skills/
 ```
-</details>
 
-<details>
-<summary><strong>Project-local</strong> — only this repo</summary>
-
+**Project-local** — only this repo
 ```bash
 mkdir -p .claude/skills
 cp -r agent-skills/luciq-* .claude/skills/
 ```
-</details>
 
 ---
 
 ## Skills
 
-<details>
-<summary><strong>luciq-setup</strong> — Install and configure the Luciq SDK</summary>
-
-Edits your build files, inserts the init call at the right entry point, configures invocation and auto-masking, and wires up the Luciq MCP server — all in one go.
+### `luciq-setup` — [docs](luciq-setup/SKILL.md)
+Install and configure the Luciq SDK end-to-end: edits your build files, inserts the init call at the right entry point, configures invocation and auto-masking, and wires up the Luciq MCP server.
 
 **Try saying:**
 - `"Add Luciq to this Flutter project"`
 - `"Set up Luciq for Android, use a floating button invocation"`
 - `"Initialize Luciq and mask the payment fields"`
 
-[View full skill →](luciq-setup/SKILL.md)
-</details>
+---
 
-<details>
-<summary><strong>luciq-debug</strong> — Investigate production issues end-to-end</summary>
-
-Pulls crash details, session context, repro steps, and device/version distribution via MCP, maps it to your local repo, then proposes a fix with every claim traced back to its source.
+### `luciq-debug` — [docs](luciq-debug/SKILL.md)
+Investigate any production signal — crash, hang, bug report, performance regression, or App Store rating drop. Pulls the full context via MCP, maps it to your local repo, and proposes a fix with every claim traced back to its source.
 
 **Try saying:**
 - `"Why is crash AB-1234 happening?"`
@@ -55,21 +44,15 @@ Pulls crash details, session context, repro steps, and device/version distributi
 
 > **Requires:** Luciq MCP server authenticated. Run `luciq-setup` first.
 
-[View full skill →](luciq-debug/SKILL.md)
-</details>
+---
 
-<details>
-<summary><strong>luciq-migrate</strong> — Migrate Instabug → Luciq or upgrade SDK versions</summary>
-
-Renames symbols, updates dependency manifests, shows 3 sample diffs before touching anything, then bulk-applies and verifies with a build.
+### `luciq-migrate` — [docs](luciq-migrate/SKILL.md)
+Migrate from Instabug → Luciq or upgrade between Luciq SDK versions. Renames symbols, updates dependency manifests, shows 3 sample diffs before touching anything, then bulk-applies and verifies with a build.
 
 **Try saying:**
 - `"Migrate this project from Instabug to Luciq"`
 - `"Upgrade Luciq SDK to v2"`
 - `"Replace all deprecated Luciq APIs"`
-
-[View full skill →](luciq-migrate/SKILL.md)
-</details>
 
 ---
 
