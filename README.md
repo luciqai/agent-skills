@@ -42,7 +42,7 @@ Investigate any production signal — crash, hang, bug report, performance regre
 - `"What broke since version 3.2.0?"`
 - `"Our App Store rating dropped last week — what's going on?"`
 
-> **Requires:** Luciq MCP server authenticated. Run `luciq-setup` first.
+> **Requires:** Luciq MCP server authenticated — see the [MCP install guide](https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/luciq-mcp-server). Run `luciq-setup` to wire it automatically.
 
 ---
 
