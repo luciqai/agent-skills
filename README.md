@@ -24,7 +24,7 @@ cp -r agent-skills/luciq-* .claude/skills/
 
 ## Skills
 
-### `luciq-setup` — [docs](luciq-setup/SKILL.md)
+### `luciq-setup` — [docs](https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/agent-skills/luciq-setup)
 Install and configure the Luciq SDK end-to-end: edits your build files, inserts the init call at the right entry point, configures invocation and auto-masking, and wires up the Luciq MCP server.
 
 **Try saying:**
@@ -34,7 +34,7 @@ Install and configure the Luciq SDK end-to-end: edits your build files, inserts 
 
 ---
 
-### `luciq-debug` — [docs](luciq-debug/SKILL.md)
+### `luciq-debug` — [docs](https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/agent-skills/luciq-debug)
 Investigate any production signal — crash, hang, bug report, performance regression, or App Store rating drop. Pulls the full context via MCP, maps it to your local repo, and proposes a fix with every claim traced back to its source.
 
 **Try saying:**
@@ -46,7 +46,7 @@ Investigate any production signal — crash, hang, bug report, performance regre
 
 ---
 
-### `luciq-migrate` — [docs](luciq-migrate/SKILL.md)
+### `luciq-migrate` — [docs](https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/agent-skills/luciq-migrate)
 Migrate from Instabug → Luciq or upgrade between Luciq SDK versions. Renames symbols, updates dependency manifests, shows 3 sample diffs before touching anything, then bulk-applies and verifies with a build.
 
 **Try saying:**
