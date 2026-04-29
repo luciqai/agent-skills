@@ -56,17 +56,6 @@ Migrate from Instabug → Luciq or upgrade between Luciq SDK versions. Renames s
 
 ---
 
-## Coming soon
-
-| Skill | What it will do |
-|---|---|
-| `luciq-docs` | Look up Luciq SDK APIs, config options, and platform support |
-| `luciq-symbolicate` | Upload symbol files and wire CI auto-upload |
-| `luciq-release-check` | Decide whether a release is safe to roll out |
-| `luciq-feature-flags` | Wrap code in Luciq feature-flag checks |
-
----
-
 ## How it works
 
 | | |
