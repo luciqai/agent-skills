@@ -8,16 +8,38 @@ Claude Code skills for the Luciq mobile observability SDK — real edits, MCP qu
 
 ## Install
 
-**User-global** — works in every project (recommended)
+### Claude Code
+
+Add the Luciq marketplace and install the plugin in one step:
+
+```
+/plugin marketplace add github.com/luciqai/agent-skills
+/plugin install luciq@luciq
+```
+
+Skills available after install:
+- `/luciq:luciq-setup` — SDK install and configuration
+- `/luciq:luciq-debug` — production signal investigation
+- `/luciq:luciq-migrate` — Instabug → Luciq migration and SDK upgrades
+
+### Cursor
+Coming soon.
+
+### Other agents (npx)
+Coming soon.
+
+### Manual install (fallback)
+
+**User-global** — works in every project
 ```bash
 mkdir -p ~/.claude/skills
-cp -r agent-skills/luciq-* ~/.claude/skills/
+cp -r agent-skills/skills/luciq-* ~/.claude/skills/
 ```
 
 **Project-local** — only this repo
 ```bash
 mkdir -p .claude/skills
-cp -r agent-skills/luciq-* .claude/skills/
+cp -r agent-skills/skills/luciq-* .claude/skills/
 ```
 
 ---

@@ -1,0 +1,11 @@
+{
+  "name": "luciq",
+  "description": "Luciq mobile observability SDK skills — investigate bugs, generate RCAs, and integrate the Luciq SDK into iOS, Android, Flutter, and React Native projects.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Luciq",
+    "url": "https://luciq.com"
+  },
+  "homepage": "https://luciq.com/docs",
+  "repository": "https://github.com/luciqai/agent-skills"
+}
