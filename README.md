@@ -14,7 +14,7 @@ Add the Luciq marketplace and install the plugin in one step:
 
 ```
 /plugin marketplace add github.com/luciqai/agent-skills
-/plugin install luciq@luciq
+/plugin install luciq-skills@luciq.ai
 ```
 
 Skills available after install:
@@ -23,7 +23,11 @@ Skills available after install:
 - `/luciq:luciq-migrate` — Instabug → Luciq migration and SDK upgrades
 
 ### Cursor
-Coming soon.
+
+```
+/plugin marketplace add github.com/luciqai/agent-skills
+/plugin install luciq-skills@luciq.ai
+```
 
 ### Other agents (npx)
 Coming soon.
