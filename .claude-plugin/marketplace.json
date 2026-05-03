@@ -1,15 +1,15 @@
 {
   "name": "luciq.ai",
-  "description": "Official Luciq plugin marketplace — skills for mobile observability SDK integration",
+  "description": "Official Luciq plugin marketplace. Skills for mobile observability SDK integration.",
   "owner": {
     "name": "Luciq",
-    "url": "https://luciq.com"
+    "url": "https://luciq.ai"
   },
   "plugins": [
     {
       "name": "luciq-skills",
       "description": "Luciq mobile observability SDK skills",
-      "path": "."
+      "source": "./"
     }
   ]
 }
