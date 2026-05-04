@@ -121,7 +121,9 @@ Also configure network-log redaction: sensitive headers (Authorization, Cookies)
 
 ## 6. Wire user identification
 
-Find login and logout flows. Add `identifyUser(...)` and the corresponding sign-out call so reports tie back to your users. Verify the exact identification API on the live guide.
+If the app has authentication, find login and logout flows. Add `identifyUser(...)` and the corresponding sign-out call so reports tie back to your users. Verify the exact identification API on the live guide.
+
+If the app is anonymous-first (no login surface — typical for many B2C utilities, content readers, and games with guest play), skip this step entirely. Do not synthesize a fake user identity, do not insert `identifyUser` at app launch with placeholder values, and do not block the workflow waiting for a login flow that doesn't exist. Note the skip in the hand-off summary so the user can wire identification later if they add auth.
 
 ## 7. Bootstrap Luciq MCP server
 
