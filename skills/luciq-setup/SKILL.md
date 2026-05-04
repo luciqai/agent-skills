@@ -61,6 +61,8 @@ Apply the rules below in this exact order. First match wins. Cross-platform proj
 
 If two or more rules match unexpectedly (for example, both `pubspec.yaml` and a top-level `*.xcodeproj` outside `ios/`), STOP and ask the user to disambiguate. Do not guess.
 
+If no rule matches (empty repo, unusual layout, or a project where the entry point lives in a non-standard subdirectory), STOP and ask the user which platform they're targeting and where the project root lives. Do not assume — silently picking a platform here corrupts every downstream step.
+
 ## 2. Acquire app token
 
 Resolve the token in this order:
