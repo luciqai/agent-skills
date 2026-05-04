@@ -1,6 +1,6 @@
 ---
 name: luciq-setup
-description: Use when the user asks to add, install, set up, integrate, or initialize the Luciq mobile observability SDK in an iOS, Android, Flutter, React Native, or Kotlin Multiplatform project. Triggers include phrases like "add Luciq", "install Luciq SDK", "set up Luciq", "initialize Luciq", or pasting an empty mobile project and asking to wire Luciq. First-time integration only.
+description: Use when the user asks to add, install, set up, integrate, or initialize the Luciq mobile observability SDK in an iOS, Android, Flutter, React Native, or Kotlin Multiplatform project. Triggers include phrases like "add Luciq", "install Luciq SDK", "set up Luciq", "initialize Luciq", or pasting an empty mobile project and asking to wire Luciq. First-time integration only — for SDK upgrades or migration from the legacy Instabug SDK use luciq-migrate.
 ---
 
 # Luciq SDK Installation
