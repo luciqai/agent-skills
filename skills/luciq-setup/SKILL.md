@@ -67,7 +67,7 @@ If no rule matches (empty repo, unusual layout, or a project where the entry poi
 
 Resolve the token in this order:
 
-1. Read from the Luciq MCP server if available: `list_applications` returns tokens for apps the authenticated user can see.
+1. Try the Luciq MCP server: `list_applications` returns tokens for apps the authenticated user can see. This works only if Luciq MCP is already authenticated in the user's agent from a previous `luciq-setup` run on another project — for genuine first-time setups, this call will fail with a tool-not-found error and you should fall through to step 2 below. Do not attempt to bootstrap MCP here; that is step 7.
 2. Read from environment (`LUCIQ_APP_TOKEN`).
 3. Prompt the user.
 
