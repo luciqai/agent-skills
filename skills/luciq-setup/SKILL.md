@@ -1,6 +1,6 @@
 ---
 name: luciq-setup
-description: Use when the user asks to add, install, set up, integrate, or initialize the Luciq mobile observability SDK in an iOS, Android, Flutter, React Native, or Kotlin Multiplatform project. Triggers include phrases like "add Luciq", "install Luciq SDK", "set up Luciq", "initialize Luciq", or pasting an empty mobile project and asking to wire Luciq. First-time integration only.
+description: Use when the user asks to add, install, set up, integrate, or initialize the Luciq mobile observability SDK in an iOS, Android, Flutter, React Native, or Kotlin Multiplatform project. Triggers include phrases like "add Luciq", "install Luciq SDK", "set up Luciq", "initialize Luciq", or pasting an empty mobile project and asking to wire Luciq. First-time integration only — for SDK upgrades or migration from the legacy Instabug SDK use luciq-migrate.
 ---
 
 # Luciq SDK Installation
@@ -61,11 +61,13 @@ Apply the rules below in this exact order. First match wins. Cross-platform proj
 
 If two or more rules match unexpectedly (for example, both `pubspec.yaml` and a top-level `*.xcodeproj` outside `ios/`), STOP and ask the user to disambiguate. Do not guess.
 
+If no rule matches (empty repo, unusual layout, or a project where the entry point lives in a non-standard subdirectory), STOP and ask the user which platform they're targeting and where the project root lives. Do not assume — silently picking a platform here corrupts every downstream step.
+
 ## 2. Acquire app token
 
 Resolve the token in this order:
 
-1. Read from the Luciq MCP server if available: `list_applications` returns tokens for apps the authenticated user can see.
+1. Try the Luciq MCP server: `list_applications` returns tokens for apps the authenticated user can see. This works only if Luciq MCP is already authenticated in the user's agent from a previous `luciq-setup` run on another project — for genuine first-time setups, this call will fail with a tool-not-found error and you should fall through to step 2 below. Do not attempt to bootstrap MCP here; that is step 7.
 2. Read from environment (`LUCIQ_APP_TOKEN`).
 3. Prompt the user.
 
@@ -119,7 +121,9 @@ Also configure network-log redaction: sensitive headers (Authorization, Cookies)
 
 ## 6. Wire user identification
 
-Find login and logout flows. Add `identifyUser(...)` and the corresponding sign-out call so reports tie back to your users. Verify the exact identification API on the live guide.
+If the app has authentication, find login and logout flows. Add `identifyUser(...)` and the corresponding sign-out call so reports tie back to your users. Verify the exact identification API on the live guide.
+
+If the app is anonymous-first (no login surface — typical for many B2C utilities, content readers, and games with guest play), skip this step entirely. Do not synthesize a fake user identity, do not insert `identifyUser` at app launch with placeholder values, and do not block the workflow waiting for a login flow that doesn't exist. Note the skip in the hand-off summary so the user can wire identification later if they add auth.
 
 ## 7. Bootstrap Luciq MCP server
 
