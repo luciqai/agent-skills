@@ -9,7 +9,7 @@
     {
       "name": "luciq-skills",
       "description": "Luciq mobile observability SDK skills",
-      "source": "./"
+      "source": "./plugins/luciq-skills"
     }
   ]
 }

@@ -20,9 +20,9 @@ Add the Luciq marketplace and install the plugin in one step:
 The plugin install also wires up the Luciq MCP server, so the skills get production data right away.
 
 Skills available after install:
-- `/luciq:luciq-setup`. SDK install and configuration.
-- `/luciq:luciq-debug`. Production signal investigation.
-- `/luciq:luciq-migrate`. Instabug to Luciq migration and SDK upgrades.
+- `/luciq-skills:luciq-setup`. SDK install and configuration.
+- `/luciq-skills:luciq-debug`. Production signal investigation.
+- `/luciq-skills:luciq-migrate`. Instabug to Luciq migration and SDK upgrades.
 
 ### Cursor
 
@@ -31,21 +31,18 @@ Skills available after install:
 /plugin install luciq-skills@luciq.ai
 ```
 
-### Other agents (npx)
-Coming soon.
-
 ### Manual install (fallback)
 
 **User-global** (works in every project)
 ```bash
 mkdir -p ~/.claude/skills
-cp -r agent-skills/skills/luciq-* ~/.claude/skills/
+cp -r agent-skills/plugins/luciq-skills/skills/luciq-* ~/.claude/skills/
 ```
 
 **Project-local** (only this repo)
 ```bash
 mkdir -p .claude/skills
-cp -r agent-skills/skills/luciq-* .claude/skills/
+cp -r agent-skills/plugins/luciq-skills/skills/luciq-* .claude/skills/
 ```
 
 ---
