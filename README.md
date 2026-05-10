@@ -31,6 +31,13 @@ Skills available after install:
 /plugin install luciq-skills@luciq.ai
 ```
 
+### npx
+
+```bash
+npx luciq-skills install            # project-local
+npx luciq-skills install --global   # all projects
+```
+
 ### Manual install (fallback)
 
 **User-global** (works in every project)
