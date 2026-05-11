@@ -25,7 +25,9 @@ YOU MUST verify SDK API signatures, package names, and MCP transport URLs agains
 | --- | --- |
 | iOS install + init | https://docs.luciq.ai/ios/setup-luciq-for-ios/integrate-luciq-on-ios/luciq-ai-ios-guide |
 | Android install + init | https://docs.luciq.ai/android/set-up-luciq-for-android/integrate-luciq-on-android/luciq-ai-android-guide |
-| Flutter, React Native, KMP | the platform's setup space at https://docs.luciq.ai |
+| Flutter install + init | https://docs.luciq.ai/flutter/setup-luciq-for-flutter/integrating-luciq |
+| React Native install + init | https://docs.luciq.ai/react-native/setup-luciq-for-react-native/integrate-luciq-on-react-native |
+| KMP install + init | https://docs.luciq.ai/kmp/setup-luciq-for-kmp/integrating-luciq |
 | MCP server config | https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/luciq-mcp-server/setup-by-ide |
 | App tokens (when authenticated) | Luciq MCP `list_applications` |
 
@@ -78,30 +80,139 @@ NEVER commit the token inline. Use a build-time injection, an env var, or a giti
 YOU MUST verify the exact init signature, package name, and Gradle plugin name for the detected platform against the live integration guide above before applying. APIs evolved through the Instabug-to-Luciq rebrand. The recipes below name the files to edit, not authoritative signatures.
 
 ### iOS
-1. Edit `Podfile`: add the Luciq pod to the main target.
-2. Run `pod install` after user confirmation.
-3. Edit `AppDelegate.swift` (or `.m`): import Luciq and call the start API in `application(_:didFinishLaunchingWithOptions:)`.
+
+Verify the recommended install method against the live guide before proceeding — the primary method has changed across SDK versions.
+
+**Swift Package Manager (recommended for all new and existing projects)**
+1. In Xcode: File → Add Package Dependencies.
+2. Enter the SDK repository URL from the live guide (e.g. `https://github.com/luciqai/luciq-ios-sdk`). Confirm it on the live guide; do not hardcode it here.
+3. Select "Add Package".
+4. Edit `AppDelegate.swift` (or `.m`): import Luciq and call the start API in `application(_:didFinishLaunchingWithOptions:)`. Verify the exact init signature on the live guide.
+5. Add required `info.plist` keys per the live guide (e.g. `NSMicrophoneUsageDescription`, `NSPhotoLibraryUsageDescription` for user attachments).
+
+**Carthage (alternative)**
+1. Add the Luciq binary spec to `Cartfile` — verify the exact URL on the live guide.
+2. Run `carthage update` after user confirmation.
+3. Drag the resulting `.xcframework` into the project's Embedded Binaries section.
+4. Follow steps 4–5 above.
+
+**CocoaPods (deprecated — avoid for new integrations)**
+> ⚠️ The CocoaPods registry becomes read-only on December 2, 2026. Prefer SPM or Carthage. Only use this path if the project already uses CocoaPods and migration is out of scope for this task.
+1. Edit `Podfile`: add the Luciq pod to the main target — verify the pod name on the live guide.
+2. Run `pod install` and `pod update Luciq` after user confirmation.
+3. Follow steps 4–5 above.
 
 ### Android
-1. Edit `app/build.gradle(.kts)`: add the Luciq dependency. Apply the Luciq Gradle plugin if the live guide says so.
-2. Sync Gradle.
-3. Edit the `Application` subclass `onCreate` to construct and start Luciq.
+
+Verify exact dependency coordinates, version, and init signature against the live guide before applying — these change across releases.
+
+1. **Check compile SDK version**: must be ≥ 29. Raise `compileSdkVersion` in `app/build.gradle(.kts)` if needed.
+2. **Add the dependency** in `app/build.gradle(.kts)` (verify groupId, artifactId, and latest version on the live guide):
+   - Gradle: `implementation 'ai.luciq.library:luciq:<version>'`
+   - Maven projects: use the same groupId/artifactId coordinates from the live guide.
+3. **Sync Gradle** after user confirmation.
+4. **Initialize in the Application subclass** `onCreate` using the Builder pattern (verify exact API on the live guide):
+   - Kotlin: `Luciq.Builder(this, "APP_TOKEN").build()`
+   - Java: `new Luciq.Builder(this, "APP_TOKEN").build();`
+5. **Permissions**: the SDK automatically injects `WAKE_LOCK` and `INTERNET` into `AndroidManifest.xml` — no manual edits needed. Optional permissions for image/video attachments and network monitoring are listed in the live guide.
+6. **Android 15+ (API 35)**: if `targetSdkVersion` is 35 or higher, the live guide requires Luciq ≥ 13.4.0 for 16 KB page-size support. Verify the minimum compatible version on the live guide and pin accordingly.
 
 ### Flutter
-1. Edit `pubspec.yaml`: add the `luciq_flutter` package per the live guide.
-2. Run `flutter pub get`.
-3. Edit `lib/main.dart`: call `Luciq.start(...)` before `runApp(...)`.
+
+1. **Add dependency** in `pubspec.yaml` (verify the exact package name and version on the live guide):
+   ```yaml
+   dependencies:
+     luciq_flutter:
+   ```
+2. **Fetch the package**: `flutter packages get`
+3. **Import** in the file where you initialize: `import 'package:luciq_flutter/luciq_flutter.dart';`
+4. **Initialize** in `initState()` (verify the exact API signature on the live guide):
+   ```dart
+   Luciq.init(
+     token: 'APP_TOKEN',
+     invocationEvents: [InvocationEvent.shake],
+   );
+   ```
+5. **iOS permissions** — add to `Info.plist` (required for media attachments):
+   - `NSMicrophoneUsageDescription`
+   - `NSPhotoLibraryUsageDescription`
+6. **Android permissions**: auto-injected into `AndroidManifest.xml` — no manual edits needed. Exception: if you enable screenshot invocation, the SDK requests storage permission at app launch (it monitors the screenshots directory).
 
 ### React Native
-1. Verify the exact package name on the live guide, then `npm install` or `yarn add` it.
-2. iOS host app: `cd ios && pod install`.
-3. Android host app: verify autolinking.
-4. Edit the JS entry to call the start method early in app lifecycle.
+
+**Requirement:** React Native ≥ 0.60.x. Verify the minimum version on the live guide before proceeding.
+
+1. **Install the package** (verify the exact package name on the live guide):
+   - npm: `npm install @luciq/react-native`
+   - yarn: `yarn add @luciq/react-native`
+2. **iOS native deps**: `cd ios && pod install && cd ..` after user confirmation.
+3. **Android**: autolinking handles native wiring automatically — no manual step needed.
+4. **Initialize** in `index.js` (verify the exact API signature on the live guide):
+   ```js
+   import Luciq, { InvocationEvent } from '@luciq/react-native';
+
+   Luciq.init({
+     token: 'APP_TOKEN',
+     invocationEvents: [InvocationEvent.shake],
+   });
+   ```
+5. **iOS permissions** — add these keys to `info.plist` (required for media attachments):
+   - `NSMicrophoneUsageDescription`
+   - `NSPhotoLibraryUsageDescription`
 
 ### KMP
-1. Edit `shared/build.gradle.kts` for shared deps per the live guide.
-2. Run the iOS recipe for the iOS app target.
-3. Run the Android recipe for the Android app target.
+
+Verify dependency coordinates, version, and init signatures against the live guide — these change across releases.
+
+1. **Add the shared dependency** in `shared/build.gradle.kts` under `commonMain` (get the latest version from Maven Central):
+   ```kotlin
+   sourceSets {
+       commonMain.dependencies {
+           api("ai.luciq-library:luciq-kmp:<version>")
+       }
+   }
+   ```
+   iOS also requires a separate native LuciqKMP dependency — check the live guide for the exact artifact.
+
+2. **Create a shared config object** in `commonMain` (verify the exact class names and fields on the live guide):
+   ```kotlin
+   import ai.luciq.kmp.modules.LuciqKmp
+   import ai.luciq.kmp.utils.InvocationEvents
+
+   object LuciqDefaults {
+       const val APP_TOKEN = "YOUR_TOKEN"
+       val invocationEvents = listOf(InvocationEvents.FloatingButton)
+   }
+
+   fun initializeLuciq(configuration: LuciqConfiguration) {
+       LuciqKmp.init(configuration)
+   }
+   ```
+
+3. **Android entry point** — call as early as possible in the Application class, passing the `Application` instance:
+   ```kotlin
+   val configuration = LuciqConfiguration(
+       androidApplication = application,
+       token = LuciqDefaults.APP_TOKEN,
+       invocationEvents = LuciqDefaults.invocationEvents,
+   )
+   initializeLuciq(configuration)
+   ```
+
+4. **iOS entry point** — call as early as possible in the app lifecycle (e.g. `application(_:didFinishLaunchingWithOptions:)`); omit `androidApplication`:
+   ```swift
+   let configuration = LuciqConfiguration(
+       token: LuciqDefaults.shared.APP_TOKEN,
+       invocationEvents: LuciqDefaults.shared.invocationEvents,
+   )
+   initializeLuciq(configuration: configuration)
+   ```
+
+5. **Permissions**:
+   - Android: the native SDK declares required permissions automatically; remove any that your app does not need.
+   - iOS: add `NSMicrophoneUsageDescription` and `NSPhotoLibraryUsageDescription` to `Info.plist`.
+
+6. **Platform-specific extras** (if applicable): Jetpack Compose apps may need additional native Compose libraries for screen tracking and APM; SwiftUI apps may need native SwiftUI APIs. Check the live guide for current requirements.
 
 ## 4. Configure invocation
 
