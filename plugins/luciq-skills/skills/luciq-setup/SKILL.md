@@ -84,17 +84,57 @@ YOU MUST verify the exact init signature, package name, and Gradle plugin name f
 Verify the recommended install method against the live guide before proceeding — the primary method has changed across SDK versions.
 
 **Swift Package Manager (recommended for all new and existing projects)**
-1. In Xcode: File → Add Package Dependencies.
-2. Enter the SDK repository URL from the live guide (e.g. `https://github.com/luciqai/luciq-ios-sdk`). Confirm it on the live guide; do not hardcode it here.
-3. Select "Add Package".
-4. Edit `AppDelegate.swift` (or `.m`): import Luciq and call the start API in `application(_:didFinishLaunchingWithOptions:)`. Verify the exact init signature on the live guide.
-5. Add required `info.plist` keys per the live guide (e.g. `NSMicrophoneUsageDescription`, `NSPhotoLibraryUsageDescription` for user attachments).
 
-**Carthage (alternative)**
-1. Add the Luciq binary spec to `Cartfile` — verify the exact URL on the live guide.
-2. Run `carthage update` after user confirmation.
-3. Drag the resulting `.xcframework` into the project's Embedded Binaries section.
-4. Follow steps 4–5 above.
+First check whether a `Package.swift` exists at the project root.
+
+*Project has `Package.swift`:*
+1. Edit `Package.swift` — add to `dependencies` and to the appropriate target's `dependencies`. Verify the repo URL and version on the live guide:
+   ```swift
+   // dependencies array:
+   .package(url: "<REPO_URL_FROM_LIVE_GUIDE>", from: "<VERSION>"),
+   // target dependencies:
+   .product(name: "<SPM_PRODUCT_NAME>", package: "luciq-ios-sdk"),
+   ```
+2. Run `swift package resolve` to fetch.
+3. Check the resolved `Package.swift` in DerivedData checkouts to confirm the product name and module name — **they are different**: the SPM product may be `Luciq` while the Swift import is `import LuciqSDK`. Use the module name (from the `.xcframework` contents) for `import`, not the product name.
+4. Edit `AppDelegate.swift` (or `.m`): import the module and call the start API. Verify the exact init signature on the live guide.
+5. Edit `Info.plist`: add `NSMicrophoneUsageDescription` and `NSPhotoLibraryUsageDescription`.
+
+*Project is `.xcodeproj`-only (no `Package.swift`):*
+SPM works fine for `.xcodeproj` projects via direct `project.pbxproj` edits. Apply all four changes, then run `xcodebuild -resolvePackageDependencies` immediately (no confirmation needed — it only fetches, it does not build):
+1. Add an `XCRemoteSwiftPackageReference` entry with the repo URL and `upToNextMajorVersion` requirement. Verify the repo URL on the live guide.
+2. Add an `XCSwiftPackageProductDependency` entry pointing to that reference. **Verify the product name from the package's own `Package.swift` after resolving** — it is not the same as the Swift import name. (Confirmed: SPM product = `Luciq`, Swift import = `import LuciqSDK`.)
+3. Add the product dependency UUID to `packageProductDependencies` in `PBXNativeTarget`.
+4. Add the package reference UUID to `packageReferences` in `PBXProject`.
+5. Run `xcodebuild -resolvePackageDependencies -project <name>.xcodeproj`. If it fails with "no versions match", check the actual release tags on the repo and update `minimumVersion` to match (the SDK may be at a high major version, e.g. `19.x`).
+6. Edit `AppDelegate.swift` (or `.m`): import the module and call the start API. Verify the exact init signature on the live guide.
+7. Edit `Info.plist`: add `NSMicrophoneUsageDescription` and `NSPhotoLibraryUsageDescription`.
+
+**Carthage (alternative — only if SPM is blocked by a project-level constraint)**
+1. Edit (or create) `Cartfile` — verify the binary spec URL on the live guide:
+   ```
+   binary "<SPEC_URL_FROM_LIVE_GUIDE>"
+   ```
+2. Run `carthage update --use-xcframeworks` after user confirmation.
+3. Embed the built `.xcframework` programmatically using the `xcodeproj` Ruby gem:
+   ```bash
+   gem install xcodeproj   # skip if already installed
+   ```
+   Then run a Ruby script (adapt `TARGET_NAME` and the `.xcframework` filename to the actual project — check `Carthage/Build/` after step 2):
+   ```ruby
+   require 'xcodeproj'
+   project = Xcodeproj::Project.open(Dir.glob('*.xcodeproj').first)
+   target  = project.targets.find { |t| t.name == 'TARGET_NAME' }
+   ref     = project.new_file('Carthage/Build/LuciqSDK.xcframework')
+   target.frameworks_build_phase.add_file_reference(ref)
+   phase   = target.new_shell_script_build_phase('Copy Luciq Frameworks')
+   phase.shell_script    = '"$(SRCROOT)/Carthage/Build/carthage" copy-frameworks'
+   phase.input_paths    << '$(SRCROOT)/Carthage/Build/LuciqSDK.xcframework'
+   project.save
+   ```
+   Show the diff of `project.pbxproj` before saving.
+4. Edit `AppDelegate.swift` (or `.m`): import the module and call the start API. Verify the exact init signature on the live guide.
+5. Edit `Info.plist`: add `NSMicrophoneUsageDescription` and `NSPhotoLibraryUsageDescription`.
 
 **CocoaPods (deprecated — avoid for new integrations)**
 > ⚠️ The CocoaPods registry becomes read-only on December 2, 2026. Prefer SPM or Carthage. Only use this path if the project already uses CocoaPods and migration is out of scope for this task.
@@ -110,7 +150,7 @@ Verify exact dependency coordinates, version, and init signature against the liv
 2. **Add the dependency** in `app/build.gradle(.kts)` (verify groupId, artifactId, and latest version on the live guide):
    - Gradle: `implementation 'ai.luciq.library:luciq:<version>'`
    - Maven projects: use the same groupId/artifactId coordinates from the live guide.
-3. **Sync Gradle** after user confirmation.
+3. **Verify dependency resolution** after user confirmation: `./gradlew :app:dependencies` — this triggers Gradle to fetch the new dependency without needing Android Studio. Fix any resolution errors before continuing.
 4. **Initialize in the Application subclass** `onCreate` using the Builder pattern (verify exact API on the live guide):
    - Kotlin: `Luciq.Builder(this, "APP_TOKEN").build()`
    - Java: `new Luciq.Builder(this, "APP_TOKEN").build();`
@@ -238,22 +278,19 @@ If the app is anonymous-first (no login surface — typical for many B2C utiliti
 
 ## 7. Bootstrap Luciq MCP server
 
-Add the Luciq MCP server to `~/.claude.json` (user-global) or `.mcp.json` (project). Confirm with the user where to write.
+YOU MUST verify the MCP server URL and transport type against https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/luciq-mcp-server/setup-by-ide before proceeding. Both have evolved across releases.
 
-```json
-{
-  "mcpServers": {
-    "luciq": {
-      "type": "http",
-      "url": "https://api.luciq.ai/api/mcp"
-    }
-  }
-}
+Ask the user once: "global or project-local?" — then run immediately. Default to user-global if they don't express a preference. Use the `claude mcp add` CLI. Do NOT hand-edit `~/.claude.json` directly — the file can be very large and a malformed edit will break all MCP servers:
+
+```bash
+# User-global (survives across projects):
+claude mcp add --transport http luciq <URL_FROM_LIVE_GUIDE> --scope user
+
+# Project-local (.mcp.json in repo root):
+claude mcp add --transport http luciq <URL_FROM_LIVE_GUIDE>
 ```
 
-YOU MUST verify the MCP server URL and transport type against https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/luciq-mcp-server/setup-by-ide before writing the config. Both have evolved across releases.
-
-After writing, prompt the user to restart their agent (Claude Code, Cursor, Codex, or other supported client) and complete the OAuth flow. Once authenticated, Luciq MCP tools become available qualified as `luciq:<tool_name>` (for example, `luciq:list_crashes`).
+After running, prompt the user to restart their agent (Claude Code, Cursor, Codex, or other supported client) and complete the OAuth flow. Once authenticated, Luciq MCP tools become available qualified as `luciq:<tool_name>` (for example, `luciq:list_crashes`).
 
 ## 8. Bootstrap the Luciq CLI (optional)
 
@@ -267,7 +304,7 @@ Store credentials via environment variables (`LUCIQ_APP_TOKEN` plus any per-plat
 
 | Platform | Command |
 | --- | --- |
-| iOS | `xcodebuild -workspace <Workspace>.xcworkspace -scheme <Scheme> build` |
+| iOS | `xcodebuild -project <Name>.xcodeproj -scheme <Scheme> -sdk iphonesimulator -destination "generic/platform=iOS Simulator" build` |
 | Android | `./gradlew :app:assembleDebug` |
 | Flutter | `flutter build apk --debug` |
 | React Native (Android) | `npx react-native run-android` |
@@ -276,8 +313,8 @@ Store credentials via environment variables (`LUCIQ_APP_TOKEN` plus any per-plat
 
 Deriving `<Workspace>` and `<Scheme>` for iOS and RN-iOS:
 
-- `<Workspace>`: the `.xcworkspace` filename (without extension) in the project's `ios/` directory (or repo root for native iOS). If only an `.xcodeproj` exists, use `-project Foo.xcodeproj` instead of `-workspace`.
-- `<Scheme>`: derive by running `xcodebuild -list -workspace <Workspace>.xcworkspace` and picking the app scheme. Usually matches the workspace name. For RN, the scheme typically matches the app's display name in `app.json`.
+- `<Name>`: the `.xcodeproj` filename (without extension) at the project root. If a `.xcworkspace` exists instead (e.g. after CocoaPods install), use `-workspace Foo.xcworkspace` instead of `-project`.
+- `<Scheme>`: derive by running `xcodebuild -list -project <Name>.xcodeproj` (or `-workspace` if applicable) and picking the app scheme. Usually matches the project name. For RN, the scheme typically matches the app's display name in `app.json`.
 - If multiple workspaces or schemes exist, STOP and ask the user which to build. Do not guess.
 
 STOP on build failure. NEVER claim success on a broken build.
