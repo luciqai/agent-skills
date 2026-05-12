@@ -1,6 +1,6 @@
 ---
 name: luciq-migrate
-description: Use when the user asks to migrate a mobile codebase from the legacy Instabug SDK to Luciq, upgrade between Luciq SDK versions, or replace deprecated Luciq APIs. Triggers include phrases like "migrate from Instabug to Luciq", "move us off Instabug", "upgrade Luciq SDK to vX", "Phoenix migration", or "replace deprecated Luciq APIs". Covers iOS, Android, Flutter, React Native, KMP. First-time SDK installs go to luciq-setup.
+description: Use when the user asks to migrate a mobile codebase from the legacy Instabug SDK to Luciq, upgrade between Luciq SDK versions, or replace deprecated Luciq APIs. Triggers include phrases like "migrate from Instabug to Luciq", "move us off Instabug", "upgrade Luciq SDK to vX", or "replace deprecated Luciq APIs". Covers iOS, Android, Flutter, React Native, KMP. First-time SDK installs go to luciq-setup.
 ---
 
 # Luciq SDK Migration
@@ -20,7 +20,7 @@ YOU MUST fetch the current rename and deprecation tables from the live Migration
 
 | Concern | Source |
 | --- | --- |
-| Instabug-to-Luciq renames, vN-to-vN+1 deprecations, v1-to-v2 ("Phoenix") API changes | https://docs.luciq.ai/getting-started/luciq-migration-hub |
+| Instabug-to-Luciq renames, vN-to-vN+1 deprecations, v1-to-v2 API changes | https://docs.luciq.ai/getting-started/luciq-migration-hub |
 
 ## Workflow
 
@@ -48,7 +48,7 @@ Report: SDK name, current version, count of call sites. The call-site count come
 | --- | --- |
 | Instabug to Luciq | Rename `Instabug*` symbols, imports, packages, dependency entries. |
 | vN to vN+1 | Apply known deprecations between those versions. |
-| v1 to v2 / "Phoenix" | v1 to v2 API surface. Fetch the canonical mapping from the Migration Hub. |
+| v1 to v2 | v1 to v2 API surface. Fetch the canonical mapping from the Migration Hub. |
 
 Always look up the current rename and deprecation tables from the Migration Hub above. Do not invent renames.
 

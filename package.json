@@ -1,6 +1,6 @@
 {
   "name": "luciq-skills",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Luciq agent skills for Claude Code and Cursor — SDK integration, crash debugging, and migration.",
   "homepage": "https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/agent-skills/",
   "repository": {
