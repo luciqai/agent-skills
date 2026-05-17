@@ -167,5 +167,6 @@ If you catch yourself thinking any of these, you are about to ship a fabricated 
 - "Confidence is high because the top frame matches my prior." One source is not three. Lower confidence to low or medium.
 - "I'll apply the fix without a diff because it's obviously right." Show the diff. Get confirmation. Always.
 - "The hypothesis cites the symbol but not which MCP tool produced it." Add the citation, or weaken the hypothesis.
+- "I'll skip running `crash_patterns` because the top frame already tells me the answer." Run it anyway. Distribution data catches the cases where the top frame is misleading.
 
 The pattern: every shortcut here trades "sounds confident" for "actually true." The skill's job is to be true.
