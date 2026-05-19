@@ -90,6 +90,30 @@ Prefer this over aggregate-timestamp fields (`last_occurred_at`, `first_occurred
 
 Bugs are addressed by integer `number`, not ULID; the rule doesn't apply on the bug channel.
 
+### Parsing the ULID timestamp
+
+The first 10 base32 characters encode milliseconds since the Unix epoch. Crockford's base32 alphabet — `0123456789ABCDEFGHJKMNPQRSTVWXYZ` (no I, L, O, U) — is the canonical encoding; ULIDs are case-insensitive in practice but normalize to uppercase before parsing.
+
+```
+# pseudocode
+CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+
+def ulid_timestamp_ms(ulid):
+    ms = 0
+    for c in ulid[:10].upper():
+        ms = ms * 32 + CROCKFORD.index(c)
+    return ms                                # milliseconds since 1970-01-01 UTC
+
+age_seconds = (now_ms() - ulid_timestamp_ms(token)) / 1000
+```
+
+Two reasons to parse the ULID timestamp directly rather than relying on `state.fields.reported_at`:
+
+1. **Authoritative source.** `reported_at` is a separate field that depends on when the SDK assembled the report; the ULID is set at occurrence creation and is what the audit identifies the record by.
+2. **No format ambiguity.** `reported_at` is an ISO-8601 string that varies in precision and timezone representation; ULID parsing is deterministic.
+
+This is the input to the recency check (`C0b` in `check-catalog.md`).
+
 ### Mode enum (every per-app tool)
 
 ```

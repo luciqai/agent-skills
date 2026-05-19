@@ -201,6 +201,19 @@ detail   = get_occurrence_details(token=selected, ...)
 
 Bugs are addressed by integer `number`, not ULID, so this rule doesn't apply on the bug channel. Detail: `references/payload-schemas.md` ("ULID structure and `max(tokens)` selection").
 
+### 3e. Verify freshness — parse the ULID timestamp
+
+Once the freshest occurrence is selected, verify it's *actually* fresh enough to represent this build's behavior. Parse the ULID's embedded timestamp (first 10 base32 chars, Crockford's alphabet — full recipe in `references/payload-schemas.md`) and compare against mode-dependent thresholds (`C0b` in `references/check-catalog.md`):
+
+| Mode | WARN if older than | FAIL if older than |
+| --- | --- | --- |
+| `synthetic` (default) | 5 min | 30 min |
+| `prod-canary` | 12h | 24h |
+
+Customers running reuse-mode against an existing dev-tools surface can override per rule pack (`recency_thresholds: { warn_minutes, fail_minutes }`) — engineers often run the in-house trigger sequence minutes-to-hours before invoking the audit, so the synthetic defaults can be too tight.
+
+Why parse the ULID rather than read `state.fields.reported_at`: the ULID timestamp is set at occurrence creation and is what the audit identifies the record by; `reported_at` is a separate field whose precision and timezone representation can vary. Parsing the ULID is deterministic.
+
 ## 4. Audit
 
 The audit runs every rule in the merged rule pack (base + customer) against the captured payload. Each rule produces exactly one row in the report with a status, evidence string, and (on failure) a remediation pointer.

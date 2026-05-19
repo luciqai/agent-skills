@@ -50,9 +50,26 @@ A single `FAIL` blocks the release. `MANUAL` items do not block automatically bu
 | Code | Check | Evidence source |
 | --- | --- | --- |
 | `C0`  | Latest occurrence selected for audit | `list_occurrences_tokens.states_tokens[0]` (newest first). Response also includes `total_occurrences`. |
-| `C0b` | Selected occurrence is recent (< 5 min for synthetic mode; < 24h for prod-canary) | `state.fields.reported_at` (ISO 8601) |
+| `C0b` | Selected occurrence is recent. Source: parsed ULID timestamp (first 10 base32 chars of the token, Crockford's alphabet — see `payload-schemas.md` for the recipe). Thresholds are mode-dependent and rule-pack-overridable via `recency_thresholds: { warn_minutes, fail_minutes }`. | Parsed ULID timestamp |
 | `C0c` | SDK version recorded matches the version under test | `state.fields.sdk_version` (e.g. `"19.6.1"`) |
 | `C0d` | State token returned matches the ULID queried | `state.fields.state_token == <ulid>` — cross-app / cross-mode sanity check |
+
+### `C0b` recency thresholds (defaults)
+
+| Mode | WARN if older than | FAIL if older than | Rationale |
+| --- | --- | --- | --- |
+| `synthetic` | 5 min | 30 min | Smoke just ran; freshest occurrence should be brand new. |
+| `prod-canary` | 12h | 24h | Audits real-user telemetry; lenient by design. |
+
+Customers can override per environment via the rule pack:
+
+```yaml
+recency_thresholds:
+  warn_minutes: 120        # e.g. 2h — reuse-mode workflows where engineers
+  fail_minutes: 1440       #         smoke ahead of running the audit
+```
+
+Useful for reuse-mode setups that drive an existing in-house dev-tools surface — engineers often run the trigger sequence minutes-to-hours before invoking the audit, so the synthetic-mode defaults are too tight.
 
 ## Network capture (`C1`–`C7`)
 
