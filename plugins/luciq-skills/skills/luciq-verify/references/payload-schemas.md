@@ -342,6 +342,8 @@ Verified live against fetched archives. The `.txt` file extension is misleading 
 
 `get_occurrence_details` archive URLs return **base64-encoded zlib-compressed JSON**. The first bytes are ASCII (the base64 alphabet), starting with `eJzt` / `eJys` / similar — the base64 prefix for zlib's `0x78 0x9C` magic header. Decode pipeline:
 
+**Python (in-process):**
+
 ```python
 import base64, zlib, json
 raw = open(downloaded_file, 'rb').read().strip()
@@ -349,6 +351,18 @@ decoded = base64.b64decode(raw)        # base64 → bytes
 inflated = zlib.decompress(decoded)    # zlib → bytes
 data = json.loads(inflated)            # bytes → object
 ```
+
+**Shell (fetch + decode in one pipe, agent-friendly):**
+
+```bash
+# Presigned URL is single-use; download to a local file first, then decode
+curl -s "$PRESIGNED_URL" -o logs.txt
+cat logs.txt | tr -d '\n' | base64 -d \
+  | python3 -c "import sys,zlib; sys.stdout.buffer.write(zlib.decompress(sys.stdin.buffer.read()))" \
+  > logs.json
+```
+
+`tr -d '\n'` strips line breaks that some servers introduce in base64 payloads. The trailing `> logs.json` writes the decompressed bytes to disk as JSON, ready for `jq` / `python -m json.tool` / further analysis.
 
 The decompressed JSON is an **object** (not an array), with sub-archives keyed by name:
 
