@@ -168,7 +168,7 @@ Verified live against four iOS occurrences (one CRASH, one NON_FATAL, one FATAL_
       screen_size,              # "402x874"
       city, country,            # geo
       reported_at,              # ISO 8601, e.g. "2026-05-12T03:29:59.000Z"
-      bundle_id,                # e.g. "test.NotDemoApp"
+      bundle_id,                # e.g. "com.example.your-app.debug"
       email,                    # user identity; "" when not set
       memory,                   # "22.0/22.0 MB" — string, not structured
       storage,                  # "186.341/471.482 GB" — string
@@ -401,7 +401,7 @@ So the crash-channel `compressed_logs` is the bundled equivalent of the bug-chan
 
 **Field names** in the actual payload are `request` and `response` (not `request_body` / `response_body`). Audit rules that target these fields must use the actual names.
 
-**SDK auto-redaction sentinel**: the Luciq SDK automatically replaces sensitive header values with `*****` before logging. So `headers.Authorization == "*****"` means "captured, redacted by SDK." A customer-defined redaction (e.g. `WD-REDACTED`) would appear in `request` / `response` bodies, NOT in headers.
+**SDK auto-redaction sentinel**: the Luciq SDK automatically replaces sensitive header values with `*****` before logging. So `headers.Authorization == "*****"` means "captured, redacted by SDK." A customer-defined redaction (e.g. `<REDACTED>`) would appear in `request` / `response` bodies, NOT in headers.
 
 **SDK size-truncation marker**: requests with bodies > 10240 bytes have their `request` field replaced with the literal string `"Request body has not been logged because it exceeds the maximum size of 10240 bytes"`. This is NOT the customer's redaction token — it means the SDK's size limit hit BEFORE the customer's redaction callback ran. The audit must distinguish: matching this string is INFO ("body bypassed customer redaction due to size"), not PASS ("redacted") and not FAIL ("leak").
 

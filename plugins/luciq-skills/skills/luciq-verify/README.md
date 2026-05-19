@@ -10,7 +10,7 @@ If you've ever upgraded an SDK and asked "did our redaction callbacks still fire
 
 When you bump the Luciq SDK version, several things can silently break:
 
-- A redaction callback's contract changes — your "replace body with `WD-REDACTED`" hook compiles but no longer fires.
+- A redaction callback's contract changes — your "replace body with `<REDACTED>`" hook compiles but no longer fires.
 - A new HTTP client (Ktor / OkHttp release) isn't intercepted — that traffic now ships **unredacted**.
 - The SDK adds new auto-instrumentation that captures TextField contents — PII suddenly appears in user steps even though your code didn't change.
 - An attribute key gets renamed (`persona` → `user_persona`) — your 5 persona tags stop reporting.
@@ -144,14 +144,14 @@ The skill supports two ways of getting deterministic triggers into your debug bu
 
 The scaffolded harness exposes a small API (`setTestPersona`, `fireNetworkBurst`, `exerciseFeatureFlags`, `reportBugReport`, `forceCrash`, `forceANR`, `forceUIHang`, `flushNow`) plus a one-button-per-trigger screen reachable via `luciq://verify-harness` in debug builds only.
 
-**Reuse.** Already have a debug menu with crash / hang / bug triggers (Workday's `DeveloperToolsFragment`, a `CrashLab` / `HangTrigger` / `ErrorTrigger` family, etc.)? Declare it instead of scaffolding a parallel one. Your rule pack maps the canonical triggers to your existing methods, and declares **how** each trigger should be invoked.
+**Reuse.** Already have a debug menu with crash / hang / bug triggers (e.g. a `DevToolsFragment` or a `CrashLab` / `HangTrigger` / `ErrorTrigger` family)? Declare it instead of scaffolding a parallel one. Your rule pack maps the canonical triggers to your existing methods, and declares **how** each trigger should be invoked.
 
 Four invocation strategies, picked per trigger by `invoke_via`:
 
 ```mermaid
 flowchart TD
     Trig[Canonical trigger<br/>e.g. forceCrash] --> Choice{invoke_via?}
-    Choice -->|deep_link_param| DL["URL parameter<br/>workday://devtools?trigger=forceCrash<br/><br/>Cleanest. Most modern dev menus."]
+    Choice -->|deep_link_param| DL["URL parameter<br/>yourapp://devtools?trigger=forceCrash<br/><br/>Cleanest. Most modern dev menus."]
     Choice -->|intent_extra| IE["Android intent extra<br/>am start ... --es trigger forceCrash<br/><br/>Common in older Android dev menus."]
     Choice -->|tap_by_label| TBL["mobile-mcp reads accessibility tree,<br/>finds button by label, taps it<br/><br/>Optional, requires mobile-mcp.<br/>Best for legacy dev menus."]
     Choice -->|manual| MAN["Skill prints sequence, user taps<br/><br/>Always available fallback."]
@@ -161,7 +161,7 @@ flowchart TD
 harness:
   mode: reuse
   reused_surface:
-    marker_view: "DeveloperToolsFragment"        # what current_view is on occurrences from this screen
+    marker_view: "DevToolsFragment"        # what current_view is on occurrences from this screen
     deep_link: "myapp://devtools"                # optional, for hands-free smoke
     triggers:
       # Shorthand → invoke_via: manual
@@ -239,7 +239,7 @@ flowchart TD
     Q2 -->|No| T0[Tier T0 — empty<br/>Run setup, then ask user<br/>to produce one occurrence<br/>and re-invoke]
     Q2 -->|Yes| T1[Tier T1 — telemetry only<br/>Audit organic occurrence<br/>S* synthetic rules SKIP<br/>C0b recency becomes WARN]
     Q3 -->|No| T2[Tier T2 — harness only<br/>Deterministic audit against<br/>base rule pack only<br/>A* customer rules SKIP]
-    Q3 -->|Yes| T3[Tier T3 — full<br/>Deterministic audit with<br/>customer-specific rule pack<br/>Workday-style end state]
+    Q3 -->|Yes| T3[Tier T3 — full<br/>Deterministic audit with<br/>customer-specific rule pack<br/>Full end state]
 
     T0 --> Out
     T1 --> Out
@@ -327,7 +327,7 @@ plugins/luciq-skills/
         └── references/
             ├── payload-schemas.md  ← MCP tool surface, response shapes, wire formats for log archives
             ├── check-catalog.md    ← Full E/C/S/P/A/T/U rule catalog with evidence sources
-            ├── rule-pack-format.md ← luciq-verify.yaml schema, base pack, Workday-style example
+            ├── rule-pack-format.md ← luciq-verify.yaml schema, base pack, worked example
             └── harness-contract.md ← Scaffold + reuse modes, per-platform paths, API surface, gating
 ```
 

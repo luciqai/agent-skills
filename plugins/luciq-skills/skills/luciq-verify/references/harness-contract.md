@@ -23,7 +23,7 @@ The customer's rule pack picks one mode in `harness.mode`. Default is `scaffold`
 | Mode | When to use | What the skill does |
 | --- | --- | --- |
 | `scaffold` (default) | Project has no dev-tools screen, or the team prefers the skill to own it | Generates `LuciqVerifyHarness.<ext>` source files into the debug variant (rest of this document) |
-| `reuse` | Project already has a debug menu with crash / hang / bug triggers (e.g. Workday's `DeveloperToolsFragment`, the `NotDemoApp`'s `CrashLab` / `HangTrigger` / `ErrorTrigger`) | Drives the existing surface via a trigger map declared in the rule pack. No source generation. (See "Reuse mode" below.) |
+| `reuse` | Project already has a debug menu with crash / hang / bug triggers (e.g. a `DevToolsFragment` or a `CrashLab` / `HangTrigger` / `ErrorTrigger` family) | Drives the existing surface via a trigger map declared in the rule pack. No source generation. (See "Reuse mode" below.) |
 
 The contract — what every smoke must produce, marker conventions, debug-only gating — is the same in both modes. Only the source of the triggers differs.
 
@@ -174,7 +174,7 @@ The iOS `Info.plist` entry must live in a debug-only configuration file (not the
 
 ## Reuse mode — driving an existing dev-tools surface
 
-When the customer's rule pack declares `harness.mode: reuse`, the skill skips source generation entirely and drives the customer's existing surface instead. This is the right mode when the project already has a debug menu like Workday's `DeveloperToolsFragment` or the `NotDemoApp`'s `CrashLab` / `HangTrigger` / `ErrorTrigger` family.
+When the customer's rule pack declares `harness.mode: reuse`, the skill skips source generation entirely and drives the customer's existing surface instead. This is the right mode when the project already has a debug menu like a `DevToolsFragment` or a `CrashLab` / `HangTrigger` / `ErrorTrigger` family.
 
 ### Rule-pack declaration
 
@@ -187,13 +187,13 @@ harness:
     # The current_view value occurrences from this screen surface with.
     # Find it by triggering one crash from the screen, then reading state.fields.current_view
     # on the resulting occurrence. Without this the skill cannot filter occurrences.
-    marker_view: "DeveloperToolsFragment"
+    marker_view: "DevToolsFragment"
 
     # Optional but recommended: a deep link / activity that opens the surface so the smoke
     # can be hands-free. Without this the user must navigate manually before triggering.
-    deep_link: "workday://devtools"             # one of these forms — use the one your app supports
+    deep_link: "yourapp://devtools"             # one of these forms — use the one your app supports
     # activity:  "com.example.app.debug.DevToolsActivity"
-    # ios_url:   "workday://devtools"
+    # ios_url:   "yourapp://devtools"
 
     # Map the canonical triggers to the customer's actual methods / functions / button identifiers.
     # Any unmapped trigger becomes a no-op in the smoke sequence, and the rules that depend on
@@ -234,7 +234,7 @@ The skill drives the smoke per platform. There are four invocation strategies, o
 
 | Strategy | What it requires | When to use |
 | --- | --- | --- |
-| `deep_link_param` | App accepts a URL param like `workday://devtools?trigger=forceUnwrapNil` | Cleanest path; most modern dev-tools menus already do this |
+| `deep_link_param` | App accepts a URL param like `yourapp://devtools?trigger=forceUnwrapNil` | Cleanest path; most modern dev-tools menus already do this |
 | `intent_extra` (Android) | App reads a key from the launching intent (`am start ... --es trigger forceUnwrapNil`) | Android-specific; common in older dev menus |
 | `tap_by_label` | mobile-mcp is installed; the trigger has a stable accessibility label or ID | Best fit for legacy dev menus that pre-date automation, no API surface to drive programmatically |
 | `manual` | Fallback — the skill opens the surface and asks the user to tap each button in order | Always available; needed when none of the above apply |

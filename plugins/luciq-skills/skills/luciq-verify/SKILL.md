@@ -1,6 +1,6 @@
 ---
 name: luciq-verify
-description: Verify a Luciq SDK upgrade end to end before shipping — confirm the customer's custom integration (URL redirection / normalization, masking / redaction callbacks, preserved headers, persona attributes, PII masking, feature flags, experiments, user steps, user attributes) still behaves correctly against a new SDK version. Use whenever the user mentions verifying an SDK upgrade, auditing a Luciq version bump, checking that a new SDK didn't break anything, "is it safe to release", running upgrade verification, smoke-testing the new Luciq SDK, or pastes a build with a freshly bumped Luciq dependency and asks whether to release. Also use when the user describes the kind of manual upgrade QA that the Workday-style upgrade-verification report automates (PII clean, persona attributes set, all 200 responses redacted, top 10 network rows clean, no PII leak in user steps). Scaffolds an luciq-verify harness into the debug variant, drives it to produce a fresh occurrence, pulls evidence via the Luciq MCP server (APM, bug, and crash channels), applies a customer-specific rule pack against the captured payload, and renders a pass/fail HTML+Markdown report. For first-time SDK installs use luciq-setup; for the rename/upgrade transform itself use luciq-migrate; for production crash investigation use luciq-debug.
+description: Verify a Luciq SDK upgrade end to end before shipping — confirm the customer's custom integration (URL redirection / normalization, masking / redaction callbacks, preserved headers, persona attributes, PII masking, feature flags, experiments, user steps, user attributes) still behaves correctly against a new SDK version. Use whenever the user mentions verifying an SDK upgrade, auditing a Luciq version bump, checking that a new SDK didn't break anything, "is it safe to release", running upgrade verification, smoke-testing the new Luciq SDK, or pastes a build with a freshly bumped Luciq dependency and asks whether to release. Also use when the user describes the kind of manual upgrade QA that this skill automates (PII clean, persona attributes set, all 200 responses redacted, top network rows clean, no PII leak in user steps). Scaffolds a luciq-verify harness into the debug variant, drives it to produce a fresh occurrence, pulls evidence via the Luciq MCP server (APM, bug, and crash channels), applies a customer-specific rule pack against the captured payload, and renders a pass/fail HTML+Markdown report. For first-time SDK installs use luciq-setup; for the rename/upgrade transform itself use luciq-migrate; for production crash investigation use luciq-debug.
 ---
 
 # Luciq SDK Upgrade Verification
@@ -104,7 +104,7 @@ Why generated, not packaged: per-customer customization (which redaction tokens 
 Show diffs before applying. Never touch release / production source sets, manifests, Info.plists, or entry points — a release-variant harness with a public deep link is a remote-crash vector.
 
 **Reuse mode** (`harness.mode: reuse`)
-For projects that already have a debug menu with crash / hang / bug triggers (e.g. Workday's `DeveloperToolsFragment`, the `NotDemoApp`'s `CrashLab` / `HangTrigger` / `ErrorTrigger` family), the skill drives the existing surface instead of generating a parallel one. The rule pack declares the marker view, an optional deep link / activity, and a trigger map (e.g. `forceCrash: "CrashTrigger.forceUnwrapNil"`).
+For projects that already have a debug menu with crash / hang / bug triggers (e.g. a `DevToolsFragment` or a `CrashLab` / `HangTrigger` / `ErrorTrigger` family), the skill drives the existing surface instead of generating a parallel one. The rule pack declares the marker view, an optional deep link / activity, and a trigger map (e.g. `forceCrash: "CrashTrigger.forceUnwrapNil"`).
 
 Before the smoke runs, the skill enforces the reuse-mode invariants from `references/harness-contract.md`:
 - `marker_view` is non-empty and has at least one prior occurrence in the dashboard
@@ -115,7 +115,7 @@ Unmapped triggers become no-ops in the smoke and the rules that needed them SKIP
 
 ### 1c. Scaffold the rule pack
 
-Write `luciq-verify.yaml` at the repo root with the base pack inlined plus TODO stubs for customer-specific rules. Schema, base pack defaults, and the worked Workday-style example are in `references/rule-pack-format.md`. The first run can leave all customer-specific rules commented out; bootstrap inference (Phase 1d) and drift detection (Phase 5b) fill them in over time.
+Write `luciq-verify.yaml` at the repo root with the base pack inlined plus TODO stubs for customer-specific rules. Schema, base pack defaults, and a worked example are in `references/rule-pack-format.md`. The first run can leave all customer-specific rules commented out; bootstrap inference (Phase 1d) and drift detection (Phase 5b) fill them in over time.
 
 ### 1d. Bootstrap rule inference (if any telemetry exists)
 

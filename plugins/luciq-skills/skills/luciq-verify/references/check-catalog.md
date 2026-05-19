@@ -102,7 +102,7 @@ Channel preference: **APM > Bug > Crash**. The skill picks the first channel tha
 | --- | --- | --- | --- |
 | `"*****"` | `headers.<sensitive-header>` | SDK auto-redacted a sensitive header value | C4 PASS — the SDK did the right thing |
 | `"Request body has not been logged because it exceeds the maximum size of 10240 bytes"` | `request` field | SDK truncated the body before the customer's redaction callback ran | C3a INFO (not PASS) — body bypassed customer redaction; raise visibility but don't FAIL |
-| `<the customer's redaction token>` (e.g. `"WD-REDACTED"`) | `request` / `response` field | Customer's redaction callback ran and replaced the body | C3a / C3b PASS |
+| `<the customer's redaction token>` (e.g. `"<REDACTED>"`) | `request` / `response` field | Customer's redaction callback ran and replaced the body | C3a / C3b PASS |
 
 **`C7` (no SDK self-traffic) needs an exclude list**: outbound Luciq SDK requests to `api.instabug.com/api/sdk/v3/*` DO appear in the captured network log on this branch — the SDK does not self-filter. The customer's rule pack should specify `network.url_exclude_hosts` (e.g. `["api.instabug.com", "*.luciq.com"]`) for C7 to evaluate cleanly. Without an exclude list, C7 effectively can't PASS on a build that emits any SDK telemetry.
 
