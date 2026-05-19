@@ -70,6 +70,26 @@ Verified verbatim from the MCP server source (`feat/APM-network` branch). Tool n
 
 Hold the full identifier end-to-end on whichever channel; partial identifiers cross-contaminate.
 
+### ULID structure and `max(tokens)` selection
+
+ULIDs are time-prefixed: the first 10 base32 characters encode the millisecond timestamp at generation, the trailing 16 are random. Two consequences:
+
+1. **Lexicographic order matches chronological order.** Plain string comparison gives the same ordering as sorting by generation time.
+2. **`max(tokens)` is the freshest occurrence.** Always. No need to fetch each occurrence's metadata to compare timestamps.
+
+This matters when `list_occurrences_tokens` (crash) or `apm_group_view.occurrences` (APM) returns multiple tokens — common in shared development workspaces where multiple engineers smoke against the same workspace concurrently. The selection rule:
+
+```
+# pseudocode
+tokens   = list_occurrences_tokens(...).tokens   # ordered however the API returns
+selected = max(tokens)                            # lex-max == ULID-newest
+detail   = get_occurrence_details(token=selected, ...)
+```
+
+Prefer this over aggregate-timestamp fields (`last_occurred_at`, `first_occurred_at`) — those are denormalized group-level rollups that can lag ingest order. The ULID's embedded timestamp is the authoritative chronology of the occurrence itself.
+
+Bugs are addressed by integer `number`, not ULID; the rule doesn't apply on the bug channel.
+
 ### Mode enum (every per-app tool)
 
 ```

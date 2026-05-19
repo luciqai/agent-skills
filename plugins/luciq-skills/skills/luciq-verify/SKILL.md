@@ -186,6 +186,21 @@ Poll every 5s for up to 90s per channel. If any channel lands, proceed with that
 
 If mobile-mcp is available and `optional_integrations.mobile_mcp.screenshot_on_smoke_timeout: true`, capture a screenshot of the device at the moment of timeout and embed it in the report — useful diagnostic for "no occurrence landed" (was the screen blank? wrong activity? crash dialog overlay?). Similarly `screenshot_on_smoke_end: true` captures a screenshot when the smoke completes successfully, as proof of "harness was reachable and the build was installed correctly."
 
+### 3d. Pick the right occurrence — `max(tokens)`
+
+`list_occurrences_tokens` (crash) and `apm_group_view.occurrences` (APM) can each return multiple tokens. In shared development workspaces where multiple engineers smoke against the same workspace concurrently, the audit must verify *this build's* synthetic occurrence — not someone else's.
+
+The selection rule: sort the returned tokens **lexicographically descending** and take the first (max). ULIDs are time-prefixed, so `max(tokens) ≡ newest`. Aggregate-timestamp fields like `last_occurred_at` are group-level rollups that can lag ingest order; the ULID's embedded base32 timestamp is the authoritative chronology of the occurrence itself.
+
+```
+# pseudocode
+tokens   = list_occurrences_tokens(...).tokens   # ordered however the API returns
+selected = max(tokens)                            # lex-max == ULID-newest
+detail   = get_occurrence_details(token=selected, ...)
+```
+
+Bugs are addressed by integer `number`, not ULID, so this rule doesn't apply on the bug channel. Detail: `references/payload-schemas.md` ("ULID structure and `max(tokens)` selection").
+
 ## 4. Audit
 
 The audit runs every rule in the merged rule pack (base + customer) against the captured payload. Each rule produces exactly one row in the report with a status, evidence string, and (on failure) a remediation pointer.
