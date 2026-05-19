@@ -42,8 +42,13 @@ Detailed material is split out so the SKILL.md stays workflow-focused. Read the 
 
 | Reference | When to read |
 | --- | --- |
-| `references/payload-schemas.md` | Before any audit. Defines the three channels (APM / Bug / Crash), every MCP tool's response shape, identifier model, mode/platform/crash-type enums, filter naming differences. Field paths used in this SKILL.md come from here. |
-| `references/check-catalog.md` | When implementing Phase 5 audit. Full E/C/S/P/A/T/U code catalog with per-channel evidence sources and the platform applicability matrix (which rules emit `N/A` on which platforms). |
+| `references/payload-schemas.md` | Before any runtime audit. Defines the three channels (APM / Bug / Crash), every MCP tool's response shape, identifier model, mode/platform/crash-type enums, filter naming differences. Field paths used in this SKILL.md come from here. |
+| `references/check-catalog.md` | When implementing Phase 5 (runtime audit). Full E/C/S/P/A/T/U code catalog with per-channel evidence sources and the platform applicability matrix (which rules emit `N/A` on which platforms). |
+| `references/static-checks-catalog.md` | When implementing Phase 2 (static audit). Full S-* code catalog: install, modules, invocation, identity, feature-flags, logging, masking, dSYM/mapping upload, build systems, privacy modifiers. |
+| `references/extractors-ios.md` | When running Phase 2 on an iOS project. Per-file scan patterns + the agent-native extraction recipe (Read + Grep instructions). |
+| `references/extractors-android.md` | Phase 2 on Android. Gradle Groovy + KTS coverage. |
+| `references/extractors-flutter.md` | Phase 2 on Flutter. `pubspec.yaml` + Dart source patterns. |
+| `references/extractors-rn.md` | Phase 2 on React Native. `package.json` + JS/TS source patterns. |
 | `references/rule-pack-format.md` | When scaffolding `luciq-verify.yaml` (Phase 1c), running bootstrap inference (Phase 1d), or processing drift detection (Phase 6b). Full YAML schema, base pack, inference rules. |
 | `references/harness-contract.md` | When generating the harness (Phase 1b/1c) or regenerating it on a later run. Per-platform scaffold paths, required API surface, marker convention, debug-only gating. |
 
@@ -65,9 +70,10 @@ Track every phase. Stop on any failed step rather than continuing past a broken 
 Verification Progress:
 - [ ] 0. Detect customer maturity tier (drives phase shape below)
 - [ ] 1. Setup (idempotent; no-ops on second run)
-- [ ] 3. Pre-flight safety checks
-- [ ] 4. Smoke (drive the harness; produce an occurrence)
-- [ ] 5. Audit (MCP pull + rule application)
+- [ ] 2. Static audit (config inspection; skipped if --runtime)
+- [ ] 3. Pre-flight safety checks (skipped if --static)
+- [ ] 4. Smoke — drive the harness; produce an occurrence (skipped if --static)
+- [ ] 5. Runtime audit (MCP pull + rule application; skipped if --static)
 - [ ] 6. Report (rendered HTML/Markdown) + drift detection
 ```
 
@@ -122,6 +128,66 @@ Write `luciq-verify.yaml` at the repo root with the base pack inlined plus TODO 
 If `list_crashes` returns ≥ 10 occurrences from the **baseline** (pre-upgrade) SDK version, run the inference pass described in `references/rule-pack-format.md` ("Bootstrap inference"). The skill proposes a populated rule pack draft; commit only on user confirmation. On a brand-new integration, skip and rely on drift detection over subsequent runs.
 
 PII regex and custom-attribute slot mappings are **never auto-inferred and committed** — the cost asymmetry of false positives vs. missing rules favors human approval. The skill may suggest; the user approves.
+
+## 2. Static audit
+
+Inspects the customer's source tree and build config without running the app. Catches integration bugs that surface at build/config time and never get caught by the runtime audit alone: SDK not installed (or pinned to the wrong version), modules disabled by code, masking off, dSYM / mapping upload not wired, redundant invocation listeners, suspicious patterns in custom logging.
+
+Skipped if invoked with `--runtime`. In default and `--static` modes, this phase runs after Phase 1 (Setup) and before Phase 3 (Pre-flight). The findings feed the combined report alongside runtime-audit results.
+
+The audit is **agent-native**: the skill instructs the agent which files to read and which patterns to look for, via per-platform extractor reference docs. No external runtimes, no scanning daemon, no installed dependencies.
+
+### 2a. Discover platform-relevant files
+
+Reuse the platform detection from Phase 1a. Based on the detected platform, point the agent at the corresponding extractor reference:
+
+| Platform | Reference | Files scanned |
+| --- | --- | --- |
+| iOS | `references/extractors-ios.md` | `Package.resolved`, `Podfile` (+ `.lock`), `Cartfile` (+ `.resolved`), `*.swift`, `*.m`, `Info.plist`, `project.pbxproj`, dSYM upload shell scripts |
+| Android | `references/extractors-android.md` | `build.gradle`(`.kts`), `settings.gradle`(`.kts`), `AndroidManifest.xml`, `*.kt`, `*.java` |
+| Flutter | `references/extractors-flutter.md` | `pubspec.yaml`, `*.dart` |
+| React Native | `references/extractors-rn.md` | `package.json`, `*.{js,jsx,ts,tsx}` |
+
+### 2b. Run the extractors
+
+Each reference doc enumerates a category of static checks (`S-*` codes — distinct from the `E*` / `C*` / `P*` / `A*` codes that live in `references/check-catalog.md` for the runtime audit). The agent reads the listed files (Read + Grep), applies the documented patterns, and produces findings. Field paths and check semantics live in `references/static-checks-catalog.md`.
+
+Categories per platform (full per-platform spec in each extractor reference):
+
+- **SDK install + version detection** — pinned version, install method, mismatched debug vs. release
+- **Module activation** — Bug Reporting, Crash Reporting, APM, Session Replay, NDK, Surveys, Replies, Feature Requests, OOM monitor, ANR monitor, network auto-masking
+- **Invocation events** — shake / screenshot / floating-button / two-finger swipe / programmatic
+- **User identification + attribute hooks** — `setUserData`, `setCustomData`, `addUserAttribute`, `trackUserSteps`
+- **Feature flag API usage** — `addFeatureFlag`, `removeFeatureFlag`, `checkFeatures`
+- **Custom logging + user-event logging** — `Luciq.log*`, `LCQLog.log*`, `logUserEvent`
+- **Masking / privacy config** — network auto-masking, screenshot auto-masking modes, sensitive header configuration
+- **dSYM / mapping upload setup** — iOS dSYM upload script presence; Android mapping upload Gradle plugin presence
+- **Build system detection** — SPM / CocoaPods / Carthage on iOS; Gradle Groovy / Gradle KTS on Android; npm on RN; pub on Flutter
+- **Privacy view modifiers** — iOS only (SwiftUI `.luciqPrivate()`, UIKit equivalents)
+
+### 2c. Privacy constraints during extraction
+
+Hard constraints, baked into every extractor pattern:
+
+1. **Never read source code beyond identifiers + matched patterns.** The agent reads files to grep for specific patterns; it does not summarize, paraphrase, or quote contiguous source regions in its findings.
+2. **Mask all detected tokens in the report.** If the agent extracts an app token from source, the report shows the first 4 characters + length (e.g. `2c5f… [40 chars]`), never the full token.
+3. **Never read screenshots, asset binaries, or compiled artifacts.** Static analysis is text-only.
+4. **Never open `.env` files even when present.** Listed in findings as "present" / "absent"; contents not read.
+
+The agent's outputs go into the customer's local report file; nothing is uploaded. The skill never reaches a network endpoint other than the Luciq MCP server (during runtime audit, not static).
+
+### 2d. Findings shape
+
+Each finding produces one row in the static-audit section of the combined report:
+
+| Field | Example |
+| --- | --- |
+| Code | `S-INSTALL-001` (see `references/static-checks-catalog.md`) |
+| Status | `PASS` / `FAIL` / `WARN` / `INFO` / `DISABLED` / `SKIP` |
+| Evidence | File path + line range (1-indexed) — never the matched text itself unless it's a known-safe identifier |
+| Remediation | Doc link or short hint |
+
+`FAIL` blocks release the same way runtime-audit `FAIL` does. `--static` mode produces a report with only the static section populated; default mode combines static + runtime findings into one report ordered by severity.
 
 ## 3. Pre-flight safety checks
 
@@ -252,6 +318,18 @@ Two run modes are supported. Default is synthetic. Production canary requires ex
 | **prod canary** | Day-1 of a staged rollout, audit real-user traffic from the new SDK | Smoke phase is skipped; the skill audits the most recent occurrence with the new SDK version from MCP `mode: production`; `S*` rules SKIP; recency window is 24h; PII findings are **release-blocking** even without a synthetic FAIL. Adds an explicit SDK-version regression diff via `crash_patterns` across all six `pattern_key` values: `app_versions` (primary), `oses`, `devices`, `current_views`, `app_status`, `experiments`. Same APM diff via `apm_list_groups` filtered by `app_version: [<baseline>, <new>]` and ranked by `apdex_change desc`. |
 
 Prod canary mode is invoked explicitly: `--mode=prod-canary`. The skill surfaces a top-banner warning in the report that this is production telemetry. The "prod backend" pre-flight refusal is inverted in this mode — prod *is* the target — but every other refusal still applies.
+
+## Invocation flags
+
+Orthogonal to audit mode. Default invocation runs every phase; flags trim scope when only part of the audit is needed.
+
+| Flag | Phases run | When to use |
+| --- | --- | --- |
+| (none — default) | 0, 1, 2, 3, 4, 5, 6 | Full audit. Static config inspection + runtime smoke + MCP-driven runtime audit, combined into one report. The intended path for SDK upgrades. |
+| `--static` | 0, 1, 2, 6 | Static config inspection only. No smoke, no MCP. Useful as a precondition check before upgrade, or anytime the user wants a snapshot of "is my integration wired correctly" without driving the device. |
+| `--runtime` | 0, 1, 3, 4, 5, 6 | Skip the static phase; go straight from setup to pre-flight + smoke + runtime audit. Useful when the user has already validated static config and only wants the upgrade-emission audit. |
+
+Combine with audit mode as needed: `luciq-verify --static` runs static-only synthetic mode; `luciq-verify --runtime --mode=prod-canary` skips static and audits prod telemetry. `--static --mode=prod-canary` is an error (static doesn't read telemetry, so the mode flag has nothing to apply to) — surface the conflict and stop.
 
 ## Out of scope
 
