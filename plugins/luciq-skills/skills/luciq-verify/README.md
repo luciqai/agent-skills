@@ -59,7 +59,7 @@ sequenceDiagram
 
 The skill drives a real SDK in a real app, then audits what actually shipped. No mocks, no test doubles — the dashboard is the oracle.
 
-### The 5-phase workflow
+### The workflow
 
 ```mermaid
 flowchart TD
@@ -68,16 +68,16 @@ flowchart TD
     P1 --> P1a{First run<br/>on this repo?}
     P1a -->|Yes| P1b[Scaffold harness into debug variant<br/>Scaffold luciq-verify.yaml<br/>Bootstrap rules from telemetry]
     P1a -->|No| P1c[No-op — artifacts exist]
-    P1b --> P2
-    P1c --> P2
-    P2[2. Pre-flight safety] --> P2a{Debug variant?<br/>Non-prod backend?<br/>MCP reachable?<br/>Device available?}
-    P2a -->|No| Stop([STOP + surface reason])
-    P2a -->|Yes| P3[3. Smoke]
-    P3 --> P3a[Install build → open deep link<br/>→ run trigger sequence<br/>→ flushNow → forceCrash]
-    P3a --> P3b[Poll 3 channels in parallel<br/>up to 90s]
-    P3b --> P4[4. Audit<br/>merged rule pack vs payload]
-    P4 --> P5[5. Report + drift detection]
-    P5 --> Out([HTML + Markdown report<br/>+ proposed rule-pack diff])
+    P1b --> P3
+    P1c --> P3
+    P3[3. Pre-flight safety] --> P2a{Debug variant?<br/>Non-prod backend?<br/>MCP reachable?<br/>Device available?}
+    P3a -->|No| Stop([STOP + surface reason])
+    P3a -->|Yes| P4[4. Smoke]
+    P4 --> P4a[Install build → open deep link<br/>→ run trigger sequence<br/>→ flushNow → forceCrash]
+    P4a --> P4b[Poll 3 channels in parallel<br/>up to 90s]
+    P4b --> P5[5. Audit<br/>merged rule pack vs payload]
+    P5 --> P6[6. Report + drift detection]
+    P6 --> Out([HTML + Markdown report<br/>+ proposed rule-pack diff])
 ```
 
 ### Three audit channels, picked by preference
@@ -117,15 +117,15 @@ For everything other than network capture — synthetic markers, attributes, occ
 
 The skill doesn't write unit tests or mock the SDK. It drives your debug build through a deterministic harness, lets the **real SDK in a real app** ship telemetry to the Luciq backend, then pulls that telemetry back via the Luciq MCP server and asserts against it. End-to-end behavioral verification.
 
-### The 5 phases
+### The phases
 
 ```
 0. Detect customer maturity tier (drives phase shape below)
 1. Setup        — idempotent; scaffolds the harness and rule pack on first run
-2. Pre-flight   — safety: SDK version, debug variant, non-prod backend, MCP reachable
-3. Smoke        — drive the harness, wait for the occurrence to land
-4. Audit        — apply rules from the merged rule pack against the captured payload
-5. Report       — render HTML + Markdown report; propose rule-pack drift updates
+3. Pre-flight   — safety: SDK version, debug variant, non-prod backend, MCP reachable
+4. Smoke        — drive the harness, wait for the occurrence to land
+5. Audit        — apply rules from the merged rule pack against the captured payload
+6. Report       — render HTML + Markdown report; propose rule-pack drift updates
 ```
 
 First run does heavy setup (harness scaffold, rule-pack bootstrap, environment confirmation). Every subsequent SDK upgrade is a 2-minute "press go."
@@ -301,7 +301,7 @@ Each row in the verification checks table is one of:
 
 A single `FAIL` blocks the release. `MANUAL` items don't block automatically but appear at the top so you can verify them quickly in the dashboard.
 
-If mobile-mcp is installed and screenshots are enabled in your rule pack, the report's "Test environment" block also embeds an end-of-smoke screenshot (proof the harness was reachable) and, on Phase 3c timeouts, a diagnostic screenshot of whatever was on screen when polling gave up.
+If mobile-mcp is installed and screenshots are enabled in your rule pack, the report's "Test environment" block also embeds an end-of-smoke screenshot (proof the harness was reachable) and, on Phase 4c timeouts, a diagnostic screenshot of whatever was on screen when polling gave up.
 
 ### Two run modes
 

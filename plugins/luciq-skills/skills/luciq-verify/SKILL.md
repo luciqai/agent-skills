@@ -24,7 +24,7 @@ If the request fits any of the above, route there and stop — running this skil
 
 | Artifact | What for | If missing |
 | --- | --- | --- |
-| **Luciq MCP server, authenticated** | The entire audit is grounded in what the Luciq MCP exposes — `list_applications`, `list_crashes`, `list_bugs`, `list_occurrences_tokens`, `get_occurrence_details`, `bug_details`, `crash_patterns`, and (when GA) `apm_*`. Without it the skill has no oracle to verify against. | STOP at Phase 2 pre-flight. Route the user to `luciq-setup` step 7 or to https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/luciq-mcp-server/setup-by-ide. Do not attempt static-analysis-only "verification" — it would silently pass real regressions. |
+| **Luciq MCP server, authenticated** | The entire audit is grounded in what the Luciq MCP exposes — `list_applications`, `list_crashes`, `list_bugs`, `list_occurrences_tokens`, `get_occurrence_details`, `bug_details`, `crash_patterns`, and (when GA) `apm_*`. Without it the skill has no oracle to verify against. | STOP at Phase 3 pre-flight. Route the user to `luciq-setup` step 7 or to https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/luciq-mcp-server/setup-by-ide. Do not attempt static-analysis-only "verification" — it would silently pass real regressions. |
 | **A debug-variant build with the new SDK + the luciq-verify harness** | Produces a deterministic occurrence to audit | Run Phase 1 below — the skill generates the harness (scaffold mode) or validates the customer's existing dev-tools surface (reuse mode). |
 | **A device, simulator, or emulator** | Executes the build that produces the occurrence | Stop; ask the user to boot one. Do not spawn one without confirmation. |
 
@@ -43,8 +43,8 @@ Detailed material is split out so the SKILL.md stays workflow-focused. Read the 
 | Reference | When to read |
 | --- | --- |
 | `references/payload-schemas.md` | Before any audit. Defines the three channels (APM / Bug / Crash), every MCP tool's response shape, identifier model, mode/platform/crash-type enums, filter naming differences. Field paths used in this SKILL.md come from here. |
-| `references/check-catalog.md` | When implementing Phase 4 audit. Full E/C/S/P/A/T/U code catalog with per-channel evidence sources and the platform applicability matrix (which rules emit `N/A` on which platforms). |
-| `references/rule-pack-format.md` | When scaffolding `luciq-verify.yaml` (Phase 1c), running bootstrap inference (Phase 1d), or processing drift detection (Phase 5b). Full YAML schema, base pack, inference rules. |
+| `references/check-catalog.md` | When implementing Phase 5 audit. Full E/C/S/P/A/T/U code catalog with per-channel evidence sources and the platform applicability matrix (which rules emit `N/A` on which platforms). |
+| `references/rule-pack-format.md` | When scaffolding `luciq-verify.yaml` (Phase 1c), running bootstrap inference (Phase 1d), or processing drift detection (Phase 6b). Full YAML schema, base pack, inference rules. |
 | `references/harness-contract.md` | When generating the harness (Phase 1b/1c) or regenerating it on a later run. Per-platform scaffold paths, required API surface, marker convention, debug-only gating. |
 
 ## Canonical sources of truth
@@ -65,10 +65,10 @@ Track every phase. Stop on any failed step rather than continuing past a broken 
 Verification Progress:
 - [ ] 0. Detect customer maturity tier (drives phase shape below)
 - [ ] 1. Setup (idempotent; no-ops on second run)
-- [ ] 2. Pre-flight safety checks
-- [ ] 3. Smoke (drive the harness; produce an occurrence)
-- [ ] 4. Audit (MCP pull + rule application)
-- [ ] 5. Report (rendered HTML/Markdown) + drift detection
+- [ ] 3. Pre-flight safety checks
+- [ ] 4. Smoke (drive the harness; produce an occurrence)
+- [ ] 5. Audit (MCP pull + rule application)
+- [ ] 6. Report (rendered HTML/Markdown) + drift detection
 ```
 
 ## 0. Detect customer maturity tier
@@ -115,7 +115,7 @@ Unmapped triggers become no-ops in the smoke and the rules that needed them SKIP
 
 ### 1c. Scaffold the rule pack
 
-Write `luciq-verify.yaml` at the repo root with the base pack inlined plus TODO stubs for customer-specific rules. Schema, base pack defaults, and a worked example are in `references/rule-pack-format.md`. The first run can leave all customer-specific rules commented out; bootstrap inference (Phase 1d) and drift detection (Phase 5b) fill them in over time.
+Write `luciq-verify.yaml` at the repo root with the base pack inlined plus TODO stubs for customer-specific rules. Schema, base pack defaults, and a worked example are in `references/rule-pack-format.md`. The first run can leave all customer-specific rules commented out; bootstrap inference (Phase 1d) and drift detection (Phase 6b) fill them in over time.
 
 ### 1d. Bootstrap rule inference (if any telemetry exists)
 
@@ -123,7 +123,7 @@ If `list_crashes` returns ≥ 10 occurrences from the **baseline** (pre-upgrade)
 
 PII regex and custom-attribute slot mappings are **never auto-inferred and committed** — the cost asymmetry of false positives vs. missing rules favors human approval. The skill may suggest; the user approves.
 
-## 2. Pre-flight safety checks
+## 3. Pre-flight safety checks
 
 Runs on every invocation. The point of these checks is to refuse to verify against the wrong thing — a "PASS" report from a build that's still on the old SDK, or a debug build that's mistakenly pointing at production traffic, is worse than no report.
 
@@ -139,11 +139,11 @@ Runs on every invocation. The point of these checks is to refuse to verify again
 
 The skill refuses to proceed against a production build variant, a build pointed at a production backend, or `mode: production` on the MCP queries. These refusals are not overridable inline — the production-canary audit is a separate mode (see "Modes" below) that the user invokes explicitly.
 
-## 3. Smoke
+## 4. Smoke
 
 The skill drives the harness end-to-end. No manual "tap the button" handoff unless the user prefers it.
 
-### 3a. Install + launch
+### 4a. Install + launch
 
 Default path uses platform-native commands:
 
@@ -159,7 +159,7 @@ Derive `<Scheme>`, `<UDID>`, package name from the project. Stop on ambiguity.
 
 If mobile-mcp is available (`optional_integrations.mobile_mcp.enabled: auto` or `force`), the skill can also use it as a unified driver — its `install_app` / `launch_app` / `open_url` primitives work across iOS and Android without the per-platform command split. This is purely a convenience; both paths produce the same outcome.
 
-### 3b. Trigger the canonical action sequence
+### 4b. Trigger the canonical action sequence
 
 Order matters: attributes are set before network traffic so the audit sees them associated with the right session. The bug report is created before the crash so the audit gets a clean bug-channel sample alongside the crash sample.
 
@@ -174,7 +174,7 @@ Order matters: attributes are set before network traffic so the audit sees them 
 
 In **scaffold mode**, the scaffolded harness UI fires these in sequence as soon as the deep link opens it — the skill just opens the link and waits. In **reuse mode**, the skill invokes each trigger using the `invoke_via` strategy declared in the rule pack (`deep_link_param` / `intent_extra` / `tap_by_label` / `manual`). `tap_by_label` requires mobile-mcp; absent mobile-mcp, it degrades to `manual` (the skill prints the trigger sequence and waits for the user to tap). See `references/harness-contract.md` for the strategy decision table.
 
-### 3c. Wait for the occurrence to land — three parallel channels
+### 4c. Wait for the occurrence to land — three parallel channels
 
 Poll all three channels because the audit pulls evidence from whichever returns data. The exact polling commands per channel are in `references/payload-schemas.md`. Summary:
 
@@ -186,7 +186,7 @@ Poll every 5s for up to 90s per channel. If any channel lands, proceed with that
 
 If mobile-mcp is available and `optional_integrations.mobile_mcp.screenshot_on_smoke_timeout: true`, capture a screenshot of the device at the moment of timeout and embed it in the report — useful diagnostic for "no occurrence landed" (was the screen blank? wrong activity? crash dialog overlay?). Similarly `screenshot_on_smoke_end: true` captures a screenshot when the smoke completes successfully, as proof of "harness was reachable and the build was installed correctly."
 
-### 3d. Pick the right occurrence — `max(tokens)`
+### 4d. Pick the right occurrence — `max(tokens)`
 
 `list_occurrences_tokens` (crash) and `apm_group_view.occurrences` (APM) can each return multiple tokens. In shared development workspaces where multiple engineers smoke against the same workspace concurrently, the audit must verify *this build's* synthetic occurrence — not someone else's.
 
@@ -201,7 +201,7 @@ detail   = get_occurrence_details(token=selected, ...)
 
 Bugs are addressed by integer `number`, not ULID, so this rule doesn't apply on the bug channel. Detail: `references/payload-schemas.md` ("ULID structure and `max(tokens)` selection").
 
-### 3e. Verify freshness — parse the ULID timestamp
+### 4e. Verify freshness — parse the ULID timestamp
 
 Once the freshest occurrence is selected, verify it's *actually* fresh enough to represent this build's behavior. Parse the ULID's embedded timestamp (first 10 base32 chars, Crockford's alphabet — full recipe in `references/payload-schemas.md`) and compare against mode-dependent thresholds (`C0b` in `references/check-catalog.md`):
 
@@ -214,7 +214,7 @@ Customers running reuse-mode against an existing dev-tools surface can override 
 
 Why parse the ULID rather than read `state.fields.reported_at`: the ULID timestamp is set at occurrence creation and is what the audit identifies the record by; `reported_at` is a separate field whose precision and timezone representation can vary. Parsing the ULID is deterministic.
 
-## 4. Audit
+## 5. Audit
 
 The audit runs every rule in the merged rule pack (base + customer) against the captured payload. Each rule produces exactly one row in the report with a status, evidence string, and (on failure) a remediation pointer.
 
@@ -226,9 +226,9 @@ Full rule catalog with evidence sources per channel is in `references/check-cata
 - **A single FAIL blocks the release.** MANUAL items do not block automatically but appear at the top of the report.
 - **Channel preference for C1–C7 / S2 / P1 / C9: APM > Bug > Crash.** APM exposes per-request structured data; the bug payload splits logs into typed archives (`network_log`, `user_events`, `instabug_log`); the crash payload bundles everything into one archive that requires disambiguating parsing.
 
-## 5. Report and drift detection
+## 6. Report and drift detection
 
-### 5a. Render
+### 6a. Render
 
 Two artifacts:
 - `luciq-verify-report.html` — colored status pills, expandable evidence rows, network audit table, occurrences list. Format matches the customer-screenshot style.
@@ -238,7 +238,7 @@ Both include: summary bar (counts per status); test environment block (slug, mod
 
 A single FAIL is highlighted at the top. MANUAL rows are also surfaced at top.
 
-### 5b. Drift detection (always runs)
+### 6b. Drift detection (always runs)
 
 Compare the observed payload to the declared rule pack and produce a "Rule-pack drift" appendix proposing pack updates as a unified diff. Categories and proposal semantics are in `references/rule-pack-format.md` ("Drift detection"). The user accepts, rejects, or edits per hunk — never auto-edit `luciq-verify.yaml`.
 
