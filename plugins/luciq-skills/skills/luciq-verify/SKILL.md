@@ -1,6 +1,6 @@
 ---
-name: luciq-upgrade-verify
-description: Verify a Luciq SDK upgrade end to end before shipping — confirm the customer's custom integration (URL redirection / normalization, masking / redaction callbacks, preserved headers, persona attributes, PII masking, feature flags, experiments, user steps, user attributes) still behaves correctly against a new SDK version. Use whenever the user mentions verifying an SDK upgrade, auditing a Luciq version bump, checking that a new SDK didn't break anything, "is it safe to release", running upgrade verification, smoke-testing the new Luciq SDK, or pastes a build with a freshly bumped Luciq dependency and asks whether to release. Also use when the user describes the kind of manual upgrade QA that the Workday-style upgrade-verification report automates (PII clean, persona attributes set, all 200 responses redacted, top 10 network rows clean, no PII leak in user steps). Scaffolds an upgrade-verify harness into the debug variant, drives it to produce a fresh occurrence, pulls evidence via the Luciq MCP server (APM, bug, and crash channels), applies a customer-specific rule pack against the captured payload, and renders a pass/fail HTML+Markdown report. For first-time SDK installs use luciq-setup; for the rename/upgrade transform itself use luciq-migrate; for production crash investigation use luciq-debug.
+name: luciq-verify
+description: Verify a Luciq SDK upgrade end to end before shipping — confirm the customer's custom integration (URL redirection / normalization, masking / redaction callbacks, preserved headers, persona attributes, PII masking, feature flags, experiments, user steps, user attributes) still behaves correctly against a new SDK version. Use whenever the user mentions verifying an SDK upgrade, auditing a Luciq version bump, checking that a new SDK didn't break anything, "is it safe to release", running upgrade verification, smoke-testing the new Luciq SDK, or pastes a build with a freshly bumped Luciq dependency and asks whether to release. Also use when the user describes the kind of manual upgrade QA that the Workday-style upgrade-verification report automates (PII clean, persona attributes set, all 200 responses redacted, top 10 network rows clean, no PII leak in user steps). Scaffolds an luciq-verify harness into the debug variant, drives it to produce a fresh occurrence, pulls evidence via the Luciq MCP server (APM, bug, and crash channels), applies a customer-specific rule pack against the captured payload, and renders a pass/fail HTML+Markdown report. For first-time SDK installs use luciq-setup; for the rename/upgrade transform itself use luciq-migrate; for production crash investigation use luciq-debug.
 ---
 
 # Luciq SDK Upgrade Verification
@@ -25,7 +25,7 @@ If the request fits any of the above, route there and stop — running this skil
 | Artifact | What for | If missing |
 | --- | --- | --- |
 | **Luciq MCP server, authenticated** | The entire audit is grounded in what the Luciq MCP exposes — `list_applications`, `list_crashes`, `list_bugs`, `list_occurrences_tokens`, `get_occurrence_details`, `bug_details`, `crash_patterns`, and (when GA) `apm_*`. Without it the skill has no oracle to verify against. | STOP at Phase 2 pre-flight. Route the user to `luciq-setup` step 7 or to https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/luciq-mcp-server/setup-by-ide. Do not attempt static-analysis-only "verification" — it would silently pass real regressions. |
-| **A debug-variant build with the new SDK + the upgrade-verify harness** | Produces a deterministic occurrence to audit | Run Phase 1 below — the skill generates the harness (scaffold mode) or validates the customer's existing dev-tools surface (reuse mode). |
+| **A debug-variant build with the new SDK + the luciq-verify harness** | Produces a deterministic occurrence to audit | Run Phase 1 below — the skill generates the harness (scaffold mode) or validates the customer's existing dev-tools surface (reuse mode). |
 | **A device, simulator, or emulator** | Executes the build that produces the occurrence | Stop; ask the user to boot one. Do not spawn one without confirmation. |
 
 The skill itself runs locally and pulls cloud-side telemetry — but cannot synthesize an occurrence without something running the build. This is not optional.
@@ -97,7 +97,7 @@ Reuse `luciq-setup`'s platform-detection rules verbatim (first match wins on roo
 Two modes, picked by the customer's `harness.mode` in `luciq-verify.yaml`. Default is `scaffold`. Read `references/harness-contract.md` for the full spec of both.
 
 **Scaffold mode** (default — `harness.mode: scaffold`)
-The skill generates `UpgradeVerifyHarness.<ext>` directly inside the customer's debug variant. Per-platform file paths, the required API surface, the marker convention (`current_view == "UpgradeVerifyHarness"`), and debug-only gating rules are in `references/harness-contract.md`.
+The skill generates `LuciqVerifyHarness.<ext>` directly inside the customer's debug variant. Per-platform file paths, the required API surface, the marker convention (`current_view == "LuciqVerifyHarness"`), and debug-only gating rules are in `references/harness-contract.md`.
 
 Why generated, not packaged: per-customer customization (which redaction tokens to fire, which personas to test) makes a single binary library a poor fit; the generated source is small (≈ 100–200 lines per platform) and can be regenerated by the skill on subsequent runs.
 
@@ -149,8 +149,8 @@ Default path uses platform-native commands:
 
 | Platform | Install | Launch harness |
 | --- | --- | --- |
-| iOS | `xcodebuild -scheme <Debug> -destination 'platform=iOS Simulator,id=<UDID>' install` | `xcrun simctl openurl <UDID> luciq://upgrade-verify-harness` |
-| Android | `./gradlew :app:installDebug` | `adb shell am start -W -a android.intent.action.VIEW -d "luciq://upgrade-verify-harness"` |
+| iOS | `xcodebuild -scheme <Debug> -destination 'platform=iOS Simulator,id=<UDID>' install` | `xcrun simctl openurl <UDID> luciq://verify-harness` |
+| Android | `./gradlew :app:installDebug` | `adb shell am start -W -a android.intent.action.VIEW -d "luciq://verify-harness"` |
 | Flutter | `flutter install --debug` | platform-specific `am start` / `simctl openurl` |
 | React Native | `npx react-native run-<platform>` | as above |
 | KMP | run both | as above |
@@ -164,12 +164,12 @@ If mobile-mcp is available (`optional_integrations.mobile_mcp.enabled: auto` or 
 Order matters: attributes are set before network traffic so the audit sees them associated with the right session. The bug report is created before the crash so the audit gets a clean bug-channel sample alongside the crash sample.
 
 ```
-1. UpgradeVerifyHarness.setTestPersona("<persona-key-from-rule-pack>")
-2. UpgradeVerifyHarness.fireNetworkBurst(n=<count-from-rule-pack>)
-3. UpgradeVerifyHarness.exerciseFeatureFlags()       # iterates declared flags / experiments
-4. UpgradeVerifyHarness.reportBugReport()            # produces a bug record with SPLIT log archives — cleanest C1–C7 evidence channel after APM
-5. UpgradeVerifyHarness.flushNow()                   # synchronously ship pending telemetry — removes the timer race
-6. UpgradeVerifyHarness.forceCrash()                 # produces the auditable crash with current_view=UpgradeVerifyHarness
+1. LuciqVerifyHarness.setTestPersona("<persona-key-from-rule-pack>")
+2. LuciqVerifyHarness.fireNetworkBurst(n=<count-from-rule-pack>)
+3. LuciqVerifyHarness.exerciseFeatureFlags()       # iterates declared flags / experiments
+4. LuciqVerifyHarness.reportBugReport()            # produces a bug record with SPLIT log archives — cleanest C1–C7 evidence channel after APM
+5. LuciqVerifyHarness.flushNow()                   # synchronously ship pending telemetry — removes the timer race
+6. LuciqVerifyHarness.forceCrash()                 # produces the auditable crash with current_view=LuciqVerifyHarness
 ```
 
 In **scaffold mode**, the scaffolded harness UI fires these in sequence as soon as the deep link opens it — the skill just opens the link and waits. In **reuse mode**, the skill invokes each trigger using the `invoke_via` strategy declared in the rule pack (`deep_link_param` / `intent_extra` / `tap_by_label` / `manual`). `tap_by_label` requires mobile-mcp; absent mobile-mcp, it degrades to `manual` (the skill prints the trigger sequence and waits for the user to tap). See `references/harness-contract.md` for the strategy decision table.
@@ -202,8 +202,8 @@ Full rule catalog with evidence sources per channel is in `references/check-cata
 ### 5a. Render
 
 Two artifacts:
-- `luciq-upgrade-verify-report.html` — colored status pills, expandable evidence rows, network audit table, occurrences list. Format matches the customer-screenshot style.
-- `luciq-upgrade-verify-report.md` — same content, plain Markdown, for PR comments and CI logs.
+- `luciq-verify-report.html` — colored status pills, expandable evidence rows, network audit table, occurrences list. Format matches the customer-screenshot style.
+- `luciq-verify-report.md` — same content, plain Markdown, for PR comments and CI logs.
 
 Both include: summary bar (counts per status); test environment block (slug, mode, app version, backend host, bundle ID, SDK version); selected occurrence block (type, number, ULID, reported timestamp, current_view); APM coverage block when available; verification checks table (every rule, status, evidence, source channel); network log audit table (full table for successful redaction; failed rows excluded with stated count); occurrences list (crash + bug IDs in the smoke window); user attributes; experiments.
 

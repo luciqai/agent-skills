@@ -42,7 +42,7 @@ env:
   dashboard_mode: "staging"                 # alpha | beta | staging | qa | development | production
 
 # Harness configuration. Two modes:
-#   scaffold (default) — the skill generates UpgradeVerifyHarness into the debug variant.
+#   scaffold (default) — the skill generates LuciqVerifyHarness into the debug variant.
 #   reuse              — the skill drives an existing dev-tools surface in your app.
 # See references/harness-contract.md for the full spec of both modes.
 harness:
@@ -160,7 +160,7 @@ env:
   dashboard_mode: "alpha"
 
 # Workday already has DeveloperToolsFragment with crash triggers — reuse that
-# surface instead of scaffolding a parallel UpgradeVerifyHarness.
+# surface instead of scaffolding a parallel LuciqVerifyHarness.
 harness:
   mode: "reuse"
   reused_surface:

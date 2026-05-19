@@ -1,4 +1,4 @@
-# luciq-upgrade-verify
+# luciq-verify
 
 A Claude Code / Cursor skill that verifies a Luciq mobile SDK upgrade end-to-end **before** you ship — by smoking your debug build, pulling the resulting telemetry, and auditing it against your custom integration's contract.
 
@@ -38,7 +38,7 @@ The audit verifies (configurable per customer via `luciq-verify.yaml`):
 sequenceDiagram
     autonumber
     participant Dev as Developer / CI
-    participant Skill as luciq-upgrade-verify skill
+    participant Skill as luciq-verify skill
     participant Device as Device / Simulator
     participant App as Debug build (new SDK)
     participant Cloud as Luciq cloud
@@ -136,13 +136,13 @@ The skill supports two ways of getting deterministic triggers into your debug bu
 
 **Scaffold (default).** The skill writes a small harness directly into your debug variant — *not* a published package. Per platform:
 
-- **iOS**: `<App>/DebugOnly/UpgradeVerify/UpgradeVerifyHarness.swift` with `#if DEBUG` guards
-- **Android**: `app/src/debug/java/<pkg>/upgradeverify/` (debug sourceSet only)
+- **iOS**: `<App>/DebugOnly/LuciqVerify/LuciqVerifyHarness.swift` with `#if DEBUG` guards
+- **Android**: `app/src/debug/java/<pkg>/luciqverify/` (debug sourceSet only)
 - **Flutter**: `lib/upgrade_verify/` mounted only under `kDebugMode`
-- **React Native**: `src/upgrade-verify/` gated by `if (__DEV__)`
+- **React Native**: `src/luciq-verify/` gated by `if (__DEV__)`
 - **KMP**: `shared/src/debugMain/` plus thin platform shims
 
-The scaffolded harness exposes a small API (`setTestPersona`, `fireNetworkBurst`, `exerciseFeatureFlags`, `reportBugReport`, `forceCrash`, `forceANR`, `forceUIHang`, `flushNow`) plus a one-button-per-trigger screen reachable via `luciq://upgrade-verify-harness` in debug builds only.
+The scaffolded harness exposes a small API (`setTestPersona`, `fireNetworkBurst`, `exerciseFeatureFlags`, `reportBugReport`, `forceCrash`, `forceANR`, `forceUIHang`, `flushNow`) plus a one-button-per-trigger screen reachable via `luciq://verify-harness` in debug builds only.
 
 **Reuse.** Already have a debug menu with crash / hang / bug triggers (Workday's `DeveloperToolsFragment`, a `CrashLab` / `HangTrigger` / `ErrorTrigger` family, etc.)? Declare it instead of scaffolding a parallel one. Your rule pack maps the canonical triggers to your existing methods, and declares **how** each trigger should be invoked.
 
@@ -205,7 +205,7 @@ flowchart LR
         M[mobile-mcp server<br/>github.com/mobile-next/mobile-mcp]
     end
 
-    L --> Skill[luciq-upgrade-verify]
+    L --> Skill[luciq-verify]
     B --> Skill
     D --> Skill
     M -.optional.-> Skill
@@ -266,7 +266,7 @@ What happens on first run:
 
 1. The skill detects your platform and asks for confirmation before doing anything that writes files.
 2. **Harness setup, branching on your rule-pack `harness.mode`:**
-   - **`scaffold` (default)** — generates `UpgradeVerifyHarness.<ext>` into your debug variant and shows you the diff.
+   - **`scaffold` (default)** — generates `LuciqVerifyHarness.<ext>` into your debug variant and shows you the diff.
    - **`reuse`** — validates the `reused_surface` declaration in your rule pack: confirms the `marker_view` exists on prior occurrences, checks the surface is debug-gated, surfaces gaps. No source generation.
 3. It scaffolds `luciq-verify.yaml` at the repo root if it doesn't exist. If you have ≥ 10 prior occurrences on the previous SDK version, it proposes a rule pack populated from your observed telemetry. You review and accept block-by-block.
 4. It runs pre-flight safety checks (debug variant, non-prod backend, MCP reachable, device available).
@@ -283,8 +283,8 @@ After the first run, invoking the skill again skips setup (harness is already th
 
 Two artifacts are produced in your repo root:
 
-- `luciq-upgrade-verify-report.html` — colored status pills, expandable evidence rows, network audit table. Open in a browser.
-- `luciq-upgrade-verify-report.md` — same content as Markdown, suitable for pasting into a PR or CI log.
+- `luciq-verify-report.html` — colored status pills, expandable evidence rows, network audit table. Open in a browser.
+- `luciq-verify-report.md` — same content as Markdown, suitable for pasting into a PR or CI log.
 
 Each row in the verification checks table is one of:
 
@@ -321,7 +321,7 @@ plugins/luciq-skills/
 ├── commands/
 │   └── luciq-verify.md          ← /luciq-verify slash command (invokes this skill)
 └── skills/
-    └── luciq-upgrade-verify/
+    └── luciq-verify/
         ├── README.md            ← you are here (human-facing)
         ├── SKILL.md             ← LLM-facing instructions; the workflow definition
         └── references/
@@ -367,6 +367,6 @@ These came out of inspecting real SDK traffic and may surprise customers:
 
 ## Related skills
 
-- **`luciq-setup`** — first-time SDK integration. Run this before `luciq-upgrade-verify` can work.
-- **`luciq-migrate`** — Instabug → Luciq rename, or vN → vN+1 API transforms. Run this *before* `luciq-upgrade-verify` audits the result.
+- **`luciq-setup`** — first-time SDK integration. Run this before `luciq-verify` can work.
+- **`luciq-migrate`** — Instabug → Luciq rename, or vN → vN+1 API transforms. Run this *before* `luciq-verify` audits the result.
 - **`luciq-debug`** — production crash / hang / bug investigation. Different use case: real-user signal, not synthetic verification.

@@ -104,7 +104,7 @@ These confirm the smoke actually ran. They SKIP in tier T1 (telemetry-only mode)
 
 | Code | Check | Evidence source |
 | --- | --- | --- |
-| `S1` | Harness marker present (`current_view == "UpgradeVerifyHarness"`) | `state.fields.current_view` |
+| `S1` | Harness marker present (`current_view == "LuciqVerifyHarness"`) | `state.fields.current_view` |
 | `S2` | User steps / breadcrumbs captured at expected threshold | Bug path: `state.logs.user_events.url` — dedicated breadcrumbs archive. Crash path: inside `state.logs.compressed_logs` archive (fetch + parse). SKIP if archive `is_empty_array: true` |
 
 ## PII (`P*`)
