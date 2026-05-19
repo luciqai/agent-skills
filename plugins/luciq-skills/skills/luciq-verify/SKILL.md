@@ -222,6 +222,7 @@ Full rule catalog with evidence sources per channel is in `references/check-cata
 
 - **Cite the MCP tool result that produced each piece of evidence.** No paraphrasing, no fabrication. If the evidence comes from a presigned-URL archive, cite the archive name and the parsed line range.
 - **Empty evidence is never PASS.** A missing field or empty array is SKIP with reason "evidence field missing," not silent pass. Auto-passing missing data masks integration regressions — exactly the kind of failure mode this skill exists to catch.
+- **`DISABLED` is not `FAIL`.** A feature turned off at the workspace level (e.g. `user_steps` disabled by dashboard policy) is intentional configuration, not a regression. Surface as `DISABLED` with the source ("workspace policy" or "rule pack"). FAILing on intentional disables produces false-positive release blocks. See `references/check-catalog.md` for detection heuristics.
 - **A single FAIL blocks the release.** MANUAL items do not block automatically but appear at the top of the report.
 - **Channel preference for C1–C7 / S2 / P1 / C9: APM > Bug > Crash.** APM exposes per-request structured data; the bug payload splits logs into typed archives (`network_log`, `user_events`, `instabug_log`); the crash payload bundles everything into one archive that requires disambiguating parsing.
 
@@ -298,6 +299,7 @@ These are the failure modes that produce a misleading "PASS" report. If you catc
 
 **Empty evidence and false positives**
 - "MCP returned empty for the network log — I'll mark the redaction checks PASS because nothing is there to leak." Empty evidence is never PASS. Mark SKIP with the reason and tell the user the smoke probably didn't generate network traffic.
+- "The payload has no `user_steps` key at all — I'll FAIL the user-steps checks." Could be workspace policy (`user_steps` disabled by dashboard). Mark `DISABLED` with reason `"workspace policy: user_steps disabled"` rather than FAIL. Same logic for any feature whose entire payload key is absent rather than empty — absence-of-key often means "feature off at workspace level," empty-array means "feature on, no data captured this run."
 - "The non-2xx response bodies are not redacted but C3b says response bodies should be redacted." C3b excludes failed responses by design — error bodies are intentionally captured for diagnostics. Re-read the rule.
 - "`state.fields.user_attributes` is `{}` so the customer's integration is broken." Maybe — but `{}` could also mean the harness didn't call `setTestPersona()`, or the customer's app doesn't set user attributes for this code path. FAIL only when `attributes.user.required` is non-empty AND a required key is missing AND the harness was supposed to set it.
 - "I see strings that look like emails in user steps — I'll auto-add an email regex to the PII rule pack." PII regexes require user approval. Auto-additions create permanent false alarms.

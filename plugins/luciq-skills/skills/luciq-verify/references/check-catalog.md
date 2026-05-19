@@ -29,12 +29,18 @@ Eight statuses; do not invent new ones. Match the rendered report exactly.
 | `INFO` | Informational signal, not an assertion |
 | `SKIP` | Rule could not run — surfaces the reason (e.g. "evidence field missing", "apm tools unavailable") |
 | `MANUAL` | Rule requires human dashboard verification — never auto-PASS |
-| `DISABLED` | Rule is in the rule pack but explicitly turned off — surfaces why |
+| `DISABLED` | Rule is technically applicable but the feature it tests against is intentionally off. Two sources: (a) rule pack explicitly turns the rule off, or (b) the dashboard workspace has the feature toggled off (e.g. `user_steps` disabled at workspace level). The audit surfaces *why*. |
 | `N/A` | Rule does not apply to this platform / SDK version |
 
 A single `FAIL` blocks the release. `MANUAL` items do not block automatically but appear at the top of the report.
 
 **Empty evidence is never PASS.** If the audit cannot find the field path it expects, the result is SKIP with reason "evidence field missing." Marking PASS-by-default would silently mask integration regressions.
+
+**Distinguishing `DISABLED` from `FAIL`.** A feature toggled off at the workspace level is *intentional configuration*, not a regression. The audit reports `DISABLED` (with the source — "rule pack" or "workspace policy") and continues. If the audit instead emitted `FAIL`, every workspace that disabled `user_steps`, network logging, or any optional channel would produce a false-positive release block.
+
+Detection heuristics:
+- **Rule-pack source**: rule pack has `disabled: true` on the rule, or omits a required capability declaration.
+- **Workspace source**: the SDK feature's evidence field is structurally present in the payload's schema but the captured data is empty *because the dashboard says it should be* — e.g. payload contains no `user_steps` key at all (vs. an empty array). When detected, mark `DISABLED` with reason `"workspace policy: <feature> disabled"` rather than SKIP-empty-evidence.
 
 ## Environment (`E*`)
 
