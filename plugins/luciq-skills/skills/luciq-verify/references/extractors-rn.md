@@ -36,7 +36,7 @@ Emits:
 - `S-BUILD-RN-NPM` / `S-BUILD-RN-YARN` / `S-BUILD-RN-PNPM PASS` based on which lockfile is present
 - `S-INSTALL-001 PASS` if Luciq package declared
 - `S-INSTALL-002` per rule-pack `expected_sdk_version` cross-check (resolved from lockfile)
-- `S-INSTALL-004 WARN` if both Luciq and legacy `instabug-reactnative` declared
+- `S-INSTALL-004 WARN` if both Luciq and legacy `instabug-reactnative` declared — message: `"both Luciq and legacy Instabug packages declared in package.json; if you're mid-migration, run luciq-migrate to finish the rename. Long-term coexistence is not supported."`
 
 ## JS/TS source (`*.{js,jsx,ts,tsx}`)
 
@@ -122,6 +122,6 @@ Hybrid project anti-patterns:
 | `Luciq.start` after `AppRegistry.registerComponent` | Init runs too late; misses early errors | `WARN` |
 | `Luciq.start` inside `if (__DEV__) { ... }` only | Release bundle won't initialize | `FAIL` (unless project is explicitly debug-only) |
 | Token in source | Long string literal as `token:` value | `WARN` masked in report |
-| Both `@luciq/react-native` AND `instabug-reactnative` in deps | Migration coexistence | `WARN` |
+| Both `@luciq/react-native` AND `instabug-reactnative` in deps | Migration coexistence | `WARN` — run `luciq-migrate` to finish the rename if mid-migration; long-term coexistence is unsupported |
 | Native + JS version skew | iOS / Android / JS Luciq versions don't match | `WARN` |
 | Module disabled at init in production | `bugReportingEnabled: false` etc. without env guard | `INFO` surface for review |

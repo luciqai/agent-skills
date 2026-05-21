@@ -87,7 +87,7 @@ Each toggle pattern below. The grep should be substring-anchored (not regex) bec
 | Force Restart | `CrashReporting.forceRestartEnabled` |
 | Network Auto-Masking | `Luciq.setNetworkAutoMaskingState`, `NetworkLogger.setNetworkAutoMasking` |
 
-If a pattern is absent for a default-ON module, emit `S-MODULE-<name> PASS` (default). If a pattern is present with a `false` value, emit `DISABLED` (and note the file:line).
+If a pattern is absent for a default-ON module, emit `S-MODULE-<name> INFO` with reason `"no explicit toggle in source; assumed default-ON per integration guide — runtime audit confirms"`. Do not emit `PASS` from absence alone — static analysis can't confirm the runtime state of an unconfigured module. If a pattern is present with a `false` value, emit `DISABLED` (and note the file:line). See `static-checks-catalog.md` "Module activation" for the coordinated handoff to runtime rules.
 
 ### Invocation events (`S-INVOKE-*`)
 
@@ -187,5 +187,5 @@ Surface as `WARN` (or `FAIL` if egregious):
 | `Luciq.start(...)` called more than once | Multiple matches of init pattern across source files | `WARN` |
 | `Luciq.start(...)` inside a `#if DEBUG` only | Init in debug-gated block; release builds won't initialize | `FAIL` (unless explicitly debug-only project) |
 | Token detected directly in source (vs. read from env / config) | String literal of length ≥ 32 that looks like a Luciq token argument | `WARN` "credential detected in source — confirm scope" — report masked (first 4 chars + length) |
-| Legacy `Instabug` import alongside `Luciq` | `import Instabug` plus `import LuciqSDK` in the same target | `WARN` (migration in progress is fine; long-term coexistence is not) |
+| Legacy `Instabug` import alongside `Luciq` | `import Instabug` plus `import LuciqSDK` in the same target | `WARN` — run `luciq-migrate` to finish the rename if mid-migration; long-term coexistence is unsupported |
 | Module toggle in production code path (non-debug) | A `setXEnabled(false)` outside any `#if DEBUG` / `#if PROFILE` guard | `INFO` (intentional disables are fine — surface for review) |

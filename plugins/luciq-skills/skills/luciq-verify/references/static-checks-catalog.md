@@ -43,7 +43,9 @@ Findings cite **file path + 1-indexed line range** as evidence. Matched text is 
 
 ## Module activation (`S-MODULE-*`)
 
-Per-module toggles. Defaults from `constants.py` in earlier tooling — most modules default ON. Findings: detected state vs. default. Disabling a module that the runtime audit later expects produces a coordinated `S-MODULE-* DISABLED` + `C* SKIP` pair.
+Per-module toggles. Most modules default ON when the SDK is installed; defaults are platform-specific (see each row's `Default` column below and verify against the live integration guide if uncertain — defaults can change between SDK versions).
+
+When no toggle pattern is found in source for a default-ON module, the audit emits `INFO` ("no explicit toggle in source; assumed default-ON — runtime audit confirms"), not `PASS` — static analysis alone cannot confirm runtime behaviour. A toggle pattern set to `false` emits `DISABLED` with the file:line citation. The runtime audit then cross-checks: an `S-MODULE-<x> DISABLED` finding causes every dependent `C*` rule to `SKIP` with reason `"module disabled in source (S-MODULE-<x> at <file>:<line>)"` — see `SKILL.md` Phase 5 for the coordination mechanism.
 
 | Code | Module | Default | Toggle pattern |
 | --- | --- | --- | --- |

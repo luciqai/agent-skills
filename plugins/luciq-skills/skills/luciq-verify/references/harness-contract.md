@@ -81,11 +81,11 @@ The skill filters `list_occurrences_tokens` and `list_crashes` by `current_views
 
 ## Required UI
 
-A single screen with one button per trigger. Reachable via `luciq://verify-harness` deep link in debug builds only.
+A single screen with one button per trigger. Reachable via `luciq://luciq-verify-harness` deep link in debug builds only. The host segment matches the `android:host` value in the debug-only intent filter below — keep these in sync.
 
 The screen exists for two reasons:
 1. **Manual smoke** — a developer can install the build, deep-link in, and tap buttons in 30 seconds without writing UI tests.
-2. **CI smoke** — `adb shell am start -d luciq://verify-harness` (or `xcrun simctl openurl`) gets the harness into focus before the trigger sequence fires.
+2. **CI smoke** — `adb shell am start -d luciq://luciq-verify-harness` (or `xcrun simctl openurl`) gets the harness into focus before the trigger sequence fires.
 
 ## Required gating — debug only, every platform
 
@@ -109,7 +109,7 @@ The skill generates these files into the customer's debug variant on first run:
 | --- | --- | --- |
 | iOS | `<App>/DebugOnly/LuciqVerify/` (new group); `#if DEBUG` guards | `LuciqVerifyHarness.swift` (API + screen + triggers) |
 | Android | `app/src/debug/java/<pkg>/luciqverify/` (debug sourceSet only) | `LuciqVerifyHarness.kt`, `LuciqVerifyHarnessActivity.kt`, debug-only `AndroidManifest.xml` deep-link intent filter |
-| Flutter | `lib/upgrade_verify/` plus a `kDebugMode`-gated mount | `upgrade_verify_harness.dart` |
+| Flutter | `lib/luciq_verify/` plus a `kDebugMode`-gated mount | `luciq_verify_harness.dart` |
 | React Native | `src/luciq-verify/` plus an `if (__DEV__)` mount; screen registered only in dev | `LuciqVerifyHarness.tsx` |
 | KMP | `shared/src/debugMain/...` plus thin platform shims on Android + iOS sides | `LuciqVerifyHarness.kt` (shared) + platform shims |
 

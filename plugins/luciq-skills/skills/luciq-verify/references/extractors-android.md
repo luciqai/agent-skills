@@ -42,7 +42,7 @@ Emits:
 - `S-BUILD-AND-GROOVY` and/or `S-BUILD-AND-KTS PASS` based on which file types are present
 - `S-INSTALL-001 PASS` if a Luciq coord is found in any Gradle file
 - `S-INSTALL-002` per `expected_sdk_version` cross-check
-- `S-INSTALL-004 WARN` if both `ai.luciq.*` AND `com.instabug.*` coords coexist (migration mid-flight is fine, long-term coexistence isn't)
+- `S-INSTALL-004 WARN` if both `ai.luciq.*` AND `com.instabug.*` coords coexist — message: `"both Luciq and legacy Instabug Maven coords declared; if you're mid-migration, run luciq-migrate to finish the rename. Long-term coexistence is not supported."`
 
 ### Mapping upload plugin (`S-SYMBOL-AND-*`)
 
@@ -202,5 +202,5 @@ Emits:
 | Builder called more than once | Multiple `Luciq.Builder(` sites in source | `WARN` |
 | Builder gated by a debug-only block (e.g. `BuildConfig.DEBUG`) | Init nested inside `if (BuildConfig.DEBUG) { ... }` | `FAIL` (unless project is explicitly debug-only) |
 | Token in source (vs. resource / env) | Builder call with a long string literal token argument | `WARN` "credential detected — confirm scope" — masked in report |
-| Both `ai.luciq.*` AND `com.instabug.*` coords | Both Maven groups present in Gradle dependencies | `WARN` migration coexistence; long-term should pick one |
+| Both `ai.luciq.*` AND `com.instabug.*` coords | Both Maven groups present in Gradle dependencies | `WARN` — run `luciq-migrate` to finish the rename if mid-migration; long-term coexistence is unsupported |
 | Module disabled in production build type | `setXState(Feature.State.DISABLED)` outside any debug-only guard | `INFO` (surface for review; intentional disables are fine) |

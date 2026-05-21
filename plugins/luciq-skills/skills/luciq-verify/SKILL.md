@@ -146,7 +146,7 @@ Reuse the platform detection from Phase 1a. Based on the detected platform, poin
 | iOS | `references/extractors-ios.md` | `Package.resolved`, `Podfile` (+ `.lock`), `Cartfile` (+ `.resolved`), `*.swift`, `*.m`, `Info.plist`, `project.pbxproj`, dSYM upload shell scripts |
 | Android | `references/extractors-android.md` | `build.gradle`(`.kts`), `settings.gradle`(`.kts`), `AndroidManifest.xml`, `*.kt`, `*.java` |
 | Flutter | `references/extractors-flutter.md` | `pubspec.yaml`, `*.dart` |
-| React Native | `references/extractors-rn.md` | `package.json`, `*.{js,jsx,ts,tsx}` |
+| React Native | `references/extractors-rn.md` — plus `extractors-ios.md` on `ios/` and `extractors-android.md` on `android/` when those subfolders exist (RN projects are hybrid; native-side Pod / Gradle integration is part of the audit) | `package.json`, `*.{js,jsx,ts,tsx}`, and the native files when applicable |
 
 ### 2b. Run the extractors
 
@@ -169,7 +169,7 @@ Categories per platform (full per-platform spec in each extractor reference):
 
 Hard constraints, baked into every extractor pattern:
 
-1. **Never read source code beyond identifiers + matched patterns.** The agent reads files to grep for specific patterns; it does not summarize, paraphrase, or quote contiguous source regions in its findings.
+1. **Never quote contiguous source regions in findings.** The agent reads files to grep for specific patterns and may cite matched API names (e.g. `Luciq.start`, `setBugReportingEnabled`) by name. Surrounding lines, full functions, or other source regions must not be reproduced in the report — findings cite file path and 1-indexed line range only.
 2. **Mask all detected tokens in the report.** If the agent extracts an app token from source, the report shows the first 4 characters + length (e.g. `2c5f… [40 chars]`), never the full token.
 3. **Never read screenshots, asset binaries, or compiled artifacts.** Static analysis is text-only.
 4. **Never open `.env` files even when present.** Listed in findings as "present" / "absent"; contents not read.
@@ -215,8 +215,8 @@ Default path uses platform-native commands:
 
 | Platform | Install | Launch harness |
 | --- | --- | --- |
-| iOS | `xcodebuild -scheme <Debug> -destination 'platform=iOS Simulator,id=<UDID>' install` | `xcrun simctl openurl <UDID> luciq://verify-harness` |
-| Android | `./gradlew :app:installDebug` | `adb shell am start -W -a android.intent.action.VIEW -d "luciq://verify-harness"` |
+| iOS | `xcodebuild -scheme <Debug> -destination 'platform=iOS Simulator,id=<UDID>' install` | `xcrun simctl openurl <UDID> luciq://luciq-verify-harness` |
+| Android | `./gradlew :app:installDebug` | `adb shell am start -W -a android.intent.action.VIEW -d "luciq://luciq-verify-harness"` |
 | Flutter | `flutter install --debug` | platform-specific `am start` / `simctl openurl` |
 | React Native | `npx react-native run-<platform>` | as above |
 | KMP | run both | as above |
@@ -254,7 +254,7 @@ If mobile-mcp is available and `optional_integrations.mobile_mcp.screenshot_on_s
 
 ### 4d. Pick the right occurrence — `max(tokens)`
 
-`list_occurrences_tokens` (crash) and `apm_group_view.occurrences` (APM) can each return multiple tokens. In shared development workspaces where multiple engineers smoke against the same workspace concurrently, the audit must verify *this build's* synthetic occurrence — not someone else's.
+`list_occurrences_tokens` (crash) and `apm_occurrence` with `selector: list` (APM) can each return multiple tokens. In shared development workspaces where multiple engineers smoke against the same workspace concurrently, the audit must verify *this build's* synthetic occurrence — not someone else's.
 
 The selection rule: sort the returned tokens **lexicographically descending** and take the first (max). ULIDs are time-prefixed, so `max(tokens) ≡ newest`. Aggregate-timestamp fields like `last_occurred_at` are group-level rollups that can lag ingest order; the ULID's embedded base32 timestamp is the authoritative chronology of the occurrence itself.
 
@@ -291,6 +291,16 @@ Full rule catalog with evidence sources per channel is in `references/check-cata
 - **`DISABLED` is not `FAIL`.** A feature turned off at the workspace level (e.g. `user_steps` disabled by dashboard policy) is intentional configuration, not a regression. Surface as `DISABLED` with the source ("workspace policy" or "rule pack"). FAILing on intentional disables produces false-positive release blocks. See `references/check-catalog.md` for detection heuristics.
 - **A single FAIL blocks the release.** MANUAL items do not block automatically but appear at the top of the report.
 - **Channel preference for C1–C7 / S2 / P1 / C9: APM > Bug > Crash.** APM exposes per-request structured data; the bug payload splits logs into typed archives (`network_log`, `user_events`, `instabug_log`); the crash payload bundles everything into one archive that requires disambiguating parsing.
+
+### Input from Phase 2 (static audit)
+
+When the default invocation runs both static + runtime, Phase 2's findings shape Phase 5's rule evaluation. Before evaluating each rule whose evidence depends on a specific SDK module, the runtime audit consults Phase 2's `S-MODULE-*` findings:
+
+- **`S-MODULE-<x> DISABLED`** (module turned off in source) → every dependent runtime rule emits `SKIP` with reason `"module disabled in source (S-MODULE-<x> at <file>:<line>)"`. The cross-link makes the cause traceable without re-deriving it from the empty payload.
+- **`S-MODULE-<x> INFO`** (default-ON, no explicit toggle) → runtime rules run normally; the static finding is the static-side affirmation and the runtime finding is the behavioural confirmation.
+- **`S-MODULE-<x> FAIL`** (module expected per rule pack but pattern absent) → runtime rules still run, but the report flags the static finding at the top so the customer sees the misconfiguration before reading runtime detail.
+
+`--runtime`-only invocations skip this coordination because there is no Phase 2 input. `--static`-only invocations stop after Phase 2; no runtime rules to coordinate with.
 
 ## 6. Report and drift detection
 

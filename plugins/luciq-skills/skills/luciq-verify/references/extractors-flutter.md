@@ -36,7 +36,7 @@ Emits:
 - `S-BUILD-FLUTTER PASS` if `pubspec.yaml` is present at scan root
 - `S-INSTALL-001 PASS` if `luciq_flutter` or `instabug_flutter` declared
 - `S-INSTALL-002` per rule-pack `expected_sdk_version` cross-check (parsed from `pubspec.lock` for the resolved version)
-- `S-INSTALL-004 WARN` if both `luciq_flutter` and `instabug_flutter` are declared
+- `S-INSTALL-004 WARN` if both `luciq_flutter` and `instabug_flutter` are declared — message: `"both Luciq and legacy Instabug packages declared in pubspec.yaml; if you're mid-migration, run luciq-migrate to finish the rename. Long-term coexistence is not supported."`
 
 ## Dart source (`*.dart`)
 
@@ -115,5 +115,5 @@ Flutter SDK exposes the full feature-flag API (verified):
 | `Luciq.start` without `await` | Init call not preceded by `await` on the same / previous line | `WARN` |
 | Init in `main()` after `runApp()` | Init must precede `runApp` to capture early errors | `WARN` |
 | Token in source (vs. read from env / `--dart-define`) | Long string literal as first positional arg to `Luciq.start` | `WARN` masked in report |
-| Both `luciq_flutter` and `instabug_flutter` declared | Both packages in `pubspec.yaml` dependencies | `WARN` migration in-flight |
+| Both `luciq_flutter` and `instabug_flutter` declared | Both packages in `pubspec.yaml` dependencies | `WARN` — run `luciq-migrate` to finish the rename if mid-migration; long-term coexistence is unsupported |
 | Module disabled in release mode source path | `setXEnabled(false)` outside any `kDebugMode` guard | `INFO` surface for review |

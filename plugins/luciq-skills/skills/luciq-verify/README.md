@@ -171,11 +171,11 @@ The skill supports two ways of getting deterministic triggers into your debug bu
 
 - **iOS**: `<App>/DebugOnly/LuciqVerify/LuciqVerifyHarness.swift` with `#if DEBUG` guards
 - **Android**: `app/src/debug/java/<pkg>/luciqverify/` (debug sourceSet only)
-- **Flutter**: `lib/upgrade_verify/` mounted only under `kDebugMode`
+- **Flutter**: `lib/luciq_verify/` mounted only under `kDebugMode`
 - **React Native**: `src/luciq-verify/` gated by `if (__DEV__)`
 - **KMP**: `shared/src/debugMain/` plus thin platform shims
 
-The scaffolded harness exposes a small API (`setTestPersona`, `fireNetworkBurst`, `exerciseFeatureFlags`, `reportBugReport`, `forceCrash`, `forceANR`, `forceUIHang`, `flushNow`) plus a one-button-per-trigger screen reachable via `luciq://verify-harness` in debug builds only.
+The scaffolded harness exposes a small API (`setTestPersona`, `fireNetworkBurst`, `exerciseFeatureFlags`, `reportBugReport`, `forceCrash`, `forceANR`, `forceUIHang`, `flushNow`) plus a one-button-per-trigger screen reachable via `luciq://luciq-verify-harness` in debug builds only.
 
 **Reuse.** Already have a debug menu with crash / hang / bug triggers (e.g. a `DevToolsFragment` or a `CrashLab` / `HangTrigger` / `ErrorTrigger` family)? Declare it instead of scaffolding a parallel one. Your rule pack maps the canonical triggers to your existing methods, and declares **how** each trigger should be invoked.
 
