@@ -55,7 +55,7 @@ Detection heuristics:
 
 | Code | Check | Evidence source |
 | --- | --- | --- |
-| `C0`  | Latest occurrence selected for audit | `list_occurrences_tokens.states_tokens[0]` (newest first). Response also includes `total_occurrences`. |
+| `C0`  | Latest occurrence selected for audit | `max(list_occurrences_tokens.states_tokens)` — lex-max equals ULID-newest because ULIDs are time-prefixed; do not assume API-returned order. Response also includes `total_occurrences`. |
 | `C0b` | Selected occurrence is recent. Source: parsed ULID timestamp (first 10 base32 chars of the token, Crockford's alphabet — see `payload-schemas.md` for the recipe). Thresholds are mode-dependent and rule-pack-overridable via `recency_thresholds: { warn_minutes, fail_minutes }`. | Parsed ULID timestamp |
 | `C0c` | SDK version recorded matches the version under test | `state.fields.sdk_version` (e.g. `"19.6.1"`) |
 | `C0d` | State token returned matches the ULID queried | `state.fields.state_token == <ulid>` — cross-app / cross-mode sanity check |

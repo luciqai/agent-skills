@@ -77,7 +77,7 @@ ULIDs are time-prefixed: the first 10 base32 characters encode the millisecond t
 1. **Lexicographic order matches chronological order.** Plain string comparison gives the same ordering as sorting by generation time.
 2. **`max(tokens)` is the freshest occurrence.** Always. No need to fetch each occurrence's metadata to compare timestamps.
 
-This matters when `list_occurrences_tokens` (crash) or `apm_group_view.occurrences` (APM) returns multiple tokens — common in shared development workspaces where multiple engineers smoke against the same workspace concurrently. The selection rule:
+This matters when `list_occurrences_tokens` (crash) or `apm_occurrence` with `selector: list` (APM) returns multiple tokens — common in shared development workspaces where multiple engineers smoke against the same workspace concurrently. The selection rule:
 
 ```
 # pseudocode

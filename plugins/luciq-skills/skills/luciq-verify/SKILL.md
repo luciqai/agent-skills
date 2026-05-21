@@ -149,8 +149,8 @@ Default path uses platform-native commands:
 
 | Platform | Install | Launch harness |
 | --- | --- | --- |
-| iOS | `xcodebuild -scheme <Debug> -destination 'platform=iOS Simulator,id=<UDID>' install` | `xcrun simctl openurl <UDID> luciq://verify-harness` |
-| Android | `./gradlew :app:installDebug` | `adb shell am start -W -a android.intent.action.VIEW -d "luciq://verify-harness"` |
+| iOS | `xcodebuild -scheme <Debug> -destination 'platform=iOS Simulator,id=<UDID>' install` | `xcrun simctl openurl <UDID> luciq://luciq-verify-harness` |
+| Android | `./gradlew :app:installDebug` | `adb shell am start -W -a android.intent.action.VIEW -d "luciq://luciq-verify-harness"` |
 | Flutter | `flutter install --debug` | platform-specific `am start` / `simctl openurl` |
 | React Native | `npx react-native run-<platform>` | as above |
 | KMP | run both | as above |
@@ -188,7 +188,7 @@ If mobile-mcp is available and `optional_integrations.mobile_mcp.screenshot_on_s
 
 ### 3d. Pick the right occurrence — `max(tokens)`
 
-`list_occurrences_tokens` (crash) and `apm_group_view.occurrences` (APM) can each return multiple tokens. In shared development workspaces where multiple engineers smoke against the same workspace concurrently, the audit must verify *this build's* synthetic occurrence — not someone else's.
+`list_occurrences_tokens` (crash) and `apm_occurrence` with `selector: list` (APM) can each return multiple tokens. In shared development workspaces where multiple engineers smoke against the same workspace concurrently, the audit must verify *this build's* synthetic occurrence — not someone else's.
 
 The selection rule: sort the returned tokens **lexicographically descending** and take the first (max). ULIDs are time-prefixed, so `max(tokens) ≡ newest`. Aggregate-timestamp fields like `last_occurred_at` are group-level rollups that can lag ingest order; the ULID's embedded base32 timestamp is the authoritative chronology of the occurrence itself.
 
