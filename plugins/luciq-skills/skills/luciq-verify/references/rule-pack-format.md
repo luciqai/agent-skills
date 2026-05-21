@@ -125,6 +125,19 @@ experiments:
   min_count: 1
   max_key_length: 70
 
+# Per-feature flags the agent can't infer from telemetry alone.
+# Declare a workspace-level disable here when a feature is off at the dashboard
+# (e.g. user_steps disabled by org policy) — runtime rules dependent on it
+# emit DISABLED with this as the source rather than SKIP "evidence field missing"
+# (which would read as a defect).
+features:
+  user_steps:
+    workspace_disabled: false        # true if turned off at the dashboard
+  session_replay:
+    workspace_disabled: false
+  network_logging:
+    workspace_disabled: false
+
 # PII regex set. Customers extend; the skill ships sensible defaults.
 pii:
   regex:
