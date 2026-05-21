@@ -1,6 +1,6 @@
 ---
-name: luciq-upgrade-verify
-description: Verify a Luciq SDK upgrade end to end before shipping — confirm the customer's custom integration (URL redirection / normalization, masking / redaction callbacks, preserved headers, persona attributes, PII masking, feature flags, experiments, user steps, user attributes) still behaves correctly against a new SDK version. Use whenever the user mentions verifying an SDK upgrade, auditing a Luciq version bump, checking that a new SDK didn't break anything, "is it safe to release", running upgrade verification, smoke-testing the new Luciq SDK, or pastes a build with a freshly bumped Luciq dependency and asks whether to release. Also use when the user describes the kind of manual upgrade QA that the Workday-style upgrade-verification report automates (PII clean, persona attributes set, all 200 responses redacted, top 10 network rows clean, no PII leak in user steps). Scaffolds an upgrade-verify harness into the debug variant, drives it to produce a fresh occurrence, pulls evidence via the Luciq MCP server (APM, bug, and crash channels), applies a customer-specific rule pack against the captured payload, and renders a pass/fail HTML+Markdown report. For first-time SDK installs use luciq-setup; for the rename/upgrade transform itself use luciq-migrate; for production crash investigation use luciq-debug.
+name: luciq-verify
+description: Verify a Luciq SDK upgrade end to end before shipping. Confirms the customer's custom integration (URL redirection, masking / redaction callbacks, preserved headers, persona attributes, PII masking, feature flags, experiments, user steps, user attributes) still behaves correctly against the new SDK version. Use whenever the user mentions verifying an SDK upgrade, auditing a Luciq version bump, "is it safe to release", smoke-testing the new SDK, or pastes a build with a freshly bumped Luciq dependency and asks whether to release. Scaffolds a luciq-verify harness into the debug variant, drives it to produce a fresh occurrence, pulls evidence via the Luciq MCP server (APM, bug, and crash channels), applies a customer-specific rule pack against the captured payload, and renders a pass/fail HTML+Markdown report. For first-time SDK installs use luciq-setup; for the rename/upgrade transform use luciq-migrate; for production crash investigation use luciq-debug.
 ---
 
 # Luciq SDK Upgrade Verification
@@ -25,7 +25,7 @@ If the request fits any of the above, route there and stop — running this skil
 | Artifact | What for | If missing |
 | --- | --- | --- |
 | **Luciq MCP server, authenticated** | The entire audit is grounded in what the Luciq MCP exposes — `list_applications`, `list_crashes`, `list_bugs`, `list_occurrences_tokens`, `get_occurrence_details`, `bug_details`, `crash_patterns`, and (when GA) `apm_*`. Without it the skill has no oracle to verify against. | STOP at Phase 2 pre-flight. Route the user to `luciq-setup` step 7 or to https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/luciq-mcp-server/setup-by-ide. Do not attempt static-analysis-only "verification" — it would silently pass real regressions. |
-| **A debug-variant build with the new SDK + the upgrade-verify harness** | Produces a deterministic occurrence to audit | Run Phase 1 below — the skill generates the harness (scaffold mode) or validates the customer's existing dev-tools surface (reuse mode). |
+| **A debug-variant build with the new SDK + the luciq-verify harness** | Produces a deterministic occurrence to audit | Run Phase 1 below — the skill generates the harness (scaffold mode) or validates the customer's existing dev-tools surface (reuse mode). |
 | **A device, simulator, or emulator** | Executes the build that produces the occurrence | Stop; ask the user to boot one. Do not spawn one without confirmation. |
 
 The skill itself runs locally and pulls cloud-side telemetry — but cannot synthesize an occurrence without something running the build. This is not optional.
@@ -97,14 +97,14 @@ Reuse `luciq-setup`'s platform-detection rules verbatim (first match wins on roo
 Two modes, picked by the customer's `harness.mode` in `luciq-verify.yaml`. Default is `scaffold`. Read `references/harness-contract.md` for the full spec of both.
 
 **Scaffold mode** (default — `harness.mode: scaffold`)
-The skill generates `UpgradeVerifyHarness.<ext>` directly inside the customer's debug variant. Per-platform file paths, the required API surface, the marker convention (`current_view == "UpgradeVerifyHarness"`), and debug-only gating rules are in `references/harness-contract.md`.
+The skill generates `LuciqVerifyHarness.<ext>` directly inside the customer's debug variant. Per-platform file paths, the required API surface, the marker convention (`current_view == "LuciqVerifyHarness"`), and debug-only gating rules are in `references/harness-contract.md`.
 
 Why generated, not packaged: per-customer customization (which redaction tokens to fire, which personas to test) makes a single binary library a poor fit; the generated source is small (≈ 100–200 lines per platform) and can be regenerated by the skill on subsequent runs.
 
 Show diffs before applying. Never touch release / production source sets, manifests, Info.plists, or entry points — a release-variant harness with a public deep link is a remote-crash vector.
 
 **Reuse mode** (`harness.mode: reuse`)
-For projects that already have a debug menu with crash / hang / bug triggers (e.g. Workday's `DeveloperToolsFragment`, the `NotDemoApp`'s `CrashLab` / `HangTrigger` / `ErrorTrigger` family), the skill drives the existing surface instead of generating a parallel one. The rule pack declares the marker view, an optional deep link / activity, and a trigger map (e.g. `forceCrash: "CrashTrigger.forceUnwrapNil"`).
+For projects that already have a debug menu with crash / hang / bug triggers (e.g. a `DevToolsFragment` or a `CrashLab` / `HangTrigger` / `ErrorTrigger` family), the skill drives the existing surface instead of generating a parallel one. The rule pack declares the marker view, an optional deep link / activity, and a trigger map (e.g. `forceCrash: "CrashTrigger.forceUnwrapNil"`).
 
 Before the smoke runs, the skill enforces the reuse-mode invariants from `references/harness-contract.md`:
 - `marker_view` is non-empty and has at least one prior occurrence in the dashboard
@@ -115,7 +115,7 @@ Unmapped triggers become no-ops in the smoke and the rules that needed them SKIP
 
 ### 1c. Scaffold the rule pack
 
-Write `luciq-verify.yaml` at the repo root with the base pack inlined plus TODO stubs for customer-specific rules. Schema, base pack defaults, and the worked Workday-style example are in `references/rule-pack-format.md`. The first run can leave all customer-specific rules commented out; bootstrap inference (Phase 1d) and drift detection (Phase 5b) fill them in over time.
+Write `luciq-verify.yaml` at the repo root with the base pack inlined plus TODO stubs for customer-specific rules. Schema, base pack defaults, and a worked example are in `references/rule-pack-format.md`. The first run can leave all customer-specific rules commented out; bootstrap inference (Phase 1d) and drift detection (Phase 5b) fill them in over time.
 
 ### 1d. Bootstrap rule inference (if any telemetry exists)
 
@@ -149,8 +149,8 @@ Default path uses platform-native commands:
 
 | Platform | Install | Launch harness |
 | --- | --- | --- |
-| iOS | `xcodebuild -scheme <Debug> -destination 'platform=iOS Simulator,id=<UDID>' install` | `xcrun simctl openurl <UDID> luciq://upgrade-verify-harness` |
-| Android | `./gradlew :app:installDebug` | `adb shell am start -W -a android.intent.action.VIEW -d "luciq://upgrade-verify-harness"` |
+| iOS | `xcodebuild -scheme <Debug> -destination 'platform=iOS Simulator,id=<UDID>' install` | `xcrun simctl openurl <UDID> luciq://luciq-verify-harness` |
+| Android | `./gradlew :app:installDebug` | `adb shell am start -W -a android.intent.action.VIEW -d "luciq://luciq-verify-harness"` |
 | Flutter | `flutter install --debug` | platform-specific `am start` / `simctl openurl` |
 | React Native | `npx react-native run-<platform>` | as above |
 | KMP | run both | as above |
@@ -164,12 +164,12 @@ If mobile-mcp is available (`optional_integrations.mobile_mcp.enabled: auto` or 
 Order matters: attributes are set before network traffic so the audit sees them associated with the right session. The bug report is created before the crash so the audit gets a clean bug-channel sample alongside the crash sample.
 
 ```
-1. UpgradeVerifyHarness.setTestPersona("<persona-key-from-rule-pack>")
-2. UpgradeVerifyHarness.fireNetworkBurst(n=<count-from-rule-pack>)
-3. UpgradeVerifyHarness.exerciseFeatureFlags()       # iterates declared flags / experiments
-4. UpgradeVerifyHarness.reportBugReport()            # produces a bug record with SPLIT log archives — cleanest C1–C7 evidence channel after APM
-5. UpgradeVerifyHarness.flushNow()                   # synchronously ship pending telemetry — removes the timer race
-6. UpgradeVerifyHarness.forceCrash()                 # produces the auditable crash with current_view=UpgradeVerifyHarness
+1. LuciqVerifyHarness.setTestPersona("<persona-key-from-rule-pack>")
+2. LuciqVerifyHarness.fireNetworkBurst(n=<count-from-rule-pack>)
+3. LuciqVerifyHarness.exerciseFeatureFlags()       # iterates declared flags / experiments
+4. LuciqVerifyHarness.reportBugReport()            # produces a bug record with SPLIT log archives — cleanest C1–C7 evidence channel after APM
+5. LuciqVerifyHarness.flushNow()                   # synchronously ship pending telemetry — removes the timer race
+6. LuciqVerifyHarness.forceCrash()                 # produces the auditable crash with current_view=LuciqVerifyHarness
 ```
 
 In **scaffold mode**, the scaffolded harness UI fires these in sequence as soon as the deep link opens it — the skill just opens the link and waits. In **reuse mode**, the skill invokes each trigger using the `invoke_via` strategy declared in the rule pack (`deep_link_param` / `intent_extra` / `tap_by_label` / `manual`). `tap_by_label` requires mobile-mcp; absent mobile-mcp, it degrades to `manual` (the skill prints the trigger sequence and waits for the user to tap). See `references/harness-contract.md` for the strategy decision table.
@@ -186,6 +186,34 @@ Poll every 5s for up to 90s per channel. If any channel lands, proceed with that
 
 If mobile-mcp is available and `optional_integrations.mobile_mcp.screenshot_on_smoke_timeout: true`, capture a screenshot of the device at the moment of timeout and embed it in the report — useful diagnostic for "no occurrence landed" (was the screen blank? wrong activity? crash dialog overlay?). Similarly `screenshot_on_smoke_end: true` captures a screenshot when the smoke completes successfully, as proof of "harness was reachable and the build was installed correctly."
 
+### 3d. Pick the right occurrence — `max(tokens)`
+
+`list_occurrences_tokens` (crash) and `apm_occurrence` with `selector: list` (APM) can each return multiple tokens. In shared development workspaces where multiple engineers smoke against the same workspace concurrently, the audit must verify *this build's* synthetic occurrence — not someone else's.
+
+The selection rule: sort the returned tokens **lexicographically descending** and take the first (max). ULIDs are time-prefixed, so `max(tokens) ≡ newest`. Aggregate-timestamp fields like `last_occurred_at` are group-level rollups that can lag ingest order; the ULID's embedded base32 timestamp is the authoritative chronology of the occurrence itself.
+
+```
+# pseudocode
+tokens   = list_occurrences_tokens(...).tokens   # ordered however the API returns
+selected = max(tokens)                            # lex-max == ULID-newest
+detail   = get_occurrence_details(token=selected, ...)
+```
+
+Bugs are addressed by integer `number`, not ULID, so this rule doesn't apply on the bug channel. Detail: `references/payload-schemas.md` ("ULID structure and `max(tokens)` selection").
+
+### 3e. Verify freshness — parse the ULID timestamp
+
+Once the freshest occurrence is selected, verify it's *actually* fresh enough to represent this build's behavior. Parse the ULID's embedded timestamp (first 10 base32 chars, Crockford's alphabet — full recipe in `references/payload-schemas.md`) and compare against mode-dependent thresholds (`C0b` in `references/check-catalog.md`):
+
+| Mode | WARN if older than | FAIL if older than |
+| --- | --- | --- |
+| `synthetic` (default) | 5 min | 30 min |
+| `prod-canary` | 12h | 24h |
+
+Customers running reuse-mode against an existing dev-tools surface can override per rule pack (`recency_thresholds: { warn_minutes, fail_minutes }`) — engineers often run the in-house trigger sequence minutes-to-hours before invoking the audit, so the synthetic defaults can be too tight.
+
+Why parse the ULID rather than read `state.fields.reported_at`: the ULID timestamp is set at occurrence creation and is what the audit identifies the record by; `reported_at` is a separate field whose precision and timezone representation can vary. Parsing the ULID is deterministic.
+
 ## 4. Audit
 
 The audit runs every rule in the merged rule pack (base + customer) against the captured payload. Each rule produces exactly one row in the report with a status, evidence string, and (on failure) a remediation pointer.
@@ -194,6 +222,7 @@ Full rule catalog with evidence sources per channel is in `references/check-cata
 
 - **Cite the MCP tool result that produced each piece of evidence.** No paraphrasing, no fabrication. If the evidence comes from a presigned-URL archive, cite the archive name and the parsed line range.
 - **Empty evidence is never PASS.** A missing field or empty array is SKIP with reason "evidence field missing," not silent pass. Auto-passing missing data masks integration regressions — exactly the kind of failure mode this skill exists to catch.
+- **`DISABLED` is not `FAIL`.** A feature turned off at the workspace level (e.g. `user_steps` disabled by dashboard policy) is intentional configuration, not a regression. Surface as `DISABLED` with the source ("workspace policy" or "rule pack"). FAILing on intentional disables produces false-positive release blocks. See `references/check-catalog.md` for detection heuristics.
 - **A single FAIL blocks the release.** MANUAL items do not block automatically but appear at the top of the report.
 - **Channel preference for C1–C7 / S2 / P1 / C9: APM > Bug > Crash.** APM exposes per-request structured data; the bug payload splits logs into typed archives (`network_log`, `user_events`, `instabug_log`); the crash payload bundles everything into one archive that requires disambiguating parsing.
 
@@ -202,8 +231,8 @@ Full rule catalog with evidence sources per channel is in `references/check-cata
 ### 5a. Render
 
 Two artifacts:
-- `luciq-upgrade-verify-report.html` — colored status pills, expandable evidence rows, network audit table, occurrences list. Format matches the customer-screenshot style.
-- `luciq-upgrade-verify-report.md` — same content, plain Markdown, for PR comments and CI logs.
+- `luciq-verify-report.html` — colored status pills, expandable evidence rows, network audit table, occurrences list. Format matches the customer-screenshot style.
+- `luciq-verify-report.md` — same content, plain Markdown, for PR comments and CI logs.
 
 Both include: summary bar (counts per status); test environment block (slug, mode, app version, backend host, bundle ID, SDK version); selected occurrence block (type, number, ULID, reported timestamp, current_view); APM coverage block when available; verification checks table (every rule, status, evidence, source channel); network log audit table (full table for successful redaction; failed rows excluded with stated count); occurrences list (crash + bug IDs in the smoke window); user attributes; experiments.
 
@@ -270,6 +299,7 @@ These are the failure modes that produce a misleading "PASS" report. If you catc
 
 **Empty evidence and false positives**
 - "MCP returned empty for the network log — I'll mark the redaction checks PASS because nothing is there to leak." Empty evidence is never PASS. Mark SKIP with the reason and tell the user the smoke probably didn't generate network traffic.
+- "The payload has no `user_steps` key at all — I'll FAIL the user-steps checks." Could be workspace policy (`user_steps` disabled by dashboard). Mark `DISABLED` with reason `"workspace policy: user_steps disabled"` rather than FAIL. Same logic for any feature whose entire payload key is absent rather than empty — absence-of-key often means "feature off at workspace level," empty-array means "feature on, no data captured this run."
 - "The non-2xx response bodies are not redacted but C3b says response bodies should be redacted." C3b excludes failed responses by design — error bodies are intentionally captured for diagnostics. Re-read the rule.
 - "`state.fields.user_attributes` is `{}` so the customer's integration is broken." Maybe — but `{}` could also mean the harness didn't call `setTestPersona()`, or the customer's app doesn't set user attributes for this code path. FAIL only when `attributes.user.required` is non-empty AND a required key is missing AND the harness was supposed to set it.
 - "I see strings that look like emails in user steps — I'll auto-add an email regex to the PII rule pack." PII regexes require user approval. Auto-additions create permanent false alarms.

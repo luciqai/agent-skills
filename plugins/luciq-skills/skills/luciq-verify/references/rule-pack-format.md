@@ -42,7 +42,7 @@ env:
   dashboard_mode: "staging"                 # alpha | beta | staging | qa | development | production
 
 # Harness configuration. Two modes:
-#   scaffold (default) — the skill generates UpgradeVerifyHarness into the debug variant.
+#   scaffold (default) — the skill generates LuciqVerifyHarness into the debug variant.
 #   reuse              — the skill drives an existing dev-tools surface in your app.
 # See references/harness-contract.md for the full spec of both modes.
 harness:
@@ -54,7 +54,7 @@ harness:
   # invoke_via options: deep_link_param | intent_extra | tap_by_label | manual
   # See references/harness-contract.md "Driving the smoke in reuse mode" for the full spec.
   # reused_surface:
-  #   marker_view: "DeveloperToolsFragment" # current_view value on occurrences from this screen
+  #   marker_view: "DevToolsFragment" # current_view value on occurrences from this screen
   #   deep_link: "myapp://devtools"         # optional — for hands-free smoke
   #   triggers:
   #     forceCrash:
@@ -145,26 +145,26 @@ overrides:
 
 ## Worked example
 
-The Workday-style report in the customer screenshots maps to these rule-pack settings:
+A worked example for a project that uses custom URL normalization, header preservation, body redaction, and persona attributes:
 
 ```yaml
 integration:
-  app_slug: "workday"
+  app_slug: "your-app-slug"
   bundle_ids:
-    debug:   "com.workday.workdroidapp.debug"
-    release: "com.workday.workdroidapp"
+    debug:   "com.your-org.your-app.debug"
+    release: "com.your-org.your-app"
 
 env:
   backend_hosts_allow:
-    - "wd-host.com"
+    - "api.your-app.com"
   dashboard_mode: "alpha"
 
-# Workday already has DeveloperToolsFragment with crash triggers — reuse that
-# surface instead of scaffolding a parallel UpgradeVerifyHarness.
+# Project already has DevToolsFragment with crash triggers — reuse that
+# surface instead of scaffolding a parallel LuciqVerifyHarness.
 harness:
   mode: "reuse"
   reused_surface:
-    marker_view: "DeveloperToolsFragment"
+    marker_view: "DevToolsFragment"
     triggers:
       forceCrash:        "CrashTrigger.forceCrash"
       reportBugReport:   "BugTrigger.reportFromDevTools"
@@ -173,36 +173,36 @@ harness:
       flushNow:          "LuciqSDK.flushNow"
 
 redaction:
-  request_body_token:  "WD-REDACTED"
-  response_body_token: "WD-REDACTED"
+  request_body_token:  "<REDACTED>"
+  response_body_token: "<REDACTED>"
   exclude_status:      [non_2xx]
   sensitive_headers:   ["Authorization", "Cookie", "Set-Cookie"]
 
 network:
   url_allow_hosts:
-    - "wd-host.com"
+    - "api.your-app.com"
   url_exclude_hosts:
     - "api.instabug.com"
     - "*.luciq.com"
   required_headers_on_all_requests:
-    - "X-WD-Hostname"
+    - "X-Tenant"
   attachment_path_redacted: true
 
 attributes:
   user:
     required:
       - "tenant"
-      - "wd-locale"
+      - "your-app-locale"
       - "install-source"
     required_one_of_pattern:
-      - "wd-*-persona"
+      - "your-app-*-persona"
 
 experiments:
   min_count: 1
   max_key_length: 70
 ```
 
-This produces the 22-PASS report shown in the screenshots: `C1` confirms 109/109 URLs match `wd-host.com`, `C2` confirms `X-WD-Hostname` on every request, `C3a/C3b` confirm `WD-REDACTED` on bodies (with 16 non-200s excluded), `A4` confirms five `wd-*-persona` keys, and so on.
+This produces an all-green report: `C1` confirms every outgoing URL matches `api.your-app.com`, `C2` confirms `X-Tenant` is present on every request, `C3a/C3b` confirm bodies are replaced with `<REDACTED>` (non-200 responses are intentionally excluded — see C3b semantics), `A4` confirms the declared persona attribute pattern, and so on.
 
 ## Base pack — what the skill ships
 
@@ -227,7 +227,7 @@ If `list_crashes` returns ≥ 10 occurrences from the **baseline** (pre-upgrade)
 
 3. **URL hosts** — observe the host distribution. Hosts above a threshold become `url_allow_hosts` candidates.
 
-4. **Attribute keys** — observe the key set across occurrences. Keys present in 100% of sessions are proposed as `attributes.user.required`. Keys matching a clustering pattern (`wd-*-persona`, `tenant-*`) are proposed as `required_one_of_pattern`.
+4. **Attribute keys** — observe the key set across occurrences. Keys present in 100% of sessions are proposed as `attributes.user.required`. Keys matching a clustering pattern (`your-app-*-persona`, `tenant-*`) are proposed as `required_one_of_pattern`.
 
 5. **Experiment / flag count band** — observe min/max counts across occurrences; propose `min_count` at the floor.
 

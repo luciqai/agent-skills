@@ -29,12 +29,18 @@ Eight statuses; do not invent new ones. Match the rendered report exactly.
 | `INFO` | Informational signal, not an assertion |
 | `SKIP` | Rule could not run — surfaces the reason (e.g. "evidence field missing", "apm tools unavailable") |
 | `MANUAL` | Rule requires human dashboard verification — never auto-PASS |
-| `DISABLED` | Rule is in the rule pack but explicitly turned off — surfaces why |
+| `DISABLED` | Rule is technically applicable but the feature it tests against is intentionally off. Two sources: (a) rule pack explicitly turns the rule off, or (b) the dashboard workspace has the feature toggled off (e.g. `user_steps` disabled at workspace level). The audit surfaces *why*. |
 | `N/A` | Rule does not apply to this platform / SDK version |
 
 A single `FAIL` blocks the release. `MANUAL` items do not block automatically but appear at the top of the report.
 
 **Empty evidence is never PASS.** If the audit cannot find the field path it expects, the result is SKIP with reason "evidence field missing." Marking PASS-by-default would silently mask integration regressions.
+
+**Distinguishing `DISABLED` from `FAIL`.** A feature toggled off at the workspace level is *intentional configuration*, not a regression. The audit reports `DISABLED` (with the source — "rule pack" or "workspace policy") and continues. If the audit instead emitted `FAIL`, every workspace that disabled `user_steps`, network logging, or any optional channel would produce a false-positive release block.
+
+Detection heuristics:
+- **Rule-pack source**: rule pack has `disabled: true` on the rule, or omits a required capability declaration.
+- **Workspace source**: the SDK feature's evidence field is structurally present in the payload's schema but the captured data is empty *because the dashboard says it should be* — e.g. payload contains no `user_steps` key at all (vs. an empty array). When detected, mark `DISABLED` with reason `"workspace policy: <feature> disabled"` rather than SKIP-empty-evidence.
 
 ## Environment (`E*`)
 
@@ -49,10 +55,27 @@ A single `FAIL` blocks the release. `MANUAL` items do not block automatically bu
 
 | Code | Check | Evidence source |
 | --- | --- | --- |
-| `C0`  | Latest occurrence selected for audit | `list_occurrences_tokens.states_tokens[0]` (newest first). Response also includes `total_occurrences`. |
-| `C0b` | Selected occurrence is recent (< 5 min for synthetic mode; < 24h for prod-canary) | `state.fields.reported_at` (ISO 8601) |
+| `C0`  | Latest occurrence selected for audit | `max(list_occurrences_tokens.states_tokens)` — lex-max equals ULID-newest because ULIDs are time-prefixed; do not assume API-returned order. Response also includes `total_occurrences`. |
+| `C0b` | Selected occurrence is recent. Source: parsed ULID timestamp (first 10 base32 chars of the token, Crockford's alphabet — see `payload-schemas.md` for the recipe). Thresholds are mode-dependent and rule-pack-overridable via `recency_thresholds: { warn_minutes, fail_minutes }`. | Parsed ULID timestamp |
 | `C0c` | SDK version recorded matches the version under test | `state.fields.sdk_version` (e.g. `"19.6.1"`) |
 | `C0d` | State token returned matches the ULID queried | `state.fields.state_token == <ulid>` — cross-app / cross-mode sanity check |
+
+### `C0b` recency thresholds (defaults)
+
+| Mode | WARN if older than | FAIL if older than | Rationale |
+| --- | --- | --- | --- |
+| `synthetic` | 5 min | 30 min | Smoke just ran; freshest occurrence should be brand new. |
+| `prod-canary` | 12h | 24h | Audits real-user telemetry; lenient by design. |
+
+Customers can override per environment via the rule pack:
+
+```yaml
+recency_thresholds:
+  warn_minutes: 120        # e.g. 2h — reuse-mode workflows where engineers
+  fail_minutes: 1440       #         smoke ahead of running the audit
+```
+
+Useful for reuse-mode setups that drive an existing in-house dev-tools surface — engineers often run the trigger sequence minutes-to-hours before invoking the audit, so the synthetic-mode defaults are too tight.
 
 ## Network capture (`C1`–`C7`)
 
@@ -79,7 +102,7 @@ Channel preference: **APM > Bug > Crash**. The skill picks the first channel tha
 | --- | --- | --- | --- |
 | `"*****"` | `headers.<sensitive-header>` | SDK auto-redacted a sensitive header value | C4 PASS — the SDK did the right thing |
 | `"Request body has not been logged because it exceeds the maximum size of 10240 bytes"` | `request` field | SDK truncated the body before the customer's redaction callback ran | C3a INFO (not PASS) — body bypassed customer redaction; raise visibility but don't FAIL |
-| `<the customer's redaction token>` (e.g. `"WD-REDACTED"`) | `request` / `response` field | Customer's redaction callback ran and replaced the body | C3a / C3b PASS |
+| `<the customer's redaction token>` (e.g. `"<REDACTED>"`) | `request` / `response` field | Customer's redaction callback ran and replaced the body | C3a / C3b PASS |
 
 **`C7` (no SDK self-traffic) needs an exclude list**: outbound Luciq SDK requests to `api.instabug.com/api/sdk/v3/*` DO appear in the captured network log on this branch — the SDK does not self-filter. The customer's rule pack should specify `network.url_exclude_hosts` (e.g. `["api.instabug.com", "*.luciq.com"]`) for C7 to evaluate cleanly. Without an exclude list, C7 effectively can't PASS on a build that emits any SDK telemetry.
 
@@ -104,7 +127,7 @@ These confirm the smoke actually ran. They SKIP in tier T1 (telemetry-only mode)
 
 | Code | Check | Evidence source |
 | --- | --- | --- |
-| `S1` | Harness marker present (`current_view == "UpgradeVerifyHarness"`) | `state.fields.current_view` |
+| `S1` | Harness marker present (`current_view == "LuciqVerifyHarness"`) | `state.fields.current_view` |
 | `S2` | User steps / breadcrumbs captured at expected threshold | Bug path: `state.logs.user_events.url` — dedicated breadcrumbs archive. Crash path: inside `state.logs.compressed_logs` archive (fetch + parse). SKIP if archive `is_empty_array: true` |
 
 ## PII (`P*`)

@@ -70,6 +70,50 @@ Verified verbatim from the MCP server source (`feat/APM-network` branch). Tool n
 
 Hold the full identifier end-to-end on whichever channel; partial identifiers cross-contaminate.
 
+### ULID structure and `max(tokens)` selection
+
+ULIDs are time-prefixed: the first 10 base32 characters encode the millisecond timestamp at generation, the trailing 16 are random. Two consequences:
+
+1. **Lexicographic order matches chronological order.** Plain string comparison gives the same ordering as sorting by generation time.
+2. **`max(tokens)` is the freshest occurrence.** Always. No need to fetch each occurrence's metadata to compare timestamps.
+
+This matters when `list_occurrences_tokens` (crash) or `apm_occurrence` with `selector: list` (APM) returns multiple tokens — common in shared development workspaces where multiple engineers smoke against the same workspace concurrently. The selection rule:
+
+```
+# pseudocode
+tokens   = list_occurrences_tokens(...).tokens   # ordered however the API returns
+selected = max(tokens)                            # lex-max == ULID-newest
+detail   = get_occurrence_details(token=selected, ...)
+```
+
+Prefer this over aggregate-timestamp fields (`last_occurred_at`, `first_occurred_at`) — those are denormalized group-level rollups that can lag ingest order. The ULID's embedded timestamp is the authoritative chronology of the occurrence itself.
+
+Bugs are addressed by integer `number`, not ULID; the rule doesn't apply on the bug channel.
+
+### Parsing the ULID timestamp
+
+The first 10 base32 characters encode milliseconds since the Unix epoch. Crockford's base32 alphabet — `0123456789ABCDEFGHJKMNPQRSTVWXYZ` (no I, L, O, U) — is the canonical encoding; ULIDs are case-insensitive in practice but normalize to uppercase before parsing.
+
+```
+# pseudocode
+CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+
+def ulid_timestamp_ms(ulid):
+    ms = 0
+    for c in ulid[:10].upper():
+        ms = ms * 32 + CROCKFORD.index(c)
+    return ms                                # milliseconds since 1970-01-01 UTC
+
+age_seconds = (now_ms() - ulid_timestamp_ms(token)) / 1000
+```
+
+Two reasons to parse the ULID timestamp directly rather than relying on `state.fields.reported_at`:
+
+1. **Authoritative source.** `reported_at` is a separate field that depends on when the SDK assembled the report; the ULID is set at occurrence creation and is what the audit identifies the record by.
+2. **No format ambiguity.** `reported_at` is an ISO-8601 string that varies in precision and timezone representation; ULID parsing is deterministic.
+
+This is the input to the recency check (`C0b` in `check-catalog.md`).
+
 ### Mode enum (every per-app tool)
 
 ```
@@ -124,7 +168,7 @@ Verified live against four iOS occurrences (one CRASH, one NON_FATAL, one FATAL_
       screen_size,              # "402x874"
       city, country,            # geo
       reported_at,              # ISO 8601, e.g. "2026-05-12T03:29:59.000Z"
-      bundle_id,                # e.g. "test.NotDemoApp"
+      bundle_id,                # e.g. "com.example.your-app.debug"
       email,                    # user identity; "" when not set
       memory,                   # "22.0/22.0 MB" — string, not structured
       storage,                  # "186.341/471.482 GB" — string
@@ -298,6 +342,8 @@ Verified live against fetched archives. The `.txt` file extension is misleading 
 
 `get_occurrence_details` archive URLs return **base64-encoded zlib-compressed JSON**. The first bytes are ASCII (the base64 alphabet), starting with `eJzt` / `eJys` / similar — the base64 prefix for zlib's `0x78 0x9C` magic header. Decode pipeline:
 
+**Python (in-process):**
+
 ```python
 import base64, zlib, json
 raw = open(downloaded_file, 'rb').read().strip()
@@ -305,6 +351,18 @@ decoded = base64.b64decode(raw)        # base64 → bytes
 inflated = zlib.decompress(decoded)    # zlib → bytes
 data = json.loads(inflated)            # bytes → object
 ```
+
+**Shell (fetch + decode in one pipe, agent-friendly):**
+
+```bash
+# Presigned URL is single-use; download to a local file first, then decode
+curl -s "$PRESIGNED_URL" -o logs.txt
+cat logs.txt | tr -d '\n' | base64 -d \
+  | python3 -c "import sys,zlib; sys.stdout.buffer.write(zlib.decompress(sys.stdin.buffer.read()))" \
+  > logs.json
+```
+
+`tr -d '\n'` strips line breaks that some servers introduce in base64 payloads. The trailing `> logs.json` writes the decompressed bytes to disk as JSON, ready for `jq` / `python -m json.tool` / further analysis.
 
 The decompressed JSON is an **object** (not an array), with sub-archives keyed by name:
 
@@ -343,7 +401,7 @@ So the crash-channel `compressed_logs` is the bundled equivalent of the bug-chan
 
 **Field names** in the actual payload are `request` and `response` (not `request_body` / `response_body`). Audit rules that target these fields must use the actual names.
 
-**SDK auto-redaction sentinel**: the Luciq SDK automatically replaces sensitive header values with `*****` before logging. So `headers.Authorization == "*****"` means "captured, redacted by SDK." A customer-defined redaction (e.g. `WD-REDACTED`) would appear in `request` / `response` bodies, NOT in headers.
+**SDK auto-redaction sentinel**: the Luciq SDK automatically replaces sensitive header values with `*****` before logging. So `headers.Authorization == "*****"` means "captured, redacted by SDK." A customer-defined redaction (e.g. `<REDACTED>`) would appear in `request` / `response` bodies, NOT in headers.
 
 **SDK size-truncation marker**: requests with bodies > 10240 bytes have their `request` field replaced with the literal string `"Request body has not been logged because it exceeds the maximum size of 10240 bytes"`. This is NOT the customer's redaction token — it means the SDK's size limit hit BEFORE the customer's redaction callback ran. The audit must distinguish: matching this string is INFO ("body bypassed customer redaction due to size"), not PASS ("redacted") and not FAIL ("leak").
 

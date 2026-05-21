@@ -1,4 +1,4 @@
-# luciq-upgrade-verify
+# luciq-verify
 
 A Claude Code / Cursor skill that verifies a Luciq mobile SDK upgrade end-to-end **before** you ship — by smoking your debug build, pulling the resulting telemetry, and auditing it against your custom integration's contract.
 
@@ -10,7 +10,7 @@ If you've ever upgraded an SDK and asked "did our redaction callbacks still fire
 
 When you bump the Luciq SDK version, several things can silently break:
 
-- A redaction callback's contract changes — your "replace body with `WD-REDACTED`" hook compiles but no longer fires.
+- A redaction callback's contract changes — your "replace body with `<REDACTED>`" hook compiles but no longer fires.
 - A new HTTP client (Ktor / OkHttp release) isn't intercepted — that traffic now ships **unredacted**.
 - The SDK adds new auto-instrumentation that captures TextField contents — PII suddenly appears in user steps even though your code didn't change.
 - An attribute key gets renamed (`persona` → `user_persona`) — your 5 persona tags stop reporting.
@@ -38,7 +38,7 @@ The audit verifies (configurable per customer via `luciq-verify.yaml`):
 sequenceDiagram
     autonumber
     participant Dev as Developer / CI
-    participant Skill as luciq-upgrade-verify skill
+    participant Skill as luciq-verify skill
     participant Device as Device / Simulator
     participant App as Debug build (new SDK)
     participant Cloud as Luciq cloud
@@ -136,22 +136,22 @@ The skill supports two ways of getting deterministic triggers into your debug bu
 
 **Scaffold (default).** The skill writes a small harness directly into your debug variant — *not* a published package. Per platform:
 
-- **iOS**: `<App>/DebugOnly/UpgradeVerify/UpgradeVerifyHarness.swift` with `#if DEBUG` guards
-- **Android**: `app/src/debug/java/<pkg>/upgradeverify/` (debug sourceSet only)
-- **Flutter**: `lib/upgrade_verify/` mounted only under `kDebugMode`
-- **React Native**: `src/upgrade-verify/` gated by `if (__DEV__)`
+- **iOS**: `<App>/DebugOnly/LuciqVerify/LuciqVerifyHarness.swift` with `#if DEBUG` guards
+- **Android**: `app/src/debug/java/<pkg>/luciqverify/` (debug sourceSet only)
+- **Flutter**: `lib/luciq_verify/` mounted only under `kDebugMode`
+- **React Native**: `src/luciq-verify/` gated by `if (__DEV__)`
 - **KMP**: `shared/src/debugMain/` plus thin platform shims
 
-The scaffolded harness exposes a small API (`setTestPersona`, `fireNetworkBurst`, `exerciseFeatureFlags`, `reportBugReport`, `forceCrash`, `forceANR`, `forceUIHang`, `flushNow`) plus a one-button-per-trigger screen reachable via `luciq://upgrade-verify-harness` in debug builds only.
+The scaffolded harness exposes a small API (`setTestPersona`, `fireNetworkBurst`, `exerciseFeatureFlags`, `reportBugReport`, `forceCrash`, `forceANR`, `forceUIHang`, `flushNow`) plus a one-button-per-trigger screen reachable via `luciq://luciq-verify-harness` in debug builds only.
 
-**Reuse.** Already have a debug menu with crash / hang / bug triggers (Workday's `DeveloperToolsFragment`, a `CrashLab` / `HangTrigger` / `ErrorTrigger` family, etc.)? Declare it instead of scaffolding a parallel one. Your rule pack maps the canonical triggers to your existing methods, and declares **how** each trigger should be invoked.
+**Reuse.** Already have a debug menu with crash / hang / bug triggers (e.g. a `DevToolsFragment` or a `CrashLab` / `HangTrigger` / `ErrorTrigger` family)? Declare it instead of scaffolding a parallel one. Your rule pack maps the canonical triggers to your existing methods, and declares **how** each trigger should be invoked.
 
 Four invocation strategies, picked per trigger by `invoke_via`:
 
 ```mermaid
 flowchart TD
     Trig[Canonical trigger<br/>e.g. forceCrash] --> Choice{invoke_via?}
-    Choice -->|deep_link_param| DL["URL parameter<br/>workday://devtools?trigger=forceCrash<br/><br/>Cleanest. Most modern dev menus."]
+    Choice -->|deep_link_param| DL["URL parameter<br/>yourapp://devtools?trigger=forceCrash<br/><br/>Cleanest. Most modern dev menus."]
     Choice -->|intent_extra| IE["Android intent extra<br/>am start ... --es trigger forceCrash<br/><br/>Common in older Android dev menus."]
     Choice -->|tap_by_label| TBL["mobile-mcp reads accessibility tree,<br/>finds button by label, taps it<br/><br/>Optional, requires mobile-mcp.<br/>Best for legacy dev menus."]
     Choice -->|manual| MAN["Skill prints sequence, user taps<br/><br/>Always available fallback."]
@@ -161,7 +161,7 @@ flowchart TD
 harness:
   mode: reuse
   reused_surface:
-    marker_view: "DeveloperToolsFragment"        # what current_view is on occurrences from this screen
+    marker_view: "DevToolsFragment"        # what current_view is on occurrences from this screen
     deep_link: "myapp://devtools"                # optional, for hands-free smoke
     triggers:
       # Shorthand → invoke_via: manual
@@ -205,7 +205,7 @@ flowchart LR
         M[mobile-mcp server<br/>github.com/mobile-next/mobile-mcp]
     end
 
-    L --> Skill[luciq-upgrade-verify]
+    L --> Skill[luciq-verify]
     B --> Skill
     D --> Skill
     M -.optional.-> Skill
@@ -239,7 +239,7 @@ flowchart TD
     Q2 -->|No| T0[Tier T0 — empty<br/>Run setup, then ask user<br/>to produce one occurrence<br/>and re-invoke]
     Q2 -->|Yes| T1[Tier T1 — telemetry only<br/>Audit organic occurrence<br/>S* synthetic rules SKIP<br/>C0b recency becomes WARN]
     Q3 -->|No| T2[Tier T2 — harness only<br/>Deterministic audit against<br/>base rule pack only<br/>A* customer rules SKIP]
-    Q3 -->|Yes| T3[Tier T3 — full<br/>Deterministic audit with<br/>customer-specific rule pack<br/>Workday-style end state]
+    Q3 -->|Yes| T3[Tier T3 — full<br/>Deterministic audit with<br/>customer-specific rule pack<br/>Full end state]
 
     T0 --> Out
     T1 --> Out
@@ -266,7 +266,7 @@ What happens on first run:
 
 1. The skill detects your platform and asks for confirmation before doing anything that writes files.
 2. **Harness setup, branching on your rule-pack `harness.mode`:**
-   - **`scaffold` (default)** — generates `UpgradeVerifyHarness.<ext>` into your debug variant and shows you the diff.
+   - **`scaffold` (default)** — generates `LuciqVerifyHarness.<ext>` into your debug variant and shows you the diff.
    - **`reuse`** — validates the `reused_surface` declaration in your rule pack: confirms the `marker_view` exists on prior occurrences, checks the surface is debug-gated, surfaces gaps. No source generation.
 3. It scaffolds `luciq-verify.yaml` at the repo root if it doesn't exist. If you have ≥ 10 prior occurrences on the previous SDK version, it proposes a rule pack populated from your observed telemetry. You review and accept block-by-block.
 4. It runs pre-flight safety checks (debug variant, non-prod backend, MCP reachable, device available).
@@ -283,8 +283,8 @@ After the first run, invoking the skill again skips setup (harness is already th
 
 Two artifacts are produced in your repo root:
 
-- `luciq-upgrade-verify-report.html` — colored status pills, expandable evidence rows, network audit table. Open in a browser.
-- `luciq-upgrade-verify-report.md` — same content as Markdown, suitable for pasting into a PR or CI log.
+- `luciq-verify-report.html` — colored status pills, expandable evidence rows, network audit table. Open in a browser.
+- `luciq-verify-report.md` — same content as Markdown, suitable for pasting into a PR or CI log.
 
 Each row in the verification checks table is one of:
 
@@ -321,13 +321,13 @@ plugins/luciq-skills/
 ├── commands/
 │   └── luciq-verify.md          ← /luciq-verify slash command (invokes this skill)
 └── skills/
-    └── luciq-upgrade-verify/
+    └── luciq-verify/
         ├── README.md            ← you are here (human-facing)
         ├── SKILL.md             ← LLM-facing instructions; the workflow definition
         └── references/
             ├── payload-schemas.md  ← MCP tool surface, response shapes, wire formats for log archives
             ├── check-catalog.md    ← Full E/C/S/P/A/T/U rule catalog with evidence sources
-            ├── rule-pack-format.md ← luciq-verify.yaml schema, base pack, Workday-style example
+            ├── rule-pack-format.md ← luciq-verify.yaml schema, base pack, worked example
             └── harness-contract.md ← Scaffold + reuse modes, per-platform paths, API surface, gating
 ```
 
@@ -367,6 +367,6 @@ These came out of inspecting real SDK traffic and may surprise customers:
 
 ## Related skills
 
-- **`luciq-setup`** — first-time SDK integration. Run this before `luciq-upgrade-verify` can work.
-- **`luciq-migrate`** — Instabug → Luciq rename, or vN → vN+1 API transforms. Run this *before* `luciq-upgrade-verify` audits the result.
+- **`luciq-setup`** — first-time SDK integration. Run this before `luciq-verify` can work.
+- **`luciq-migrate`** — Instabug → Luciq rename, or vN → vN+1 API transforms. Run this *before* `luciq-verify` audits the result.
 - **`luciq-debug`** — production crash / hang / bug investigation. Different use case: real-user signal, not synthetic verification.
