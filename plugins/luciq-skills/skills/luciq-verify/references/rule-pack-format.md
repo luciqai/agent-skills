@@ -77,7 +77,7 @@ optional_integrations:
                                             #   force: pre-flight STOPs if not installed
                                             #   off: never use even if installed
     screenshot_on_smoke_end: false          # embed end-of-smoke screenshot in report
-    screenshot_on_smoke_timeout: false      # capture diagnostic screenshot on Phase 3c timeout
+    screenshot_on_smoke_timeout: false      # capture diagnostic screenshot on Phase 4c timeout
 
 # Custom redaction contract.
 redaction:

@@ -69,7 +69,7 @@ Why each trigger exists:
 - **`reportBugReport`** is the cleanest channel for C1–C7 — the bug payload's `network_log` is a dedicated archive (vs. crash's bundled `compressed_logs`).
 - **`forceCrash`** produces the deterministic synthetic occurrence the recency check (`C0b`) and harness marker (`S1`) rely on.
 - **`forceANR` / `forceUIHang`** exist so the harness can produce non-crash signals when the customer wants to verify those paths too. They're optional in the smoke sequence.
-- **`flushNow`** is non-negotiable — it removes the timer race from Phase 3c's "wait for occurrence to land." Without it, the audit's recency window becomes flaky.
+- **`flushNow`** is non-negotiable — it removes the timer race from Phase 4c's "wait for occurrence to land." Without it, the audit's recency window becomes flaky.
 
 `forceANR()` is generated as a no-op on iOS; `forceUIHang()` is generated as a no-op on Android. The signatures exist on every platform for symmetry; the bodies differ.
 
@@ -213,7 +213,7 @@ harness:
 
 1. **`marker_view` is non-empty and present on at least one prior occurrence in the dashboard.** The skill probes `list_crashes(filters: { current_views: [marker_view] })` during Phase 0 to confirm. If the probe returns nothing, the marker is wrong (or the surface has never produced an occurrence) — the skill STOPs and asks the user to verify.
 2. **The reused surface is gated to the debug variant only.** The skill cannot statically verify every code path, but it does check: (a) the declared `activity` / class lives under a debug source set or behind a `#if DEBUG` guard; (b) the declared `deep_link` intent filter is in a debug-only manifest. If gating is unclear, the skill surfaces the gap to the user before proceeding — a release-variant crash trigger is a remote-crash vector regardless of who scaffolded it.
-3. **A `flushNow` mapping is strongly recommended.** Without it, Phase 3c's "wait for occurrence to land" becomes a timer race and recency checks (`C0b`) become flaky. If no flush primitive exists, the skill warns and extends the recency window to 60s.
+3. **A `flushNow` mapping is strongly recommended.** Without it, Phase 4c's "wait for occurrence to land" becomes a timer race and recency checks (`C0b`) become flaky. If no flush primitive exists, the skill warns and extends the recency window to 60s.
 
 ### Graceful degradation when triggers are unmapped
 
@@ -258,7 +258,7 @@ The shorthand string form (`forceCrash: "CrashTrigger.forceUnwrapNil"`) is equiv
 
 `tap_by_label` requires the **mobile-mcp** MCP server (https://github.com/mobile-next/mobile-mcp) to be installed and authenticated in the user's agent. mobile-mcp exposes accessibility-tree reads and tap-by-coordinate primitives. When present, the skill can drive ANY UI button in the reused surface without the customer wiring intent extras or deep-link params.
 
-Detection: the skill probes for mobile-mcp's `list_ui_elements` / equivalent tool name at the start of Phase 3. If found and the customer has `optional_integrations.mobile_mcp.enabled: auto` (default) or `force`, the skill uses it for any trigger with `invoke_via: tap_by_label`. If mobile-mcp is absent and `enabled: auto`, those triggers fall back to `manual`. If `enabled: force`, the skill STOPs pre-flight with a "mobile-mcp is required by your rule pack but not installed" message.
+Detection: the skill probes for mobile-mcp's `list_ui_elements` / equivalent tool name at the start of Phase 4. If found and the customer has `optional_integrations.mobile_mcp.enabled: auto` (default) or `force`, the skill uses it for any trigger with `invoke_via: tap_by_label`. If mobile-mcp is absent and `enabled: auto`, those triggers fall back to `manual`. If `enabled: force`, the skill STOPs pre-flight with a "mobile-mcp is required by your rule pack but not installed" message.
 
 What the skill does with mobile-mcp during smoke:
 1. Open the customer's surface (deep link / activity / manual nav).
@@ -273,7 +273,7 @@ If a `label` doesn't resolve to a unique element (multiple matches, or zero), th
 When mobile-mcp is present, the skill can also capture screenshots for the report. Controlled by `optional_integrations.mobile_mcp.screenshot_on_smoke_end` and `.screenshot_on_smoke_timeout`. The screenshots embed in the HTML report's "Test environment" block:
 
 - **End-of-smoke**: a screenshot of the harness surface after the trigger sequence completed. Proof of "the harness was reachable and the build was installed correctly."
-- **Timeout**: a screenshot at the moment Phase 3c's 90s polling gave up. Useful diagnostic for "no occurrence landed" — was the screen blank? Wrong activity? Crash dialog overlay?
+- **Timeout**: a screenshot at the moment Phase 4c's 90s polling gave up. Useful diagnostic for "no occurrence landed" — was the screen blank? Wrong activity? Crash dialog overlay?
 
 These default to off — opt in per rule pack.
 

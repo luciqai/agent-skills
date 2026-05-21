@@ -1,6 +1,8 @@
 # Check Catalog
 
-Every rule the audit can run, the channels each can pull evidence from, and the platform applicability matrix. Codes follow the customer-derived families: **E**nvironment, **C**apture, **S**ynthetic, **P**II, **A**ttributes, **T**racer (dashboard), **U**ser flow (dashboard).
+Every rule the **runtime audit** (Phase 5) can run, the channels each can pull evidence from, and the platform applicability matrix. Codes follow the customer-derived families: **E**nvironment, **C**apture, **S**ynthetic, **P**II, **A**ttributes, **T**racer (dashboard), **U**ser flow (dashboard).
+
+Companion catalog for static checks (Phase 2): `references/static-checks-catalog.md` — covers SDK install + version, module activation, invocation events, identity + attributes, feature flags, logging, masking, dSYM / mapping upload, build systems, privacy view modifiers. The two catalogs use non-overlapping code families (S-* for static, E/C/S-synthetic/P/A/T/U for runtime).
 
 ## Table of contents
 

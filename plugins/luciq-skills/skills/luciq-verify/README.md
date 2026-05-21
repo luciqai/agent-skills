@@ -59,7 +59,7 @@ sequenceDiagram
 
 The skill drives a real SDK in a real app, then audits what actually shipped. No mocks, no test doubles — the dashboard is the oracle.
 
-### The 5-phase workflow
+### The workflow
 
 ```mermaid
 flowchart TD
@@ -70,14 +70,17 @@ flowchart TD
     P1a -->|No| P1c[No-op — artifacts exist]
     P1b --> P2
     P1c --> P2
-    P2[2. Pre-flight safety] --> P2a{Debug variant?<br/>Non-prod backend?<br/>MCP reachable?<br/>Device available?}
-    P2a -->|No| Stop([STOP + surface reason])
-    P2a -->|Yes| P3[3. Smoke]
-    P3 --> P3a[Install build → open deep link<br/>→ run trigger sequence<br/>→ flushNow → forceCrash]
-    P3a --> P3b[Poll 3 channels in parallel<br/>up to 90s]
-    P3b --> P4[4. Audit<br/>merged rule pack vs payload]
-    P4 --> P5[5. Report + drift detection]
-    P5 --> Out([HTML + Markdown report<br/>+ proposed rule-pack diff])
+    P2[2. Static audit<br/>config + source patterns<br/>skipped if --runtime]
+    P2 --> P3[3. Pre-flight safety<br/>skipped if --static]
+    P3 --> P3a{Debug variant?<br/>Non-prod backend?<br/>MCP reachable?<br/>Device available?}
+    P3a -->|No| Stop([STOP + surface reason])
+    P3a -->|Yes| P4[4. Smoke<br/>skipped if --static]
+    P4 --> P4a[Install build → open deep link<br/>→ run trigger sequence<br/>→ flushNow → forceCrash]
+    P4a --> P4b[Poll 3 channels in parallel<br/>up to 90s]
+    P4b --> P5[5. Runtime audit<br/>merged rule pack vs payload<br/>skipped if --static]
+    P2 --> P6
+    P5 --> P6[6. Report + drift detection]
+    P6 --> Out([HTML + Markdown report<br/>+ proposed rule-pack diff])
 ```
 
 ### Three audit channels, picked by preference
@@ -117,18 +120,48 @@ For everything other than network capture — synthetic markers, attributes, occ
 
 The skill doesn't write unit tests or mock the SDK. It drives your debug build through a deterministic harness, lets the **real SDK in a real app** ship telemetry to the Luciq backend, then pulls that telemetry back via the Luciq MCP server and asserts against it. End-to-end behavioral verification.
 
-### The 5 phases
+### The phases
 
 ```
-0. Detect customer maturity tier (drives phase shape below)
-1. Setup        — idempotent; scaffolds the harness and rule pack on first run
-2. Pre-flight   — safety: SDK version, debug variant, non-prod backend, MCP reachable
-3. Smoke        — drive the harness, wait for the occurrence to land
-4. Audit        — apply rules from the merged rule pack against the captured payload
-5. Report       — render HTML + Markdown report; propose rule-pack drift updates
+0. Detect maturity tier   — T0 / T1 / T2 / T3
+1. Setup                  — idempotent; scaffolds the harness and rule pack on first run
+2. Static audit           — agent-native source + config inspection (skipped if --runtime)
+3. Pre-flight             — safety: SDK version, debug variant, non-prod backend, MCP reachable
+4. Smoke                  — drive the harness, wait for the occurrence to land
+5. Runtime audit          — apply rules from the merged rule pack against the captured payload
+6. Report                 — render HTML + Markdown report; propose rule-pack drift updates
 ```
 
 First run does heavy setup (harness scaffold, rule-pack bootstrap, environment confirmation). Every subsequent SDK upgrade is a 2-minute "press go."
+
+### Three invocation flags
+
+Default invocation runs every phase. Flags trim scope when only part of the audit is needed:
+
+| Flag | Phases run | When to use |
+| --- | --- | --- |
+| (none) | 0, 1, 2, 3, 4, 5, 6 | Full audit — static + runtime in one report. Default for SDK upgrades. |
+| `--static` | 0, 1, 2, 6 | Static config inspection only. Useful as a pre-upgrade snapshot or anytime the user wants "is my integration wired correctly" without driving the device. |
+| `--runtime` | 0, 1, 3, 4, 5, 6 | Skip the static phase; runtime smoke + MCP audit only. Useful when static config has already been validated. |
+
+### What the static audit covers (Phase 2)
+
+Agent-native inspection of source files and build config. No external runtimes, no Python, no scanning daemon. Findings cite file path + line range; matched text is never quoted unless it's a known-safe identifier.
+
+| Family | Examples |
+| --- | --- |
+| `S-INSTALL-*` | SDK declared in manifest, version pinned, init call site present |
+| `S-MODULE-*` | Per-module enable/disable across 14 SDK modules (BR, Crash, APM, SR, NLG, User Steps, ANR, OOM, NDK, Surveys, Replies, Feature Requests, Force Restart, Network Auto-Masking) |
+| `S-INVOKE-*` | Invocation events configured, programmatic invocation, no `.none` overrides |
+| `S-IDENTITY-*` | User identification + custom data + attribute hooks present |
+| `S-FLAG-*` | Feature flag API usage (add / remove / clear / check) |
+| `S-LOG-*` | Custom logging + user-event logging in use |
+| `S-MASK-*` | Network auto-masking, screen masking, sensitive header config |
+| `S-SYMBOL-*` | iOS dSYM upload pipeline; Android mapping upload plugin |
+| `S-BUILD-*` | Build system detection (SPM / CocoaPods / Carthage / Gradle / npm / pub) |
+| `S-PRIVACY-*` | iOS view-modifier privacy markers (SwiftUI / UIKit) |
+
+Per-platform extractor recipes live in `references/extractors-{ios,android,flutter,rn}.md`. The full S-* catalog lives in `references/static-checks-catalog.md`.
 
 ### Two harness modes — scaffold or reuse
 
@@ -301,7 +334,7 @@ Each row in the verification checks table is one of:
 
 A single `FAIL` blocks the release. `MANUAL` items don't block automatically but appear at the top so you can verify them quickly in the dashboard.
 
-If mobile-mcp is installed and screenshots are enabled in your rule pack, the report's "Test environment" block also embeds an end-of-smoke screenshot (proof the harness was reachable) and, on Phase 3c timeouts, a diagnostic screenshot of whatever was on screen when polling gave up.
+If mobile-mcp is installed and screenshots are enabled in your rule pack, the report's "Test environment" block also embeds an end-of-smoke screenshot (proof the harness was reachable) and, on Phase 4c timeouts, a diagnostic screenshot of whatever was on screen when polling gave up.
 
 ### Two run modes
 
