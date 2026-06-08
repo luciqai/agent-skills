@@ -23,6 +23,7 @@ Skills available after install:
 - `/luciq-skills:luciq-setup`. SDK install and configuration.
 - `/luciq-skills:luciq-debug`. Production signal investigation.
 - `/luciq-skills:luciq-migrate`. Instabug to Luciq migration and SDK upgrades.
+- `/luciq-skills:luciq-verify`. End-to-end SDK upgrade verification.
 
 ### Cursor
 
@@ -88,6 +89,19 @@ Migrate from Instabug to Luciq, or upgrade between Luciq SDK versions. Renames s
 - `"Migrate this project from Instabug to Luciq"`
 - `"Upgrade Luciq SDK to v2"`
 - `"Replace all deprecated Luciq APIs"`
+
+---
+
+### `luciq-verify`
+
+Verify a Luciq SDK upgrade end to end before shipping. Scaffolds a verification harness into your debug variant, drives a deterministic smoke, pulls the resulting occurrence through MCP, and audits it against a customer-specific rule pack — masking callbacks, URL redirection, preserved headers, user attributes, PII redaction. Outputs a pass/fail HTML + Markdown report.
+
+**Try saying:**
+- `"Verify the Luciq upgrade before we release"`
+- `"Is it safe to ship the new Luciq SDK?"`
+- `"Run upgrade verification against this build"`
+
+> **Requires** the Luciq MCP server authenticated.
 
 ---
 
