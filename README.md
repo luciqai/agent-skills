@@ -21,6 +21,7 @@ The plugin install also wires up the Luciq MCP server, so the skills get product
 
 Skills available after install:
 - `/luciq-skills:luciq-setup`. SDK install and configuration.
+- `/luciq-skills:luciq-onboard`. Personalized product walkthrough after the SDK is installed.
 - `/luciq-skills:luciq-debug`. Production signal investigation.
 - `/luciq-skills:luciq-migrate`. Instabug to Luciq migration and SDK upgrades.
 - `/luciq-skills:luciq-verify`. End-to-end SDK upgrade verification.
@@ -65,6 +66,20 @@ Install and configure the Luciq SDK end-to-end. Edits your build files, inserts 
 - `"Add Luciq to this Flutter project"`
 - `"Set up Luciq for Android, use a floating button invocation"`
 - `"Initialize Luciq and mask the payment fields"`
+
+---
+
+### `luciq-onboard`
+
+Personalized walkthrough of the Luciq product suite for an app that already has the SDK installed. Reads your repo (code, `CLAUDE.md`, `README`, `AGENTS.md`), detects any existing mobile observability SDKs and their config posture (Sentry, Crashlytics, Bugsnag, Datadog, Embrace, New Relic, App Center, UXCam, Smartlook, MetricKit), then recommends the Luciq products that actually fit — in three positively-framed buckets (*Recommended now* / *Optional* / *Can be added later*), with cited rationale at every step. Ends with one consolidated activation moment that proves Luciq is working end-to-end, and writes `LUCIQ_ONBOARDING.md` so the next session picks up exactly where this one left off.
+
+**Try saying:**
+- `"Onboard me to Luciq"`
+- `"What Luciq products should I set up?"`
+- `"Walk me through Luciq"`
+- `"What am I missing in my Luciq setup?"`
+
+> **Pairs with** the Luciq MCP server — authenticated MCP unlocks the *"your other apps already do this"* precedent quotes; the skill still works without it.
 
 ---
 
