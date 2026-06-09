@@ -32,11 +32,20 @@ Verify product names, SDK class names, and dashboard surface labels against http
 **Apply targets.**
 - Invocation event: shake (default), screenshot, floating button, or programmatic only. Default per platform per the live setup guide.
 - If the app has a sensitive screen (money path, auth flow, PII screen), avoid screenshot invocation there — recommend shake or floating button as the default, and propose programmatic-off for the sensitive screen.
-- Masking: text inputs on the money path and auth screens, derived from the profile.
+- **Per-view privacy markers** on individual PII-bound views. Consume the `sensitive_views` list from the profile (built in Phase 1 Track B) and propose the platform-appropriate marker for each entry:
+    - iOS SwiftUI → `.luciq_privateView()` modifier on the view (e.g. `TextField("Card", text: $cardNumber).luciq_privateView()`).
+    - iOS UIKit → `view.luciq_privateView = true` on the matched `UITextField` / `UILabel` / `UITextView` / `UIImageView`.
+    - Android Compose → `Modifier.luciqPrivate()` on the matched `TextField` / `Text` / `Image`.
+    - Android Views → `Luciq.addPrivateViews(view)` in `onViewCreated` / `onCreate`, or `LuciqPrivateView.setPrivateView(view, true)`.
+    - React Native → wrap the matched `TextInput` / `Text` / `Image` in `<LuciqPrivateView>...</LuciqPrivateView>`.
+    - Flutter → wrap in `LuciqPrivateView(child: ...)`.
+  Per-match confirmation is mandatory — show one diff per view with the file:line and the suggested marker. Never bulk-apply. Reject-once-and-continue on false positives.
+- Coarse screen-level fallback: if `sensitive_views` is empty or shallow (e.g. heavily generated UI), default the money path and auth screens to use the wrapper variant (`LuciqPrivateView { ... }` on iOS, `LuciqPrivateView(child: ...)` on Flutter / RN) at the screen root so the screen is masked even before per-view enumeration catches up.
 
 **Style match.**
 - If Sentry / Bugsnag / etc. has `attachScreenshot: false` → recommend Luciq screenshot capture off as default.
 - If competitor restricts to release builds only → mirror that gating.
+- If a competitor declares **view-level masking** (Sentry replay `mask` tag, UXCam `occludeSensitiveView`, Smartlook `registerBlacklistedView`, Datadog `privacy` markers), translate the *same view set* to Luciq's per-view markers above. The user's team has already decided what's sensitive — mirror their decision, don't relitigate it.
 
 **What's left for you.**
 - Nothing required — reports start arriving on next launch.
@@ -128,7 +137,8 @@ Verify product names, SDK class names, and dashboard surface labels against http
 
 **Apply targets.**
 - Enable Session Replay.
-- Configure per-screen masking. Money path screen and auth screen masked by default. Use the existing competitor's replay masking patterns if any (e.g., Sentry `mask` tagged views) as a template — same screens get masked in Luciq.
+- **Per-view privacy markers** on individual PII-bound views — same `sensitive_views` list from the profile that Bug Reporting consumed; if Bug Reporting was already in the walk, those markers are already in place and this is a no-op. If Session Replay is being added without Bug Reporting, apply the per-view markers now using the platform-appropriate API (see Bug Reporting card for the per-platform marker reference). Per-match confirmation; never bulk-apply.
+- Coarse per-screen masking as a fallback layer: money path screen and auth screen wrapped in the screen-root marker variant (e.g. `LuciqPrivateView { CheckoutView() }` on iOS) so the entire screen masks even if enumeration missed a view.
 - Sample rate: inherit from competitor if a replay-capable competitor exists, otherwise default per the live setup guide.
 
 **Style match.**

@@ -86,13 +86,40 @@ Read in priority order. Stop at the first source rich enough to anchor the recap
 
 Extract: app purpose (one sentence), team's stated priorities, PII / privacy posture, mention of compliance frameworks (GDPR, HIPAA, SOC2, PCI), and any quotable line (with line number) the recap can cite verbatim. The cited quote is what makes the recap feel uncanny — find at least one if context exists.
 
-### Track B — Archetype + money path + auth
+### Track B — Archetype + money path + auth + sensitive view enumeration
 
 From the existing `luciq-setup` profile (or a fresh scan), infer:
 
 - **Archetype**: e-commerce / fintech / social / media / productivity / gaming / B2B-tool / internal — based on deps (`Stripe`, `RevenueCat`, `Firebase Auth`, `Auth0`) and screen names (`CheckoutView`, `FeedView`, `DashboardView`).
 - **Money path**: the file:line of the screen where revenue is captured (checkout, paywall, subscription). E-commerce without an identified money path means the archetype guess is shaky — ask once.
 - **Auth flow**: login and logout file:line. Needed for product recommendations that depend on `identifyUser`.
+- **Sensitive view enumeration**: for each sensitive screen (money path, auth, settings/profile, anywhere PII surfaces), enumerate the *individual views* that bind to PII-flavored properties. This is the difference between *"mask the checkout screen"* and *"mark these 4 specific TextFields as `luciq_privateView`."* Downstream products (Bug Reporting, Session Replay) consume this list to propose per-view privacy markers — not just screen-level masking.
+
+#### What counts as a "sensitive view"
+
+A view is sensitive when **two signals agree**:
+
+1. **The view type can render or capture text/images.** SwiftUI: `TextField`, `SecureField`, `Text`, `TextEditor`, `Image`, `AsyncImage`. UIKit: `UITextField`, `UITextView`, `UILabel`, `UIImageView`. Compose: `TextField`, `OutlinedTextField`, `Text`, `Image`, `AsyncImage`. Android Views: `EditText`, `TextView`, `ImageView`. React Native: `TextInput`, `Text`, `Image`. Flutter: `TextField`, `Text`, `Image`.
+2. **The bound property or surrounding identifier matches a PII pattern.** Identifier-shaped strings: `password`, `email`, `cardNumber`, `card_number`, `cvv`, `ssn`, `pin`, `iban`, `dob`, `birthDate`, `phone`, `phoneNumber`, `address`, `firstName`, `lastName`, `fullName`, `accountNumber`, `routingNumber`, `taxId`, `passport`, `driverLicense`.
+
+Filter out matches in test/spec/mock paths, validator/regex utilities, and anything under `node_modules`, `Pods/`, `build/`. False positives are common — never apply markers in bulk.
+
+#### Suggested marker per platform (verify against the live setup docs)
+
+| Platform | View type | Suggested marker |
+|---|---|---|
+| iOS SwiftUI | `TextField`, `SecureField`, `Text`, `Image`, `TextEditor` | `.luciq_privateView()` modifier, or wrap in `LuciqPrivateView { ... }` |
+| iOS UIKit | `UITextField`, `UILabel`, `UITextView`, `UIImageView` | `view.luciq_privateView = true` (UIView category property) |
+| Android Compose | `TextField`, `Text`, `Image` | `Modifier.luciqPrivate()` |
+| Android Views | `EditText`, `TextView`, `ImageView` | `Luciq.addPrivateViews(view)` or `LuciqPrivateView.setPrivateView(view, true)` |
+| React Native | `TextInput`, `Text`, `Image` | wrap in `<LuciqPrivateView>...</LuciqPrivateView>` |
+| Flutter | `TextField`, `Text`, `Image` | wrap in `LuciqPrivateView(child: ...)` |
+
+Verify the exact import path, method signature, and any version gating against the live setup docs for the user's platform before quoting them in a diff. The markers above evolved through the Instabug → Luciq rebrand and may differ across SDK versions.
+
+The structured output is `sensitive_views: [{screen, file, line, view_type, binding, suggested_marker}]` on the profile. **Per-match confirmation is mandatory in Phase 4 Apply** — never bulk-apply markers.
+
+If a competitor SDK in Track C has equivalent view-level masking (e.g., Sentry replay `mask` tag, UXCam's view-tagging, Smartlook's blacklisted views), translate the **same view set** to Luciq's marker — that's the privacy-posture style-match at the view level, mirroring what the user's team already considers sensitive.
 
 ### Track C — Mobile observability SDK scan + deep config read
 

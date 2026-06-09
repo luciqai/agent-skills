@@ -71,7 +71,7 @@ Install and configure the Luciq SDK end-to-end. Edits your build files, inserts 
 
 ### `luciq-onboard`
 
-Personalized walkthrough of the Luciq product suite for an app that already has the SDK installed. Reads your repo (code, `CLAUDE.md`, `README`, `AGENTS.md`), detects any existing mobile observability SDKs and their config posture (Sentry, Crashlytics, Bugsnag, Datadog, Embrace, New Relic, App Center, UXCam, Smartlook, MetricKit), then recommends the Luciq products that actually fit — in three positively-framed buckets (*Recommended now* / *Optional* / *Can be added later*), with cited rationale at every step. Ends with one consolidated activation moment that proves Luciq is working end-to-end, and writes `LUCIQ_ONBOARDING.md` so the next session picks up exactly where this one left off.
+Personalized walkthrough of the Luciq product suite for an app that already has the SDK installed. Reads your repo (code, `CLAUDE.md`, `README`, `AGENTS.md`), detects any existing mobile observability SDKs and their config posture (Sentry, Crashlytics, Bugsnag, Datadog, Embrace, New Relic, App Center, UXCam, Smartlook, MetricKit), then recommends the Luciq products that actually fit — in three positively-framed buckets (*Recommended now* / *Optional* / *Can be added later*), with cited rationale at every step. Auto-enumerates individual PII-bound views per sensitive screen and proposes per-view privacy markers (`.luciq_privateView()` / `Modifier.luciqPrivate()` / `LuciqPrivateView`) with per-match confirmation. Ends with one consolidated activation moment that proves Luciq is working end-to-end, and writes `LUCIQ_ONBOARDING.md` so the next session picks up exactly where this one left off.
 
 **Try saying:**
 - `"Onboard me to Luciq"`
