@@ -13,6 +13,7 @@ Claude Code skills for the Luciq mobile observability SDK. They live inside an e
 | [`luciq-debug`](luciq-debug/SKILL.md) | Investigating a crash, bug, hang, performance regression, or rating drop |
 | [`luciq-symbolicate`](luciq-symbolicate/SKILL.md) | Uploading symbol files or wiring CI auto-upload |
 | [`luciq-release-check`](luciq-release-check/SKILL.md) | Deciding whether a release is safe to roll out |
+| [`luciq-readout`](luciq-readout/SKILL.md) | Building an audience-tailored health or quality report, or a version comparison, for a stakeholder |
 | [`luciq-feature-flags`](luciq-feature-flags/SKILL.md) | Wrapping code in Luciq feature-flag checks |
 | [`luciq-migrate`](luciq-migrate/SKILL.md) | Migrating Instabug → Luciq or upgrading SDK versions |
 
@@ -36,7 +37,7 @@ cp -r agent-skills/luciq-* .claude/skills/
 
 | Skill | Needs |
 |---|---|
-| `luciq-debug`, `luciq-release-check` | Luciq MCP server configured + OAuth'd. `luciq-setup` wires this. |
+| `luciq-debug`, `luciq-release-check`, `luciq-readout` | Luciq MCP server configured + OAuth'd. `luciq-setup` wires this. |
 | `luciq-symbolicate` (Flutter) | `luciq_cli` installed: `dart pub global activate luciq_cli` |
 | Everything else | None — pure code + repo work |
 
