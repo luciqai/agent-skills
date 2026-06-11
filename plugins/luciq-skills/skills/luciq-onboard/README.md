@@ -6,6 +6,79 @@ If you've ever finished installing an SDK and wondered *"OK, what now? Which fea
 
 ---
 
+## At a glance
+
+Four (sometimes five) analysis tracks run **in parallel** before a single word is said to the user. Everything downstream — the recap, the plan, the per-product diffs, the activation — is driven from the structured profile those tracks produce.
+
+```
+                  ┌───────────────────────────────────┐
+                  │  Customer says: "onboard me to    │
+                  │   Luciq" (SDK already installed)  │
+                  └─────────────────┬─────────────────┘
+                                    │
+                                    ▼
+            ┌───────────── SILENT PARALLEL SCAN ─────────────┐
+            │                                                │
+   ┌────────┴────────┐ ┌──────────────┐ ┌──────────────┐ ┌───┴────────────┐
+   │   A. Context    │ │ B. Archetype │ │ C. Competing │ │ D. Workspace   │
+   │   CLAUDE.md,    │ │ + money path │ │ SDKs + their │ │ precedent      │
+   │   README, docs  │ │ + auth flow  │ │ live config  │ │ (Luciq MCP:    │
+   │   → quotables   │ │ + sensitive  │ │ → what's on/ │ │ other apps in  │
+   │                 │ │   views      │ │ off/tuned    │ │ this workspace)│
+   └────────┬────────┘ └──────┬───────┘ └──────┬───────┘ └───┬────────────┘
+            │                 │                │             │
+            │         ┌───────┴──────┐         │             │
+            │         │ E. Infra:    │         │             │
+            │         │ CI, push,    │         │             │
+            │         │ network, dist│         │             │
+            │         │ locales, a11y│         │             │
+            │         └───────┬──────┘         │             │
+            └─────────────────┴────────────────┴─────────────┘
+                                    │
+                                    ▼
+                  ┌─────────────────────────────────┐
+                  │  Conflict detection             │
+                  │  (dual crash handlers, racing   │
+                  │   ANR detectors, etc.)          │
+                  └─────────────────┬───────────────┘
+                                    ▼
+                  ┌─────────────────────────────────┐
+                  │  RECAP — cite the customer's    │
+                  │  own code/docs back to them     │
+                  │  ("your CLAUDE.md line 12 says… │
+                  │   so I'll default masking on    │
+                  │   checkout aggressive")         │
+                  └─────────────────┬───────────────┘
+                                    ▼
+                  ┌─────────────────────────────────┐
+                  │  THE PLAN — 3 positive buckets  │
+                  │  • Recommended now              │
+                  │  • Optional                     │
+                  │  • Add later (with WHEN)        │
+                  └─────────────────┬───────────────┘
+                                    ▼
+                  ┌─────────────────────────────────┐
+                  │  PER-PRODUCT WALK               │
+                  │  Ask → show diff → Apply →      │
+                  │  Summarize. One beat at a time. │
+                  └─────────────────┬───────────────┘
+                                    ▼
+                  ┌─────────────────────────────────┐
+                  │  ONE AHA MOMENT                 │
+                  │  end-to-end activation: shake → │
+                  │  report → data on dashboard     │
+                  └─────────────────┬───────────────┘
+                                    ▼
+                  ┌─────────────────────────────────┐
+                  │  Handoff: LUCIQ_ONBOARDING.md   │
+                  │  (durable, queryable next week) │
+                  └─────────────────────────────────┘
+```
+
+The mermaid diagrams further down go deeper on each phase; this one is the shareable overview.
+
+---
+
 ## What it does
 
 Once the Luciq SDK is initialized (typically by `luciq-setup`), `luciq-onboard` reads the user's repo and surrounding context, detects what observability they already have, and walks them through the Luciq products that actually fit — with cited rationale at every step.
@@ -18,6 +91,8 @@ The skill specifically:
 - Detects every active mobile observability SDK in the project (Sentry, Firebase Crashlytics, Bugsnag, Datadog RUM, Embrace, New Relic Mobile, Microsoft App Center, the legacy Instabug SDK, UXCam, Smartlook, and MetricKit as a system-native complement).
 - Reads each detected SDK's **actual config** at its init site — what's on, what's off, what's tuned — and infers the team's style (privacy-conservative, low sample, strict env gating, etc.).
 - **Enumerates individual sensitive views per screen** — not just *"mask the checkout screen"* but *"these 4 specific `TextField`s on `CheckoutView.swift` bind to card / CVV / address — here are the per-view `.luciq_privateView()` markers, per-match confirm."* Translates competitor-declared view-level masking patterns (Sentry replay `mask` tags, UXCam occlusions, Smartlook blacklisted views) into the equivalent Luciq markers so the team's existing privacy decisions carry over.
+- **Reads accessibility posture** — counts `accessibilityIdentifier` / `contentDescription` / `testID` / `Semantics` usage on interactive views and pairs it with CLAUDE.md / README mentions of WCAG, VoiceOver, TalkBack. Teams with strong a11y posture get more accessible defaults — e.g. Bug Reporting invocation defaults to the floating button (operable via screen reader / switch control) alongside shake, since shake is hostile to motor-impaired users.
+- **Detects infrastructure and integration sites** (CI system, push token registration, network client + base URLs, distribution channel, locales count) so what would otherwise be doc-pointer left-for-you items become real Phase-4 diffs against existing workflow files, push hooks, and network init sites.
 - Surfaces real conflicts honestly (e.g. dual crash signal handlers between Sentry + Crashlytics) **before** proposing any Luciq product. Independent of Luciq, just honest.
 - Cross-references the user's other apps via the Luciq MCP server when authenticated, to surface "your team already does this on your other apps" precedents.
 - Recommends Luciq products in three positively-framed buckets — **Recommended now**, **Optional**, **Can be added later** (with a specific revisit condition). Never says "not a fit."
@@ -72,9 +147,10 @@ flowchart TD
 
     subgraph Analyze["Phase 1 — parallel tracks"]
         A[Context docs<br/>CLAUDE.md, README,<br/>AGENTS.md, .cursorrules]
-        B[Archetype + money path<br/>+ auth flow]
+        B[Archetype + money path<br/>+ auth flow + sensitive views<br/>+ a11y posture]
         C[Mobile obs SDK scan<br/>+ deep config read<br/>+ style inference]
         D[Workspace precedent<br/>MCP list_applications]
+        E[Infrastructure + sites<br/>CI + push token + network<br/>+ distribution + locales]
     end
 
     P1 --> Analyze
@@ -123,11 +199,11 @@ The plan presented in Phase 3 always uses positively-framed bucket names. The sk
 
 | Bucket | Meaning | Example |
 |---|---|---|
-| **Recommended now** | Strong fit, applying this session | Bug Reporting (no competitor on stack handles user-initiated reports) |
-| **Optional — add if you'd like** | Reasonable fit, user's call | APM (overlaps Sentry perf, but checkout-scoped APM still adds value) |
-| **Can be added later** | Better timed for the future, with the revisit condition stated | App Ratings (when on the App Store) · Crash (Sentry covers today) · In-App Replies (when identifyUser is wired) |
+| **Recommended now** | Strong fit, applying this session | Bug Reporting, Crash Reporting, APM, Session Replay — recommended on their own merits regardless of competitor presence; competitor coverage is named honestly in the Ask, not used as a downgrade |
+| **Optional — add if you'd like** | Reasonable fit, user's call | A product where the fit signal is partial — e.g. APM on a single-screen utility (low-value, not no-value) |
+| **Can be added later** | Better *timed* for the future, with the revisit condition stated | App Ratings (when on the App Store) · In-App Replies (when `identifyUser` is wired) · Feature Requests (when user base is active) |
 
-Every "later" item names its revisit condition. The handoff doc captures both the condition and the reason so the next session — possibly with a different operator — picks up exactly where this one left off.
+Every "later" item names its revisit condition — and the condition is always about *timing* (pre-launch, missing prerequisite, awaiting a real-world event). **Competitor presence is never a reason to defer a Luciq product.** If a competitor SDK covers similar ground, the skill names it in the Ask and lets the customer decide whether to adopt alongside, evaluate as a swap, or stay on what they have. The handoff doc captures both the condition and the reason so the next session — possibly with a different operator — picks up exactly where this one left off.
 
 ### Conflict detection — honest first, never blocking
 
@@ -227,15 +303,19 @@ Re-readable next week. Hand-off-able to a teammate. Queryable by `luciq-debug` l
 | Product | One-line value | Strongest fit signals | Anti-signals (deferred) |
 |---|---|---|---|
 | **Bug Reporting** | Users shake / screenshot to send a report with logs, network, video | Universal — any app with real users | Almost none |
-| **Crash Reporting** | Fatal crashes with repro steps + session context | Any production app | Existing crash reporter on stack |
-| **APM** | Slow screens, slow network, hangs, Apdex | E-commerce checkout, social feed, anywhere speed shows up in support | Existing APM (Datadog, Sentry perf, etc.) |
+| **Crash Reporting** | Fatal crashes with repro steps + session context | Any production app — universal fit | Unresolved dual-crash-handler conflict |
+| **APM** | Slow screens, slow network, hangs, Apdex | E-commerce checkout, social feed, anywhere speed shows up in support | Hobby or single-screen utility (signal too low) |
 | **Session Replay** | Watch the actual session that led to a bug or crash | High-stakes flows; reports where repro steps fail | Privacy-strict apps without robust masking |
 | **In-App Surveys** | Ask users questions in-context — NPS, satisfaction, exit | Retention / engagement goals, post-action prompts | Pre-launch, very low DAU |
 | **App Ratings & Reviews** | Prompt happy users for a store rating; route unhappy ones to feedback | Consumer apps with store presence and growth goals | B2B / enterprise / internal tools |
 | **Feature Requests** | Users submit and vote on ideas in-app | Product-led growth, B2B SaaS, engaged consumer communities | Pre-launch, transactional one-time-use apps |
 | **In-App Replies** | Reply to reports / requests / surveys directly in-app | Support-conscious teams (B2B, premium tier consumer) | No auth flow / `identifyUser` not wired |
+| **Feature Flags** | Tie experiment variants to crashes, perf, and bug reports | Existing experimentation SDK (LaunchDarkly / Statsig / Optimizely / Firebase RC / Amplitude); A/B tests in CLAUDE.md | Pre-launch; no experimentation in code |
+| **APM Flows** | Multi-step user journey completion rate + P50/P95 + drop-off cause | Money path with 2+ screens; e-commerce / fintech / funnel-heavy archetypes; CLAUDE.md mentions conversion | Single-screen utility; APM not also adopted; SDK < v13 |
 
 Per-product cards (apply targets, style-match rules, what's-left-for-you copy) live in `references/product-cards.md` and are the source of truth — easy for the DX/PMM team to edit without touching the skill prompt.
+
+**Capabilities not in the buckets.** Several Luciq capabilities are auto-derived from configured products, live entirely on the dashboard, or need Luciq support / account-admin enablement — they're not products to apply during the walk. Frustration-Free Sessions, App Health Dashboard, Issues List, Business Impact, Alerts & Rules, Rollout Management, Team Ownership, One Code Apps, and the Detect / Resolve / Release AI agents fall in this category. The skill catalogues them in `references/post-onboarding-capabilities.md` and surfaces them in the handoff doc under "Dashboard capabilities now active" and "Capabilities that unlock later" — never in the Phase-3 buckets.
 
 ### What mobile observability SDKs the skill detects
 
@@ -262,9 +342,10 @@ plugins/luciq-skills/
         ├── README.md            ← you are here (human-facing)
         ├── SKILL.md             ← LLM-facing instructions; the workflow definition
         └── references/
-            ├── product-cards.md       ← Per-product fit, apply targets, what's-left-for-you (8 products)
-            ├── observability-sdks.md  ← Detection patterns, config-key extraction, coverage matrix, conflict rules (10 SDKs)
-            └── handoff-template.md    ← LUCIQ_ONBOARDING.md template with a worked example
+            ├── product-cards.md                  ← Per-product fit, apply targets, what's-left-for-you (10 products)
+            ├── observability-sdks.md             ← Detection patterns, config-key extraction, coverage matrix, conflict rules (10 SDKs)
+            ├── post-onboarding-capabilities.md   ← Dashboard-only / auto-derived / support-gated capabilities (handoff-doc inputs, never bucketed)
+            └── handoff-template.md               ← LUCIQ_ONBOARDING.md template with a worked example
 ```
 
 The references are loaded by the skill only when the corresponding phase needs them — progressive disclosure keeps `SKILL.md` focused on workflow orchestration while the per-product copy, per-SDK detection patterns, and handoff template can evolve independently.

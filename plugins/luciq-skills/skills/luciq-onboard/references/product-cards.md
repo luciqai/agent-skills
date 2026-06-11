@@ -32,24 +32,24 @@ Verify product names, SDK class names, and dashboard surface labels against http
 **Apply targets.**
 - Invocation event: shake (default), screenshot, floating button, or programmatic only. Default per platform per the live setup guide.
 - If the app has a sensitive screen (money path, auth flow, PII screen), avoid screenshot invocation there — recommend shake or floating button as the default, and propose programmatic-off for the sensitive screen.
-- **Per-view privacy markers** on individual PII-bound views. Consume the `sensitive_views` list from the profile (built in Phase 1 Track B) and propose the platform-appropriate marker for each entry:
-    - iOS SwiftUI → `.luciq_privateView()` modifier on the view (e.g. `TextField("Card", text: $cardNumber).luciq_privateView()`).
-    - iOS UIKit → `view.luciq_privateView = true` on the matched `UITextField` / `UILabel` / `UITextView` / `UIImageView`.
-    - Android Compose → `Modifier.luciqPrivate()` on the matched `TextField` / `Text` / `Image`.
-    - Android Views → `Luciq.addPrivateViews(view)` in `onViewCreated` / `onCreate`, or `LuciqPrivateView.setPrivateView(view, true)`.
-    - React Native → wrap the matched `TextInput` / `Text` / `Image` in `<LuciqPrivateView>...</LuciqPrivateView>`.
-    - Flutter → wrap in `LuciqPrivateView(child: ...)`.
-  Per-match confirmation is mandatory — show one diff per view with the file:line and the suggested marker. Never bulk-apply. Reject-once-and-continue on false positives.
+- **Sub-capabilities to offer in the same Ask (one extra line each, not separate products):**
+  - **Report Categories** — propose a small custom taxonomy (e.g. "Checkout / Auth / Other") when the archetype has obvious user-facing surfaces. One enum + one config call.
+  - **Extended Bug Report** — propose enabling when CLAUDE.md / README signals high-stakes debugging (compliance, regulated industry, support-load mention). Off by default — opt-in.
+  - **Proactive Bug Reporting** — propose when a post-action moment exists in code (post-purchase, post-onboarding-complete). Single API call at that site.
+- **Per-view privacy markers** on individual PII-bound views. Consume the `sensitive_views` list from the profile (built in Phase 1 Track B) and propose the platform-appropriate marker for each entry — see the platform marker table in `SKILL.md` Phase 1 Track B for the canonical syntax per platform.
+  Follow the confirmation policy in SKILL.md Track B: confirm the first 3–5 views individually so the user sees the pattern, then batch-confirm the rest with a single question. Drop back to per-match if the user inspects a specific row. Reject-once-and-continue on false positives within both modes.
 - Coarse screen-level fallback: if `sensitive_views` is empty or shallow (e.g. heavily generated UI), default the money path and auth screens to use the wrapper variant (`LuciqPrivateView { ... }` on iOS, `LuciqPrivateView(child: ...)` on Flutter / RN) at the screen root so the screen is masked even before per-view enumeration catches up.
 
 **Style match.**
 - If Sentry / Bugsnag / etc. has `attachScreenshot: false` → recommend Luciq screenshot capture off as default.
 - If competitor restricts to release builds only → mirror that gating.
 - If a competitor declares **view-level masking** (Sentry replay `mask` tag, UXCam `occludeSensitiveView`, Smartlook `registerBlacklistedView`, Datadog `privacy` markers), translate the *same view set* to Luciq's per-view markers above. The user's team has already decided what's sensitive — mirror their decision, don't relitigate it.
+- If `accessibility_posture` (from Phase 1 Track B) is **"strong"** → default the invocation to the **floating button** alongside (or instead of) shake. Cite the team's a11y identifier usage (file:line of one example) as evidence in the Ask. Reason: shake invocation is hostile to motor-impaired users — the floating button is operable via VoiceOver, switch control, and keyboard. If posture is **"partial"**, mention both options in the Ask and let the user pick. If **"absent"**, default per platform without comment.
 
 **What's left for you.**
 - Nothing required — reports start arriving on next launch.
 - Optional: configure custom report attributes (app version, user tier, env) on the dashboard.
+- If `locales.count > 1` (Track E5), provide localized prompt text for each of `<list locales from profile>` on the dashboard so the invocation hints, comment placeholder, and submit-button labels match the user's chosen language.
 
 **Verification (primary — used in Phase 5).**
 1. Build and launch.
@@ -65,16 +65,21 @@ Verify product names, SDK class names, and dashboard surface labels against http
 **Value.** Fatal crashes captured with repro steps, network logs, and the session context that led up to them.
 
 **Fit signals.**
-- No competitor mobile crash reporter detected.
+- Any production app needs reliable crash reporting — universal fit.
 - CLAUDE.md / README mentions stability, crash-free rate, or a recent incident → MUST.
 
 **Anti-signals.**
-- A competitor crash reporter is active (Sentry, Firebase Crashlytics, Bugsnag, Embrace, etc.). Frame as "covered today by `<SDK>`; if you ever want to consolidate vendors, switching is a one-skill job."
-- Dual crash handler conflict already surfaced in Phase 2 — don't add a third before the user resolves the first two.
+- Dual crash handler conflict already surfaced in Phase 2 — don't add a third capturer before the user resolves the first two. (This is about an unresolved *conflict*, not about competitor presence.)
+
+**Existing competitor context (mention in Ask, never defer).**
+- If a competitor crash reporter is active (Sentry, Firebase Crashlytics, Bugsnag, Embrace), name it honestly in the Ask. Example phrasing:
+  > *"You already run `<SDK>` for crashes at `<file:line>`. Luciq Crash differentiates on session-context-rich repro steps and replay-linked crashes — worth adding alongside, evaluating as a swap, or staying on `<SDK>`. Your call."*
+- Do not move Crash Reporting out of "Recommended now" because a competitor is present. The customer decides whether to adopt, swap, or stay. See SKILL.md Operating Principle 6.
 
 **Apply targets.**
 - Generally nothing beyond the SDK init from `luciq-setup` — crash reporting is on by default for Luciq.
-- If symbolicated stack traces matter, propose adding the Luciq CLI to CI for dSYM / ProGuard mapping upload.
+- If symbolicated stack traces matter, propose adding the Luciq CLI to CI for dSYM / ProGuard mapping upload. When `ci_system` is detected (Track E1), propose a specific diff to the primary workflow file / Fastlane lane / Bitrise step — not a generic "see the CLI docs" pointer. When `ci_system` is `none`, fall back to the doc pointer in *What's left for you*.
+- If `ci_system.env_matrix` shows multiple build configs (debug / staging / release), propose env-gated app tokens at the SDK init site instead of a hardcoded string.
 
 **Style match.**
 - If competitor crash reporter gates init on release stage only → mirror.
@@ -100,13 +105,18 @@ Verify product names, SDK class names, and dashboard surface labels against http
 - CLAUDE.md / README mentions performance, p95, latency, hangs, or Apdex → MUST.
 
 **Anti-signals.**
-- A competitor APM (Datadog RUM, New Relic, Sentry perf, Firebase Performance) is active. Frame as "covered today; checkout-scoped APM in Luciq can still complement it by tying perf to the user reports — your call."
 - Hobby app or one-screen utility — APM adds noise without value.
+
+**Existing competitor context (mention in Ask, never defer).**
+- If a competitor APM (Datadog RUM, New Relic Mobile, Sentry perf, Firebase Performance) is active, name it in the Ask. Example phrasing:
+  > *"You already run `<SDK>` for perf at `<file:line>`. Luciq APM differentiates on money-path Apdex tied to user reports — worth adding alongside or evaluating as a swap. Your call."*
+- Do not move APM out of "Recommended now" because a competitor is present. The customer decides. See SKILL.md Operating Principle 6.
 
 **Apply targets.**
 - Auto-screen tracking on, matched to competitor's posture (sample rate, env gating).
 - Network logging on, with masking from the profile (headers like Authorization, body fields like password / token / card).
-- Configure tracked hosts to the user's API domain(s) if detectable from the networking config.
+- Configure tracked hosts from `network_client.base_urls` (Track E3). Propose `Luciq.setNetworkHosts([...])` populated with the actual host list — no guessing, no generic placeholder. If E3 found no client, fall back to asking the user once.
+- Apply network-header masking at the interceptor / adapter site recorded in `network_client.init_file_line` so masks live next to existing request logic, not in a separate config block.
 
 **Style match.**
 - Sample rate inheritance: if Sentry `tracesSampleRate: 0.1`, propose Luciq APM at 10% on screens, 100% on the money path.
@@ -137,9 +147,10 @@ Verify product names, SDK class names, and dashboard surface labels against http
 
 **Apply targets.**
 - Enable Session Replay.
-- **Per-view privacy markers** on individual PII-bound views — same `sensitive_views` list from the profile that Bug Reporting consumed; if Bug Reporting was already in the walk, those markers are already in place and this is a no-op. If Session Replay is being added without Bug Reporting, apply the per-view markers now using the platform-appropriate API (see Bug Reporting card for the per-platform marker reference). Per-match confirmation; never bulk-apply.
+- **Per-view privacy markers** on individual PII-bound views — same `sensitive_views` list from the profile that Bug Reporting consumed; if Bug Reporting was already in the walk, those markers are already in place and this is a no-op. If Session Replay is being added without Bug Reporting, apply the per-view markers now following the confirmation policy in SKILL.md Track B (first 3–5 individual, rest batch-confirm).
 - Coarse per-screen masking as a fallback layer: money path screen and auth screen wrapped in the screen-root marker variant (e.g. `LuciqPrivateView { CheckoutView() }` on iOS) so the entire screen masks even if enumeration missed a view.
 - Sample rate: inherit from competitor if a replay-capable competitor exists, otherwise default per the live setup guide.
+- **Mention but do not configure: device-tier auto-throttling on Android** (~30% capture on low-end, ~60% mid, 100% high-end; navigation-mode fallback on low-end). Surface in the Summarize block so the user knows replay self-protects performance — not a knob the skill tunes.
 
 **Style match.**
 - Sentry `replaysSessionSampleRate: 0.05` → propose Luciq replay at 5%.
@@ -165,13 +176,14 @@ Verify product names, SDK class names, and dashboard surface labels against http
 - Post-action moments exist in the app (post-purchase, post-onboarding, post-content-consumption).
 
 **Anti-signals.**
-- Pre-launch app, no users yet → defer until launch.
+- `distribution_model.primary` (Track E4) is `testflight-only` / `firebase-appdist` / `internal` / `unknown` with no store channels active → defer until launch.
 - Internal-only / one-time-use utility → defer.
 - Very low DAU — survey responses won't be statistically useful yet.
 
 **Apply targets.**
 - Nothing in code beyond the SDK presence — surveys are configured on the dashboard.
 - If push notification setup exists, mention that survey delivery can use it.
+- **Soft dependency: `identifyUser` + custom user attributes.** Attribute-based targeting (user tier, plan, region) only works if those attributes are set in code. If the auth flow file:line is known, propose adding the relevant `setUserAttribute` calls there; otherwise note the limitation in Summarize.
 
 **Style match.**
 - None at the code level — surveys are dashboard-configured.
@@ -179,6 +191,7 @@ Verify product names, SDK class names, and dashboard surface labels against http
 **What's left for you.**
 - Build your first survey on the dashboard (link to surveys docs).
 - Targeting rules: event-triggered or attribute-based. Decide post-purchase, post-onboarding, or NPS-style anchor.
+- If `locales.count > 1` (Track E5), write locale-aware survey copy for each of `<list locales from profile>` on the dashboard. Single-locale apps can skip this.
 
 **Verification.**
 - After creating a survey on the dashboard with the current build version as a target, trigger the targeting event in the app.
@@ -196,8 +209,9 @@ Verify product names, SDK class names, and dashboard surface labels against http
 - Positive in-app events exist (purchase complete, content consumed, level passed).
 
 **Anti-signals.**
-- B2B / enterprise / internal tool — no store presence to push ratings toward → frame as "Can be added later: when you launch publicly on the store."
-- Pre-launch.
+- `distribution_model.primary` (Track E4) is not `appstore` or `playstore` — no store presence to push ratings toward → frame as "Can be added later: when you launch publicly on the store."
+- `distribution_model.primary` is `testflight-only` / `firebase-appdist` / `enterprise` / `internal` → defer until public store launch with the same framing.
+- Pre-launch — no signed builds in CI yet.
 
 **Apply targets.**
 - Suggest the SDK call site(s) for trigger events — derived from the positive-event surfaces detected in the profile.
@@ -208,6 +222,7 @@ Verify product names, SDK class names, and dashboard surface labels against http
 
 **What's left for you.**
 - Configure trigger rules on the dashboard (link to ratings docs) — typically gated on time-since-install + happy-event count.
+- If `locales.count > 1` (Track E5), the dashboard splits ratings per locale automatically — mention so the user knows where to find the per-locale breakdowns.
 
 **Verification.**
 - Once trigger rules are configured, perform the qualifying actions in the app to reach the prompt.
@@ -257,7 +272,7 @@ Verify product names, SDK class names, and dashboard surface labels against http
 
 **Apply targets.**
 - Hooks at `identifyUser` and logout sites (already covered by `luciq-setup` if those exist).
-- Push notification setup (if not already present) for reply delivery.
+- Push notification wiring at `push_token_site` (Track E2). If detected, propose a `Luciq.setPushNotificationToken(token)` call immediately after the existing token acquisition — concrete diff, not a doc pointer. If not detected, leave the push integration as a *What's left for you* item — replies still work via in-app notification → email fallback.
 
 **Style match.**
 - None at the code level.
@@ -270,3 +285,68 @@ Verify product names, SDK class names, and dashboard surface labels against http
 - Submit a test bug report identified as a known test user.
 - Reply to the report from the dashboard.
 - The reply should appear in-app on next foreground.
+
+---
+
+## Feature Flags
+
+**Value.** Attach the experiment variants your app is running to every crash, hang, performance metric, and bug report — so when something breaks, you know *which variant* broke it.
+
+**Fit signals.**
+- A third-party experimentation SDK is active (LaunchDarkly, Statsig, Optimizely, Firebase Remote Config, Amplitude Experiment, GrowthBook). The user already evaluates flags — Luciq just attributes the outcome.
+- CLAUDE.md / README mentions experiments, A/B tests, gradual rollouts, holdouts, multivariant onboarding.
+- Workspace precedent: another Luciq app in the workspace already uses Feature Flags.
+
+**Anti-signals.**
+- Pre-launch app with no experiments running.
+- No experimentation SDK detected and no mention of experiments — no inputs to attribute.
+
+**Apply targets.**
+- At each flag-evaluation site detected in code, propose a follow-up `Luciq.addFeatureFlag({ name, variant })` call so Luciq sees the same assignment the user's experimentation SDK made. Show one diff per site, confirm per-site — never bulk-apply.
+- At sign-out or session-reset sites, propose `Luciq.removeAllFeatureFlags()` so a logged-out session doesn't inherit stale variants.
+- Boolean flags: `Luciq.addFeatureFlag({ name })` (no variant).
+
+**Style match.**
+- If the experimentation SDK gates by environment (debug excluded), mirror that — only add Luciq flag attribution where the user's own SDK is also evaluating.
+
+**What's left for you.**
+- On the dashboard, the Feature Flags surface will show crash-free rate, Apdex, and per-variant breakdowns once data flows.
+
+**Verification.**
+- Trigger a known flag evaluation in the app, then trigger a test crash or submit a test report.
+- On the dashboard, open the report — the active variants should be attached as attributes.
+
+---
+
+## APM Flows
+
+**Value.** Track the completion rate, drop-off cause, and P50/P95 duration of the multi-step user journeys that actually matter — checkout, signup, onboarding — not just isolated screens.
+
+**Fit signals.**
+- Money path identified in the profile, with at least two screens between entry and success (e.g. `CartView → CheckoutView → ConfirmationView`).
+- Archetype is e-commerce, fintech, or any app with a clear funnel.
+- CLAUDE.md / README mentions conversion, funnel, drop-off, completion rate.
+- APM is being adopted in the same session (Flows is an APM sub-feature — recommending it without APM is incoherent).
+
+**Anti-signals.**
+- Single-screen utility or hobby app — no meaningful journey.
+- APM not being adopted this session → defer with revisit condition *"when you adopt APM."*
+
+**Apply targets.**
+- `Luciq.startFlow(name)` at the journey entry point (e.g. cart view appearance).
+- `Luciq.endFlow(name)` at the success terminus (e.g. confirmation view appearance), and at known abandonment points if any.
+- Flow names follow the user's existing screen-naming convention (don't invent new vocabulary — match what their navigation already calls these screens).
+- One flow at a time per name — verify no parallel `startFlow` with the same name is possible in the proposed instrumentation.
+
+**Style match.**
+- If the user's competitor APM (Datadog RUM, Sentry perf) has custom transactions defined, name Luciq flows after the same transactions where they overlap — keeps the team's mental model consistent.
+
+**What's left for you.**
+- On the dashboard's APM > Flows surface, configure Apdex thresholds for each flow once you have a few days of data.
+
+**Verification.**
+- Run the instrumented flow end-to-end in the app (e.g. complete a test checkout).
+- The flow should appear on the Flows surface within ~1 minute with one completion logged.
+
+**Hard prereq.**
+- SDK v13.0.0 or later. If the user is on an older SDK, defer with revisit condition *"after upgrading to SDK v13+."*

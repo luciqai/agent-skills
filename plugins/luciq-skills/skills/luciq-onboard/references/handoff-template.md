@@ -46,11 +46,17 @@ Operator: <user or agent name, if known>
   - Revisit when: <specific condition — `app is on the App Store`,
     `identifyUser is wired in the auth flow`, `DAU > 1k`, etc.>
 
-### Products already covered by another SDK
+### Products you chose to stay on a competitor for (this session)
 
-- **<Product>** — covered by `<SDK name>` at `<file>:<line>`.
-  If you ever want to consolidate vendors, `luciq-migrate`-style switching
-  is straightforward — pick this up in a future session.
+This section records products the customer *chose* not to adopt this
+session because they prefer their existing competitor SDK. It reflects
+the customer's choice, never a pre-judgment by the skill — every Luciq
+product is recommended on its own merits regardless of competitor
+presence.
+
+- **<Product>** — customer chose to stay on `<SDK name>` at `<file>:<line>`.
+  Reason given: <verbatim quote from the conversation, if any>.
+  Re-evaluate whenever the customer is open to it — no auto-revisit.
 
 ### What's left for you (no code needed)
 
@@ -59,6 +65,25 @@ Operator: <user or agent name, if known>
 - ...
 
 If nothing is left, write: *None — Luciq starts capturing on next launch.*
+
+### Dashboard capabilities now active
+
+Capabilities whose prereqs the products configured above just satisfied.
+These are auto-derived or dashboard-only — no SDK work was needed.
+Sourced from `references/post-onboarding-capabilities.md`.
+
+- 📊 **<Capability>** — <one-line what it shows> — `<dashboard URL>`
+
+If none unlock this session, write: *None this session.*
+
+### Capabilities that unlock later
+
+Capabilities whose prereqs aren't met yet. Each names a verbatim
+revisit condition from the post-onboarding capabilities reference.
+
+- **<Capability>** — unlocks when `<condition stated verbatim>`.
+
+If none apply, write: *None this session.*
 
 ### Conflicts detected (independent of Luciq)
 
@@ -136,20 +161,42 @@ Operator: Heba Mekawi
   - Revisit when: you wire identifyUser into your auth flow
     (auth flow is at SettingsView.swift but no login flow yet).
 
-### Products already covered by another SDK
+### Products you chose to stay on a competitor for (this session)
 
-- **Crash Reporting** — covered by Sentry at `AppDelegate.swift:23`.
-  If you ever want to consolidate vendors, `luciq-migrate`-style switching
-  is straightforward — pick this up in a future session.
+- **Crash Reporting** — recommended on its own merits this session.
+  Customer chose to stay on Sentry at `AppDelegate.swift:23` for now.
+  Reason given: *"We're mid-quarter and don't want a crash-reporting swap
+  before the Q3 release cuts. Revisit Q4."*
+  Re-evaluate when the customer raises it.
 
-- **APM** — partially covered by Sentry. Checkout-scoped Luciq APM would
-  still complement it by tying perf data to user reports — flagged Optional
-  for next session.
+- **APM** — recommended on its own merits this session. Customer chose
+  to stay on Sentry perf alongside, did not adopt Luciq APM this session.
+  Reason given: *"Want to see Bug Reporting + Replay land first before
+  evaluating another perf vendor."*
+  Re-evaluate when the customer raises it.
 
 ### What's left for you (no code needed)
 
 - Bug Reporting: nothing required.
 - Session Replay: review masking when you add new screens with sensitive UI.
+
+### Dashboard capabilities now active
+
+- 📊 **App Health Dashboard** — color-coded overview of crash-free rate,
+  OOM, app launch, network, screen loading, UI hangs, ratings —
+  `https://app.luciq.ai/apps/abc123/health`
+- 📊 **Issues List + Frustration Impact** — unified crashes / hangs / perf
+  list ranked by share of frustrating sessions —
+  `https://app.luciq.ai/apps/abc123/issues`
+
+### Capabilities that unlock later
+
+- **Frustration-Free Sessions (FFS)** — unlocks when APM is also configured
+  (Bug Reporting + Replay alone don't feed FFS; needs Crash + APM).
+- **Business Impact (beta)** — unlocks when APM is configured *and*
+  workspace MAU ≥ 10,000.
+- **Resolve Agent (AI)** — unlocks when Crash Reporting is configured, the
+  repo is GitHub-hosted, and account admin requests enablement.
 
 ### Conflicts detected (independent of Luciq)
 
