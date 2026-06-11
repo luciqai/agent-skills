@@ -329,6 +329,10 @@ Print:
 - MCP / CLI wired status.
 - A test command (for example, "shake the device or simulator to invoke Luciq").
 - Pointers: `luciq-debug` for crash investigation, `luciq-migrate` for moving off the legacy Instabug SDK or upgrading between Luciq versions.
+- **One closing sentence about `luciq-onboard` — as a future option, never an immediate invocation.** Exact pattern:
+  > *"When you're ready to figure out which Luciq products fit your app, run `luciq-onboard` — separate ~10-minute conversation. No rush; bring it up when you have the time."*
+
+  Do **not** offer to invoke onboard yourself. Do **not** ask *"shall I onboard you next?"* The customer must invoke `luciq-onboard` themselves, on their own timing — they may want stakeholders present, a richer CLAUDE.md written first, or simply not have time right now. Setup ending is not an onboarding trigger.
 
 ## Style
 

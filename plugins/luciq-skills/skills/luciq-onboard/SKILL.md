@@ -1,6 +1,6 @@
 ---
 name: luciq-onboard
-description: Use after the Luciq SDK is installed to help the user discover which Luciq products fit their app and configure them in a personalized, evidence-based, conversational walkthrough. Trigger phrases include "onboard me to Luciq", "walk me through Luciq", "help me get started with Luciq", "what should I set up with Luciq", "what Luciq products should I use", "tour Luciq", "best way to use Luciq for my app", or any moment a user finishes luciq-setup and asks what to do next. This skill reads the user's repo (code, CLAUDE.md, README, AGENTS.md), detects any existing mobile observability SDKs (Sentry, Crashlytics, Bugsnag, Datadog, Embrace, New Relic, App Center, Instabug-legacy, UXCam, Smartlook, MetricKit) along with the user's posture on each of them, and recommends Luciq products with cited rationale — never as a generic feature menu. Specifically NOT for first-time SDK install (use luciq-setup), not for upgrading SDK versions (use luciq-migrate), not for debugging a specific crash, hang, or user-reported bug (use luciq-debug).
+description: Use ONLY when the user explicitly asks to be onboarded to Luciq products — never auto-chain from luciq-setup. The customer must invoke this skill themselves with phrases like "onboard me to Luciq", "walk me through Luciq", "help me get started with Luciq", "what should I set up with Luciq", "what Luciq products should I use", "tour Luciq", or "best way to use Luciq for my app". Completing luciq-setup is NOT a trigger — the customer chooses when (or whether) to follow up with onboarding; they may want time, stakeholders, or a richer CLAUDE.md first. This skill reads the user's repo (code, CLAUDE.md, README, AGENTS.md), detects any existing mobile observability SDKs (Sentry, Crashlytics, Bugsnag, Datadog, Embrace, New Relic, App Center, Instabug-legacy, UXCam, Smartlook, MetricKit) along with the user's posture on each of them, and recommends Luciq products with cited rationale — never as a generic feature menu. Specifically NOT for first-time SDK install (use luciq-setup), not for upgrading SDK versions (use luciq-migrate), not for debugging a specific crash, hang, or user-reported bug (use luciq-debug).
 ---
 
 # Luciq Personalized Onboarding
@@ -11,12 +11,13 @@ The aim is a conversational experience the user remembers — one where every re
 
 ## When NOT to use this skill
 
-Hand off to a sibling skill for any of the following:
+Hand off to a sibling skill (or simply don't run) for any of the following:
 
 - **First-time SDK install** — the SDK isn't initialized yet → `luciq-setup`.
 - **Upgrading a Luciq SDK version or migrating from the legacy Instabug SDK** → `luciq-migrate`.
 - **Investigating a specific crash, hang, regression, or user-reported bug** → `luciq-debug`.
 - **API signature lookups** — point the user at https://docs.luciq.ai.
+- **Immediately after `luciq-setup` completes, without an explicit customer ask.** Setup ending is not a trigger. The customer may want to bring stakeholders, write a CLAUDE.md first, or simply not have time for a 10-minute conversation right now. Let them invoke onboard themselves; never auto-chain from setup. If setup just finished and the customer hasn't said *"onboard me"* (or an equivalent trigger phrase from the description), the right move is to mention `luciq-onboard` as a future option and stop.
 
 If the user's ask matches any of the above, STOP and route them. Running `luciq-onboard` on an uninstrumented project produces incorrect recommendations because every analysis step assumes the SDK init is already present.
 
