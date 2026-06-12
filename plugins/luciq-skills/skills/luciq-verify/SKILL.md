@@ -24,7 +24,7 @@ If the request fits any of the above, route there and stop — running this skil
 
 | Artifact | What for | If missing |
 | --- | --- | --- |
-| **Luciq MCP server, authenticated** | The entire audit is grounded in what the Luciq MCP exposes — `list_applications`, `list_crashes`, `list_bugs`, `list_occurrences_tokens`, `get_occurrence_details`, `bug_details`, `crash_patterns`, and (when GA) `apm_*`. Without it the skill has no oracle to verify against. | STOP at Phase 3 pre-flight. Route the user to `luciq-setup` step 7 or to https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/luciq-mcp-server/setup-by-ide. Do not attempt static-analysis-only "verification" — it would silently pass real regressions. |
+| **Luciq MCP server, authenticated** | The entire audit is grounded in what the Luciq MCP exposes — `list_applications`, `list_crashes`, `list_bugs`, `list_occurrences_tokens`, `get_occurrence_details`, `bug_details`, `crash_patterns`, and `apm_*`. Without it the skill has no oracle to verify against. | STOP at Phase 3 pre-flight. Route the user to `luciq-setup` step 7 or to https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/luciq-mcp-server/setup-by-ide. Do not attempt static-analysis-only "verification" — it would silently pass real regressions. |
 | **A debug-variant build with the new SDK + the luciq-verify harness** | Produces a deterministic occurrence to audit | Run Phase 1 below — the skill generates the harness (scaffold mode) or validates the customer's existing dev-tools surface (reuse mode). |
 | **A device, simulator, or emulator** | Executes the build that produces the occurrence | Stop; ask the user to boot one. Do not spawn one without confirmation. |
 
@@ -246,7 +246,7 @@ Poll all three channels because the audit pulls evidence from whichever returns 
 
 - **Crash path** (the synthetic crash and its session payload): `list_crashes` → `list_occurrences_tokens` → `get_occurrence_details`. If C1–C7 must run on the crash-path fallback (APM unavailable), immediately fetch `state.logs.compressed_logs.url` — the URL is time-limited.
 - **Bug path** (the synthetic bug from `reportBugReport()`): `list_bugs` → `bug_details`. Fetch any non-empty archive URLs (`network_log`, `user_events`, etc.) immediately.
-- **APM path** (iOS / Android only, if APM tools are GA on the account): `apm_list_groups` → `apm_group_view` → `apm_occurrence`.
+- **APM path** (iOS / Android only): `apm_list_groups` → `apm_group_view` → `apm_occurrence`.
 
 **Filter every poll to the smoke window.** In shared dev workspaces an unfiltered list call returns lots of irrelevant rows; the harness marker narrows but still risks latching onto an older synthetic occurrence from a previous engineer's run. Pass `date_ms.gte = now - (recency_thresholds.fail_minutes × 60_000)` on `list_crashes` and `apm_list_groups` — the window matches `C0b`'s FAIL band so anything outside it would fail recency anyway. Per-channel filter args:
 
@@ -401,7 +401,7 @@ These are the failure modes that produce a misleading "PASS" report. If you catc
 
 **Tool-call errors**
 - "APM returned a 4xx with `{error: ...}` — I'll raise and STOP." The MCP forwards 4xx and 501 as a tool response body. Inspect the JSON, mark APM-dependent checks SKIP, continue. Stop only on 5xx (raised as `StandardError`).
-- "APM tools returned 'tool not found' — I'll FAIL the network checks." APM is not GA on every account; missing tools is SKIP with reason "apm tools unavailable on this account," fallback to bug / crash channel.
+- "APM tools returned 'tool not found' — I'll FAIL the network checks." Missing tools is SKIP with reason "apm tools unavailable on this account," fallback to bug / crash channel.
 - "`crash_patterns` returned `MCP error -32603: Internal error` — STOP and bail." It's observably flaky. Retry once. On repeated failure, mark the prod-canary regression-diff step SKIP and continue. Don't infer "no regression" from a tool failure.
 
 **Workflow shortcuts**
