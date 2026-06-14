@@ -329,16 +329,8 @@ Print:
 - MCP / CLI wired status.
 - A test command (for example, "shake the device or simulator to invoke Luciq").
 - Pointers: `luciq-debug` for crash investigation, `luciq-migrate` for moving off the legacy Instabug SDK or upgrading between Luciq versions.
-After printing everything above, **stop and ask the customer explicitly** — don't auto-chain:
 
-> *"SDK is installed and verified. Next natural step is product onboarding — a ~10-minute conversation about which Luciq products fit your app. Want to start now, save for later, or skip?"*
-
-Then wait. Branch on the answer:
-- **yes / now / start it** → hand off to `luciq-onboard`.
-- **later / no / skip** → print *"Got it. Whenever you're ready, just ask 'onboard me to Luciq.'"* End.
-- **ambiguous** → re-ask once. Still ambiguous → treat as *later*.
-
-**Hard rule:** silence is *later*, never *now*. Don't default-yes. This is the only sanctioned moment to raise onboarding — don't ask at any other point.
+**Do NOT mention `luciq-onboard`.** Do not offer it, do not describe it, do not print *"next natural step…"*, do not ask *"want to onboard you now?"*. Setup ends after the items above. If the customer wants to onboard later, they will invoke `luciq-onboard` themselves — that decision is theirs to make on their own initiative, not a prompt for the assistant to surface.
 
 ## Style
 
