@@ -329,10 +329,16 @@ Print:
 - MCP / CLI wired status.
 - A test command (for example, "shake the device or simulator to invoke Luciq").
 - Pointers: `luciq-debug` for crash investigation, `luciq-migrate` for moving off the legacy Instabug SDK or upgrading between Luciq versions.
-- **One closing sentence about `luciq-onboard` — as a future option, never an immediate invocation.** Exact pattern:
-  > *"When you're ready to figure out which Luciq products fit your app, run `luciq-onboard` — separate ~10-minute conversation. No rush; bring it up when you have the time."*
+After printing everything above, **stop and ask the customer explicitly** — don't auto-chain:
 
-  Do **not** offer to invoke onboard yourself. Do **not** ask *"shall I onboard you next?"* The customer must invoke `luciq-onboard` themselves, on their own timing — they may want stakeholders present, a richer CLAUDE.md written first, or simply not have time right now. Setup ending is not an onboarding trigger.
+> *"SDK is installed and verified. Next natural step is product onboarding — a ~10-minute conversation about which Luciq products fit your app. Want to start now, save for later, or skip?"*
+
+Then wait. Branch on the answer:
+- **yes / now / start it** → hand off to `luciq-onboard`.
+- **later / no / skip** → print *"Got it. Whenever you're ready, just ask 'onboard me to Luciq.'"* End.
+- **ambiguous** → re-ask once. Still ambiguous → treat as *later*.
+
+**Hard rule:** silence is *later*, never *now*. Don't default-yes. This is the only sanctioned moment to raise onboarding — don't ask at any other point.
 
 ## Style
 
