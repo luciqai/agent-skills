@@ -107,6 +107,7 @@ If none, write: *None detected.*
 - A user reports a crash, hang, or bug → `luciq-debug`
 - Upgrading the SDK between versions → `luciq-migrate`
 - Verifying an SDK upgrade end-to-end → `luciq-verify`
+- Deep PII / masking audit or compliance-framework prep → `luciq-pii`
 ```
 
 ---
@@ -221,4 +222,5 @@ Operator: Heba Mekawi
 - A user reports a crash, hang, or bug → `luciq-debug`
 - Upgrading the SDK between versions → `luciq-migrate`
 - Verifying an SDK upgrade end-to-end → `luciq-verify`
+- Deep PII / masking audit or compliance-framework prep → `luciq-pii`
 ```

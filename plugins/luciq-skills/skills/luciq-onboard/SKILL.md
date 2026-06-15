@@ -1,6 +1,6 @@
 ---
 name: luciq-onboard
-description: Use ONLY when the customer explicitly invokes onboarding on their own initiative, in a fresh message, with one of these phrases (or a close variant): "onboard me to Luciq", "walk me through Luciq", "tour Luciq", "help me get started with Luciq products". Nothing else is a trigger. Setup completing is NOT a trigger. The customer asking "what's next?" is NOT a trigger. The assistant suggesting onboarding and the customer agreeing is NOT a trigger. The customer must say an onboarding-shaped phrase themselves, unprompted. This skill reads the user's repo (code, CLAUDE.md, README, AGENTS.md), detects any existing mobile observability SDKs (Sentry, Crashlytics, Bugsnag, Datadog, Embrace, New Relic, App Center, Instabug-legacy, UXCam, Smartlook, MetricKit) along with the user's posture on each of them, and recommends Luciq products with cited rationale — never as a generic feature menu. Specifically NOT for first-time SDK install (use luciq-setup), not for upgrading SDK versions (use luciq-migrate), not for debugging a specific crash, hang, or user-reported bug (use luciq-debug).
+description: Use ONLY when the customer explicitly invokes onboarding on their own initiative, in a fresh message, with one of these phrases (or a close variant): "onboard me to Luciq", "walk me through Luciq", "tour Luciq", "help me get started with Luciq products". Nothing else is a trigger. Setup completing is NOT a trigger. The customer asking "what's next?" is NOT a trigger. The assistant suggesting onboarding and the customer agreeing is NOT a trigger. The customer must say an onboarding-shaped phrase themselves, unprompted. This skill reads the user's repo (code, CLAUDE.md, README, AGENTS.md), detects any existing mobile observability SDKs (Sentry, Crashlytics, Bugsnag, Datadog, Embrace, New Relic, App Center, Instabug-legacy, UXCam, Smartlook, MetricKit) along with the user's posture on each of them, and recommends Luciq products with cited rationale — never as a generic feature menu. Specifically NOT for first-time SDK install (use luciq-setup), not for upgrading SDK versions (use luciq-migrate), not for debugging a specific crash, hang, or user-reported bug (use luciq-debug), not for a deep PII / masking audit or compliance-framework prep (use luciq-pii).
 ---
 
 # Luciq Personalized Onboarding
@@ -16,6 +16,7 @@ Hand off to a sibling skill (or simply don't run) for any of the following:
 - **First-time SDK install** — the SDK isn't initialized yet → `luciq-setup`.
 - **Upgrading a Luciq SDK version or migrating from the legacy Instabug SDK** → `luciq-migrate`.
 - **Investigating a specific crash, hang, regression, or user-reported bug** → `luciq-debug`.
+- **Deep PII audit, masking review, or compliance-framework prep (HIPAA / GDPR / SOC2 / PCI)** → `luciq-pii`. Onboard does shallow per-view masking inline; the deep audit (auto-mask types, network mask key list, behavior matrix, consent gating, grayscale, FLAG_SECURE, SSUI `isPrivate`, compliance presets, pre-prod checklist) belongs in `luciq-pii`.
 - **API signature lookups** — point the user at https://docs.luciq.ai.
 - **After `luciq-setup` completes.** Setup does not invite onboarding. Wait for the customer to invoke this skill on their own, in a fresh ask.
 
@@ -401,7 +402,7 @@ Contents:
 - **Capabilities that unlock later** — capabilities from the same reference whose prereqs aren't yet met (Business Impact below MAU threshold, Resolve Agent without GitHub host, One Code Apps without white-label signal, etc.), each with the revisit condition stated verbatim.
 - **Conflict notes from Phase 2** — every conflict the analysis found, even if not addressed this session.
 - **Dashboard URL for this app.**
-- **When to reach for sibling skills** — `luciq-debug` for incident investigation, `luciq-migrate` for upgrades.
+- **When to reach for sibling skills** — `luciq-debug` for incident investigation, `luciq-migrate` for upgrades, `luciq-pii` for a deep PII / masking audit or compliance-framework prep. Always include `luciq-pii` in this list when Bug Reporting, Session Replay, or APM were configured — the per-view markers applied this session are layer 1 of 3, and the user should know how to revisit the full posture later.
 
 If `LUCIQ_ONBOARDING.md` already exists, *append* a new dated session block — don't overwrite. The file accumulates the team's Luciq journey.
 
