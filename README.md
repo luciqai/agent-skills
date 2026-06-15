@@ -13,7 +13,7 @@ Claude Code skills for the Luciq mobile observability SDK. Real edits, MCP queri
 Add the Luciq marketplace and install the plugin in one step:
 
 ```
-/plugin marketplace add github.com/luciqai/agent-skills
+/plugin marketplace add luciqai/agent-skills
 /plugin install luciq-skills@luciq.ai
 ```
 
@@ -28,7 +28,7 @@ Skills available after install:
 ### Cursor
 
 ```
-/plugin marketplace add github.com/luciqai/agent-skills
+/plugin marketplace add luciqai/agent-skills
 /plugin install luciq-skills@luciq.ai
 ```
 
