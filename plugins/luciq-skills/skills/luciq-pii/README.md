@@ -106,6 +106,7 @@ plugins/luciq-skills/
             ├── defense-in-depth.md      ← Layer 3: consent, grayscale, FLAG_SECURE, usersPageEnabled
             ├── ssui-isprivate.md        ← Server-driven UI isPrivate flow
             ├── compliance-defaults.md   ← HIPAA / GDPR / PCI / SOC2 / CCPA / FERPA presets
+            ├── encryption-at-rest.md    ← AES-256-GCM / TLS 1.2+ / iOS Keychain — paired layer to masking
             ├── preprod-checklist.md     ← Pre-production privacy checklist
             └── handoff-template.md      ← LUCIQ_PII.md template with a worked example
 ```

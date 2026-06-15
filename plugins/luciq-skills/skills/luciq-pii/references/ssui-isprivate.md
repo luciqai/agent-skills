@@ -13,11 +13,11 @@ If no SSUI is detected, skip this section entirely — don't propose the pattern
 1. **Extend the SSUI schema with an `isPrivate` boolean** on every node type that can render PII. Server controls per-node sensitivity at deploy time without an app release.
 2. **At render time, after a node is inflated**, mark the resulting view private if `node.isPrivate` is true. Platform-specific:
    - **iOS UIKit**: `view.ibgPrivate = true`
-   - **iOS SwiftUI**: wrap the view in `LuciqPrivateView { ... }` or apply `.luciqPrivate()`
-   - **Android Views**: `Luciq.addPrivateViews(view)`
+   - **iOS SwiftUI**: `view.luciqPrivate()` modifier
+   - **Android Views**: `Luciq.addPrivateViews(view)` (pair with `Luciq.removePrivateViews(view)` when the node leaves the screen, or `Luciq.removeAllPrivateViews()` on teardown)
    - **Android Compose**: `Modifier.luciqPrivate(isPrivate = node.isPrivate)`
-   - **React Native**: wrap in `<LuciqPrivateView>...</LuciqPrivateView>` based on `node.isPrivate`
-   - **Flutter**: wrap in `LuciqPrivateView(child: ...)` based on `node.isPrivate`
+   - **React Native**: `Luciq.addPrivateViews([viewRef])` keyed off `node.isPrivate`
+   - **Flutter**: `SessionReplay.addPrivateViews([widgetKey])` keyed off `node.isPrivate`
 3. **Add a global safety net at SDK init** — appropriate auto-mask types per `auto-mask-types.md`. A forgotten flag on a single node still can't leak when the safety net catches the type.
 4. **Verify in a dev build** that masked regions render as solid blocks in repro-step screenshots and Session Replay frames.
 5. **Gate the SSUI render path behind a feature flag** (ideally per app version) so a bad server payload can be turned off without an app release.
@@ -55,8 +55,28 @@ Text(
 // iOS SwiftUI — at render time after inflate
 let view = node.render()
 return node.isPrivate
-    ? AnyView(LuciqPrivateView { view })
+    ? AnyView(view.luciqPrivate())
     : AnyView(view)
+```
+
+```javascript
+// React Native — after inflate, mark by ref
+const ref = useRef(null);
+useEffect(() => {
+    if (node.isPrivate && ref.current) {
+        Luciq.addPrivateViews([ref.current]);
+    }
+}, [node.isPrivate]);
+return <RenderedNode ref={ref} {...props} />;
+```
+
+```dart
+// Flutter — after inflate, mark by widget key
+final key = GlobalKey();
+if (node.isPrivate) {
+    SessionReplay.addPrivateViews([key]);
+}
+return RenderedNode(key: key, ...);
 ```
 
 ## Audit checklist (used in Phase 4)

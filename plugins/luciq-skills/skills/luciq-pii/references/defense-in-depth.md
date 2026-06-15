@@ -58,7 +58,7 @@ Android's `WindowManager.LayoutParams.FLAG_SECURE` prevents the OS from includin
 ### Override
 
 ```kotlin
-Instabug.Builder(application, token)
+Luciq.Builder(application, token)
     .ignoreFlagSecure(true)  // Default: false
     .build()
 ```
@@ -66,6 +66,8 @@ Instabug.Builder(application, token)
 Setting `ignoreFlagSecure(true)` means Luciq captures FLAG_SECURE windows. **Almost never the right call.** If you find this set, surface as a "Close now" item with the consequence stated:
 
 > *"`ignoreFlagSecure(true)` at `LuciqInit.kt:18` overrides the OS-level secure-window protection. FLAG_SECURE windows (typically payment screens, ID verification, biometric prompts) will be captured by Luciq. Recommend reverting to default unless your team has a documented reason."*
+
+Grep target for detection: `ignoreFlagSecure(` (class-agnostic — catches `Luciq.Builder` and legacy `Instabug.Builder` call sites).
 
 ### When NOT to surface as a red flag
 

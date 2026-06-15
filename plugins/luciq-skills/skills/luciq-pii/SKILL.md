@@ -138,6 +138,8 @@ Five small reads, each one a separate control in the plan.
 
 Output: `defense_in_depth: { consent_gating, grayscale, flag_secure_overridden, users_page_enabled, ssui_inflate_sites: [...] }`.
 
+Encryption posture (AES-256-GCM at rest, TLS 1.2+ with HMAC-SHA256 in transit, iOS Keychain for PII keys) is on by default and not configurable from the audit — but it belongs in the recap and handoff so the user sees masking + encryption as a layered posture, not just masking. See `references/encryption-at-rest.md` for the one-line recap form and the on-device data category table.
+
 ### Track F — Workspace precedent (MCP, optional)
 
 If the Luciq MCP is authenticated, call `list_applications` and read masking config from peer apps. A precedent quote like *"your other 3 apps mask `TEXT_INPUTS + LABELS` at SDK init"* is the strongest trust move available for an audit. Skip silently if MCP isn't authenticated.

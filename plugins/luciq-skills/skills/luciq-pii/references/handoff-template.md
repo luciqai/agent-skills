@@ -60,6 +60,10 @@ By layer:
 - `usersPageEnabled`: `<enabled / disabled / default>`
 - SSUI `isPrivate`: `<wired at <inflate sites> / no SSUI detected>`
 
+**Encryption posture (default, layered with masking)**
+- In transit: TLS 1.2+ with HMAC-SHA256 request signing.
+- At rest (on-device): AES-256-GCM; iOS PII keys (`IBGName`, `IBGEmail`, `IBGDeviceUUID`, push tokens) in the iOS Keychain. Local copy deleted once transmission is confirmed.
+
 ### Controls applied this session
 
 - ✅ **<Control>** — <one-line summary>
@@ -200,6 +204,10 @@ Operator: Heba Mekawi
 - FLAG_SECURE: n/a (iOS app)
 - `usersPageEnabled`: disabled (requested via support)
 - SSUI `isPrivate`: no SSUI detected
+
+**Encryption posture (default, layered with masking)**
+- In transit: TLS 1.2+ with HMAC-SHA256 request signing.
+- At rest (on-device): AES-256-GCM via CryptoKit; `IBGName`, `IBGEmail`, `IBGDeviceUUID`, push tokens stored in iOS Keychain.
 
 ### Controls applied this session
 

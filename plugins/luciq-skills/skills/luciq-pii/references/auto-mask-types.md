@@ -55,6 +55,21 @@ The skill proposes one of these in Phase 3 / 4, then cites the archetype as the 
 | **Fintech** | `TEXT_INPUTS + LABELS + WEB_VIEWS` | All four types | All four + per-view markers on PAN/CVV/IBAN |
 | **Healthcare (HIPAA)** | `TEXT_INPUTS + LABELS + MEDIA` | All four types | All four + per-view markers on every PHI surface + consent gating |
 
+## Per-view marker APIs (for cross-reference)
+
+Auto-mask is the blanket layer; per-view markers are the precise layer. The marker APIs the audit cites:
+
+| Platform | Mark private | Unmark | Clear all |
+|---|---|---|---|
+| iOS UIKit | `view.ibgPrivate = true` | `view.ibgPrivate = false` | — |
+| iOS SwiftUI | `view.luciqPrivate()` | — (recompose without modifier) | — |
+| Android Views | `Luciq.addPrivateViews(v1, v2)` | `Luciq.removePrivateViews(v)` | `Luciq.removeAllPrivateViews()` |
+| Android Compose | `Modifier.luciqPrivate(isPrivate = true)` | `Modifier.luciqPrivate(isPrivate = false)` | — |
+| React Native | `Luciq.addPrivateViews([ref1, ref2])` | (re-add without the ref) | — |
+| Flutter | `SessionReplay.addPrivateViews([key1, key2])` | (re-add without the key) | — |
+
+The marker works on any view reference — including views inflated at runtime from server JSON — with no compile-time annotation, manifest entry, or XML attribute required. Marking a `ViewGroup` or Compose parent automatically masks every descendant.
+
 ## How auto-mask combines with per-view markers
 
 The reference document's §2.4 behavior matrix (paraphrased):
@@ -67,6 +82,21 @@ The reference document's §2.4 behavior matrix (paraphrased):
 | No | No | Not masked |
 
 Key inference for audits: **a view of a non-covered type with no per-view marker is not masked.** A `TEXT_INPUTS`-only config does nothing for a SwiftUI `Text` rendering a credit card number. Per-view markers fill the gap precisely; auto-mask catches what the team forgot.
+
+## Platform support matrix
+
+Use this in Phase 2 recap when stating what's available on the user's platform. "n/a" means the concept doesn't apply on that platform, not that it's missing.
+
+| Capability | iOS | Android | Flutter | React Native |
+|---|---|---|---|---|
+| Auto type-based screenshot masking | Yes | Yes | Yes | Yes |
+| Manual private views | Yes | Yes | Yes | Yes |
+| Compose / SwiftUI modifier | Yes (SwiftUI) | Yes (Compose) | n/a | n/a |
+| Auto network header/query masking | Yes | Yes | Yes | Yes |
+| Manual network obfuscate / omit | Yes | Yes | Yes | Yes |
+| Grayscale screenshot mode | Yes | Yes | Yes | Yes |
+| Secure-window control (FLAG_SECURE) | n/a | Yes | n/a | n/a |
+| Private views in **video recording** | **No** | **No** | **No** | **No** |
 
 ## What auto-mask does NOT do
 

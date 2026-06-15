@@ -28,11 +28,13 @@ The list is configurable **server-side**. New keys can be added without a code c
 State the consequence before applying. Disabling means raw `authorization` / `password` / `api_key` values reach Luciq storage — that's almost never the right call. Surface as a red flag.
 
 ```kotlin
-Instabug.setNetworkAutoMaskingState(Feature.State.DISABLED)
+Luciq.setNetworkAutoMaskingState(Feature.State.DISABLED)
 ```
 ```swift
 NetworkLogger.autoMaskingEnabled = false
 ```
+
+Objective-C equivalent: `IBGNetworkLogger.autoMaskingEnabled = false;`
 
 ## Layer 2 — Manual obfuscate / omit
 
