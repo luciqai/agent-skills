@@ -94,7 +94,7 @@ Extract: explicit privacy lines, compliance framework mentions, "never log X" ru
 
 ### Track B — Sensitive view enumeration
 
-If a recent `LUCIQ_ONBOARDING.md` exists with a sensitive-view list, read it and skip re-enumeration. Otherwise run the same enumeration `luciq-onboard` does (see its Track B): for each sensitive screen, identify individual views bound to PII-flavored properties, with `file:line, view_type, binding, suggested_marker`. Same false-positive filters (test/spec/mock paths, validator utilities, `node_modules`, `Pods/`, `build/`).
+Run the same enumeration `luciq-onboard` does (see its Track B): for each sensitive screen, identify individual views bound to PII-flavored properties, with `file:line, view_type, binding, suggested_marker`. Same false-positive filters (test/spec/mock paths, validator utilities, `node_modules`, `Pods/`, `build/`). Re-enumerate from scratch every run — the audit should be evidence-driven from the current repo state, never relying on a prior session's notes which may be stale.
 
 The structured output is `sensitive_views: [{screen, file, line, view_type, binding, suggested_marker, currently_marked: bool}]`. The `currently_marked` flag is the key new column — set true if the view already has the Luciq marker applied at its site.
 

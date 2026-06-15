@@ -13,7 +13,7 @@ Once the Luciq SDK is initialized, `luciq-pii` reads the user's repo and the SDK
 The skill specifically:
 
 - Reads `CLAUDE.md`, `AGENTS.md`, `README` for explicit privacy lines, framework mentions, and consent obligations.
-- Re-uses the sensitive-view list from `LUCIQ_ONBOARDING.md` when present; otherwise re-enumerates per-platform.
+- Re-enumerates sensitive views per-platform on every run — the audit is always driven by the current repo state, never a prior session's snapshot.
 - Detects what's masked today across **three layers**:
   - **Layer 1 — Screen / view.** Auto-mask types at SDK init (`TEXT_INPUTS`, `LABELS`, `MEDIA`, `WEB_VIEWS`) + per-view markers on individual PII-bound views.
   - **Layer 2 — Network.** Auto-masking state (default-on from SDK 14.2.0), the default key list (`authorization`, `password`, `api_key`, `client_secret`, …), and any manual `obfuscateLog` / `omitLog` sites.
@@ -117,7 +117,7 @@ The references are loaded only when the corresponding phase needs them.
 ## Related skills
 
 - **`luciq-setup`** — first-time SDK integration. Run this first.
-- **`luciq-onboard`** — full product walk (Bug Reporting, Replay, APM, Surveys, etc.). Onboard configures per-view markers inline as part of the walk; `luciq-pii` covers the deeper masking layers and compliance presets. Reading `LUCIQ_ONBOARDING.md` when present skips re-enumeration of sensitive views.
+- **`luciq-onboard`** — full product walk (Bug Reporting, Replay, APM, Surveys, etc.). Onboard configures per-view markers inline as part of the walk; `luciq-pii` covers the deeper masking layers and compliance presets.
 - **`luciq-migrate`** — SDK upgrades / legacy Instabug rename.
 - **`luciq-verify`** — verifies an SDK upgrade end-to-end before shipping. Use after `luciq-migrate` to confirm the new SDK version preserves your masking contracts.
 - **`luciq-debug`** — production incident investigation.

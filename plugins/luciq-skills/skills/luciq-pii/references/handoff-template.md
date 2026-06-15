@@ -127,7 +127,7 @@ If none, write: *None this session — all controls applied are code-side.*
 
 - CLAUDE.md: <line numbers cited during the session>
 - Framework presets loaded: `<framework or "none">`
-- Sensitive views source: `<LUCIQ_ONBOARDING.md from <date> | fresh enumeration>`
+- Sensitive views source: fresh enumeration this session
 - Detected SDK style match: `<one-line summary, if applicable>`
 - Workspace precedent: <one-line, or *MCP not authenticated*>
 
@@ -240,7 +240,7 @@ Operator: Heba Mekawi
 
 - CLAUDE.md: line 8 ("never log PHI")
 - Framework presets loaded: HIPAA
-- Sensitive views source: fresh enumeration (no recent LUCIQ_ONBOARDING.md)
+- Sensitive views source: fresh enumeration this session
 - Detected SDK style match: n/a (no competitor observability SDK)
 - Workspace precedent: MCP not authenticated
 
