@@ -1,6 +1,6 @@
 ---
 name: luciq-onboard
-description: Use ONLY when the customer explicitly invokes onboarding on their own initiative, in a fresh message, with one of these phrases (or a close variant): "onboard me to Luciq", "walk me through Luciq", "tour Luciq", "help me get started with Luciq products". Nothing else is a trigger. Setup completing is NOT a trigger. The customer asking "what's next?" is NOT a trigger. The assistant suggesting onboarding and the customer agreeing is NOT a trigger. The customer must say an onboarding-shaped phrase themselves, unprompted. This skill reads the user's repo (code, CLAUDE.md, README, AGENTS.md), detects any existing mobile observability SDKs (Sentry, Crashlytics, Bugsnag, Datadog, Embrace, New Relic, App Center, Instabug-legacy, UXCam, Smartlook, MetricKit) along with the user's posture on each of them, and recommends Luciq products with cited rationale — never as a generic feature menu. Specifically NOT for first-time SDK install (use luciq-setup), not for upgrading SDK versions (use luciq-migrate), not for debugging a specific crash, hang, or user-reported bug (use luciq-debug), not for a deep PII / masking audit or compliance-framework prep (use luciq-pii).
+description: Use ONLY when the customer explicitly invokes onboarding on their own initiative, in a fresh message, with one of these phrases (or a close variant): "onboard me to Luciq", "walk me through Luciq", "tour Luciq", "help me get started with Luciq products". Nothing else is a trigger. Setup completing is NOT a trigger. The customer asking "what's next?" is NOT a trigger. The assistant suggesting onboarding and the customer agreeing is NOT a trigger. The customer must say an onboarding-shaped phrase themselves, unprompted. This skill reads the user's repo (code, CLAUDE.md, README, AGENTS.md), detects any existing mobile observability SDKs (Sentry, Crashlytics, Bugsnag, Datadog, Embrace, New Relic, App Center, Instabug-legacy, UXCam, Smartlook, MetricKit) along with the user's posture on each of them, and recommends Luciq products with cited rationale — never as a generic feature menu. Specifically NOT for first-time SDK install (use luciq-setup), not for upgrading SDK versions (use luciq-migrate), not for debugging a specific crash, hang, or user-reported bug (use luciq-debug), not for a deep PII / masking audit or compliance-framework prep (use luciq-masking-rules).
 ---
 
 # Luciq Personalized Onboarding
@@ -16,7 +16,7 @@ Hand off to a sibling skill (or simply don't run) for any of the following:
 - **First-time SDK install** — the SDK isn't initialized yet → `luciq-setup`.
 - **Upgrading a Luciq SDK version or migrating from the legacy Instabug SDK** → `luciq-migrate`.
 - **Investigating a specific crash, hang, regression, or user-reported bug** → `luciq-debug`.
-- **Deep PII audit, masking review, or compliance-framework prep (HIPAA / GDPR / SOC2 / PCI)** → `luciq-pii`. Onboard does shallow per-view masking inline; the deep audit (auto-mask types, network mask key list, behavior matrix, consent gating, grayscale, FLAG_SECURE, SSUI `isPrivate`, compliance presets, pre-prod checklist) belongs in `luciq-pii`.
+- **Deep PII audit, masking review, or compliance-framework prep (HIPAA / GDPR / SOC2 / PCI)** → `luciq-masking-rules`. Onboard does shallow per-view masking inline; the deep audit (auto-mask types, network mask key list, behavior matrix, consent gating, grayscale, FLAG_SECURE, SSUI `isPrivate`, compliance presets, pre-prod checklist) belongs in `luciq-masking-rules`.
 - **API signature lookups** — point the user at https://docs.luciq.ai.
 - **After `luciq-setup` completes.** Setup does not invite onboarding. Wait for the customer to invoke this skill on their own, in a fresh ask.
 
@@ -411,7 +411,7 @@ The doc is structured as **two halves separated by a hard `---` divider**. Don't
 - **Conflicts detected (independent of Luciq)** — every conflict from Phase 2, even if the user didn't address it this session. Accountability survives.
 - **Competitor coverage** — products the customer chose to stay on a competitor for, with their reason verbatim if given.
 - **How the agent figured this out** — context docs cited, money path, auth flow, sensitive views, accessibility posture, detected SDK style, workspace precedent.
-- **When to reach for sibling skills** — `luciq-debug`, `luciq-migrate`, `luciq-verify`, `luciq-pii`. Always include `luciq-pii` when Bug Reporting, Session Replay, or APM were configured — per-view markers applied this session are layer 1 of 3, and the user should know how to revisit the full posture later.
+- **When to reach for sibling skills** — `luciq-debug`, `luciq-migrate`, `luciq-verify`, `luciq-masking-rules`. Always include `luciq-masking-rules` when Bug Reporting, Session Replay, or APM were configured — per-view markers applied this session are layer 1 of 3, and the user should know how to revisit the full posture later.
 
 **Footer.** Session metadata (mode, operator, SDK name + version, package manager, product name, import) lives in an italic one-liner at the very bottom — present for the audit trail, absent from the celebration.
 

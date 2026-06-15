@@ -1,9 +1,9 @@
 ---
-name: luciq-pii
+name: luciq-masking-rules
 description: Use ONLY when the customer explicitly invokes a PII / masking audit on their own initiative, in a fresh message, with one of these phrases (or a close variant) — "audit my PII", "check my masking", "review Luciq privacy / PII posture", "prep Luciq for HIPAA / GDPR / SOC2 / PCI", "add masking to <screen>", "what's masked in Luciq?". Nothing else is a trigger. `luciq-onboard` finishing is NOT a trigger. The assistant suggesting a PII review and the customer agreeing is NOT a trigger. The customer must say a PII-shaped phrase themselves, unprompted. This skill scans the user's repo and Luciq SDK config for masking posture (auto-mask types, per-view markers, network auto-masking, manual obfuscate/omit, consent gating, grayscale, FLAG_SECURE, SSUI isPrivate handling), compares it against compliance frameworks the user mentions, and walks the user through adding the controls that fit — with cited rationale. Specifically NOT for first-time SDK install (use `luciq-setup`), not for the full product walk (use `luciq-onboard`), not for SDK upgrades (use `luciq-migrate`), not for debugging a specific incident (use `luciq-debug`).
 ---
 
-# Luciq PII & Masking Audit
+# Luciq Masking Rules
 
 End-to-end PII posture audit and masking apply for an app that already has the SDK installed. Scans what's masked today (screen, view-level, network), surfaces gaps against the customer's stated compliance posture, and walks the user through closing them — one control at a time, with cited reasoning.
 
@@ -20,7 +20,7 @@ Hand off to a sibling skill (or simply don't run) for any of the following:
 - **API signature lookups** — point the user at https://docs.luciq.ai.
 - **After `luciq-onboard` completes.** Onboard does not invite a PII audit. Wait for the customer to invoke this skill on their own, in a fresh ask.
 
-If the user's ask matches any of the above, STOP and route them. Running `luciq-pii` on an uninstrumented project produces incorrect results because every detection step assumes the SDK init is already present.
+If the user's ask matches any of the above, STOP and route them. Running `luciq-masking-rules` on an uninstrumented project produces incorrect results because every detection step assumes the SDK init is already present.
 
 ## Canonical sources of truth
 
@@ -59,7 +59,7 @@ PII Audit Progress:
 - [ ] 3. Plan — three positive buckets (close now / optional / monitor)
 - [ ] 4. Per-control walk (Ask → Apply → Summarize)
 - [ ] 5. Verification — visually confirm masking on one sensitive screen
-- [ ] 6. Handoff — write LUCIQ_PII.md (pre-prod checklist + posture snapshot)
+- [ ] 6. Handoff — write LUCIQ_MASKING.md (pre-prod checklist + posture snapshot)
 ```
 
 ## 0. Detect mode + compliance posture
@@ -223,7 +223,7 @@ After applying, three short blocks:
 > - Wrapped `SessionReplay.enabled = true` in `userHasConsented` check at `OnboardingFlow.swift:74`.
 >
 > What's left for you:
-> - Email support to add `x-patient-id` to the network mask key list (template in `LUCIQ_PII.md`).
+> - Email support to add `x-patient-id` to the network mask key list (template in `LUCIQ_MASKING.md`).
 > - Verify masked regions in the dashboard after next session — see Phase 5.
 >
 > Moving to the next control.
@@ -245,9 +245,9 @@ If the user reports masking didn't work, diagnose (marker on parent vs child, au
 
 In FAST mode, skip the wait. The handoff doc still includes verification steps so the user can do it themselves.
 
-## 6. Handoff — write LUCIQ_PII.md
+## 6. Handoff — write LUCIQ_MASKING.md
 
-Write `LUCIQ_PII.md` at the repo root using the template in `references/handoff-template.md`. The doc is the durable artifact — re-readable next quarter, hand-off-able to legal / compliance, queryable by `luciq-debug` later.
+Write `LUCIQ_MASKING.md` at the repo root using the template in `references/handoff-template.md`. The doc is the durable artifact — re-readable next quarter, hand-off-able to legal / compliance, queryable by `luciq-debug` later.
 
 Contents:
 
@@ -260,7 +260,7 @@ Contents:
 - **Visual verification** — timestamp + screen name if confirmed, or *not verified this session*.
 - **When to reach for sibling skills** — `luciq-onboard` for product walk, `luciq-migrate` for SDK upgrades, `luciq-debug` for incident investigation.
 
-If `LUCIQ_PII.md` already exists, *append* a new dated session block — don't overwrite. The file accumulates the team's PII journey.
+If `LUCIQ_MASKING.md` already exists, *append* a new dated session block — don't overwrite. The file accumulates the team's masking journey.
 
 ## Style
 

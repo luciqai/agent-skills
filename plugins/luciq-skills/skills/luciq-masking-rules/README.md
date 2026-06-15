@@ -1,4 +1,4 @@
-# luciq-pii
+# luciq-masking-rules
 
 A Claude Code / Cursor skill that audits a Luciq-instrumented app's PII / masking posture across all three masking layers — screen / view markers, network logs, and defense-in-depth controls — and walks the controls that close any gaps with cited rationale.
 
@@ -8,7 +8,7 @@ If you've ever stared at a launch checklist and wondered *"is my masking actuall
 
 ## What it does
 
-Once the Luciq SDK is initialized, `luciq-pii` reads the user's repo and the SDK config in it, classifies the masking posture by layer, compares it against the compliance framework the user names (or proposes one based on archetype), and walks the controls that need closing — one at a time, with the evidence cited.
+Once the Luciq SDK is initialized, `luciq-masking-rules` reads the user's repo and the SDK config in it, classifies the masking posture by layer, compares it against the compliance framework the user names (or proposes one based on archetype), and walks the controls that need closing — one at a time, with the evidence cited.
 
 The skill specifically:
 
@@ -22,7 +22,7 @@ The skill specifically:
 - Walks each gap through **Ask → Apply → Summarize**, same micro-flow as `luciq-onboard`. Per-view markers use the same "first 3-5 individually, then batch-confirm" policy.
 - Prepares **copy-pasteable support-ticket requests** for the server-side controls code can't touch — custom network mask keys, `usersPageEnabled` toggle.
 - Ends with **one visual verification** — masked regions on the dashboard render as solid black rectangles on a screen you actually navigated to.
-- Writes `LUCIQ_PII.md` with the posture snapshot, applied controls, deferred items with revisit conditions, server-side requests, and a pre-production privacy checklist. Appended to over time; never overwritten.
+- Writes `LUCIQ_MASKING.md` with the posture snapshot, applied controls, deferred items with revisit conditions, server-side requests, and a pre-production privacy checklist. Appended to over time; never overwritten.
 
 ---
 
@@ -50,7 +50,7 @@ Three speed modes are picked from the trigger phrasing:
 The skill bails and routes to a sibling skill for any of:
 
 - **SDK isn't initialized yet** → `luciq-setup`.
-- **You want the full product walk** (Bug Reporting, Replay, APM, Surveys, etc.) → `luciq-onboard`. Onboard configures per-view markers inline as part of the walk; that's enough for most teams pre-launch. Reach for `luciq-pii` when masking is the actual question.
+- **You want the full product walk** (Bug Reporting, Replay, APM, Surveys, etc.) → `luciq-onboard`. Onboard configures per-view markers inline as part of the walk; that's enough for most teams pre-launch. Reach for `luciq-masking-rules` when masking is the actual question.
 - **SDK upgrade or Instabug → Luciq migration** → `luciq-migrate`.
 - **A specific incident (crash, hang, regression, bug report)** → `luciq-debug`.
 
@@ -69,7 +69,7 @@ PII Audit Progress:
   3. Plan — three positive buckets (close now / optional / monitor)
   4. Per-control walk (Ask → Apply → Summarize)
   5. Visual verification — one masked screen on the dashboard
-  6. Handoff — write LUCIQ_PII.md
+  6. Handoff — write LUCIQ_MASKING.md
 ```
 
 In **AUDIT** mode, the skill stops after Phase 3 and writes the handoff doc — useful when you want the report without the apply.
@@ -97,7 +97,7 @@ In **AUDIT** mode, the skill stops after Phase 3 and writes the handoff doc — 
 ```
 plugins/luciq-skills/
 └── skills/
-    └── luciq-pii/
+    └── luciq-masking-rules/
         ├── README.md            ← you are here
         ├── SKILL.md             ← LLM-facing workflow definition
         └── references/
@@ -108,7 +108,7 @@ plugins/luciq-skills/
             ├── compliance-defaults.md   ← HIPAA / GDPR / PCI / SOC2 / CCPA / FERPA presets
             ├── encryption-at-rest.md    ← AES-256-GCM / TLS 1.2+ / iOS Keychain — paired layer to masking
             ├── preprod-checklist.md     ← Pre-production privacy checklist
-            └── handoff-template.md      ← LUCIQ_PII.md template with a worked example
+            └── handoff-template.md      ← LUCIQ_MASKING.md template with a worked example
 ```
 
 The references are loaded only when the corresponding phase needs them.
@@ -118,7 +118,7 @@ The references are loaded only when the corresponding phase needs them.
 ## Related skills
 
 - **`luciq-setup`** — first-time SDK integration. Run this first.
-- **`luciq-onboard`** — full product walk (Bug Reporting, Replay, APM, Surveys, etc.). Onboard configures per-view markers inline as part of the walk; `luciq-pii` covers the deeper masking layers and compliance presets.
+- **`luciq-onboard`** — full product walk (Bug Reporting, Replay, APM, Surveys, etc.). Onboard configures per-view markers inline as part of the walk; `luciq-masking-rules` covers the deeper masking layers and compliance presets.
 - **`luciq-migrate`** — SDK upgrades / legacy Instabug rename.
 - **`luciq-verify`** — verifies an SDK upgrade end-to-end before shipping. Use after `luciq-migrate` to confirm the new SDK version preserves your masking contracts.
 - **`luciq-debug`** — production incident investigation.

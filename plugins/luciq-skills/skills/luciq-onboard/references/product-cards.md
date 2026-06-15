@@ -50,7 +50,7 @@ Verify product names, SDK class names, and dashboard surface labels against http
 - Nothing required — reports start arriving on next launch.
 - Optional: configure custom report attributes (app version, user tier, env) on the dashboard.
 - If `locales.count > 1` (Track E5), provide localized prompt text for each of `<list locales from profile>` on the dashboard so the invocation hints, comment placeholder, and submit-button labels match the user's chosen language.
-- **Deep PII / masking audit** (auto-mask types at SDK init, network mask key list, consent gating, grayscale, FLAG_SECURE, SSUI `isPrivate`, compliance-framework presets, pre-prod checklist) → run `luciq-pii` when you're ready. The per-view markers proposed above are layer 1 of 3; `luciq-pii` covers the rest.
+- **Deep PII / masking audit** (auto-mask types at SDK init, network mask key list, consent gating, grayscale, FLAG_SECURE, SSUI `isPrivate`, compliance-framework presets, pre-prod checklist) → run `luciq-masking-rules` when you're ready. The per-view markers proposed above are layer 1 of 3; `luciq-masking-rules` covers the rest.
 
 **Verification (primary — used in Phase 5).**
 1. Build and launch.
@@ -88,7 +88,7 @@ Verify product names, SDK class names, and dashboard surface labels against http
 **What's left for you.**
 - dSYM (iOS) / mapping file (Android) upload step in CI for symbolicated stack traces — see the CLI setup docs.
 - Optional: custom keys / metadata on crash reports.
-- If your app handles regulated data (PHI, PCI, EU user data), run `luciq-pii` to audit what may end up in crash payloads (thread state, captured network logs, repro-step screenshots) — crash capture is opt-out for the same surfaces masking covers.
+- If your app handles regulated data (PHI, PCI, EU user data), run `luciq-masking-rules` to audit what may end up in crash payloads (thread state, captured network logs, repro-step screenshots) — crash capture is opt-out for the same surfaces masking covers.
 
 **Verification.**
 1. Trigger a controlled, non-fatal test exception via the SDK's test method (or a deliberate `fatalError` in debug).
@@ -127,8 +127,8 @@ Verify product names, SDK class names, and dashboard surface labels against http
 **What's left for you.**
 - Optional: custom traces / spans for business-critical flows (cart checkout, payment confirmation).
 - Optional: Apdex threshold tuning on the dashboard once you have data.
-- **Network-mask key list** — Luciq auto-masks a default set of headers and query params (`authorization`, `password`, `api_key`, `client_secret`, etc.) starting SDK 14.2.0. If your API uses custom sensitive headers (`x-patient-id`, `x-stripe-customer`, `x-org-token`), they need to be added server-side via Luciq support. Run `luciq-pii` to enumerate the candidates and prep the support ticket.
-- **Deep PII / network audit** (auto-mask types, full network key review, manual obfuscate / omit on sensitive endpoints, compliance presets) → run `luciq-pii`.
+- **Network-mask key list** — Luciq auto-masks a default set of headers and query params (`authorization`, `password`, `api_key`, `client_secret`, etc.) starting SDK 14.2.0. If your API uses custom sensitive headers (`x-patient-id`, `x-stripe-customer`, `x-org-token`), they need to be added server-side via Luciq support. Run `luciq-masking-rules` to enumerate the candidates and prep the support ticket.
+- **Deep PII / network audit** (auto-mask types, full network key review, manual obfuscate / omit on sensitive endpoints, compliance presets) → run `luciq-masking-rules`.
 
 **Verification.**
 - Navigate through 3-5 screens in the app.
@@ -163,8 +163,8 @@ Verify product names, SDK class names, and dashboard surface labels against http
 **What's left for you.**
 - Review masking when you add new screens with sensitive UI.
 - Optional: per-screen replay disable on screens you never want recorded.
-- **Deep PII / masking audit** (auto-mask types, network masking, consent gating, grayscale, FLAG_SECURE, SSUI `isPrivate`, compliance presets) → run `luciq-pii`. Session Replay is the highest-PII-surface product; running the deep audit is recommended **before going to production** if your app handles regulated data (PHI, PCI, EU user data).
-- If GDPR / CCPA applies and you don't already have consent gating, surface it explicitly in the Summarize block: *"Session Replay is currently unconditional — under GDPR / CCPA you'll want a consent gate before going live. Run `luciq-pii` to add it."*
+- **Deep PII / masking audit** (auto-mask types, network masking, consent gating, grayscale, FLAG_SECURE, SSUI `isPrivate`, compliance presets) → run `luciq-masking-rules`. Session Replay is the highest-PII-surface product; running the deep audit is recommended **before going to production** if your app handles regulated data (PHI, PCI, EU user data).
+- If GDPR / CCPA applies and you don't already have consent gating, surface it explicitly in the Summarize block: *"Session Replay is currently unconditional — under GDPR / CCPA you'll want a consent gate before going live. Run `luciq-masking-rules` to add it."*
 
 **Verification.**
 - Submit a test bug report (covered by Bug Reporting verification).

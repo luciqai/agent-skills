@@ -192,9 +192,9 @@ If none, write:
 - A user reports a crash, hang, or bug → `luciq-debug`
 - Upgrading the SDK between versions → `luciq-migrate`
 - Verifying an SDK upgrade end-to-end → `luciq-verify`
-- Deep PII / masking audit or compliance prep → `luciq-pii`
+- Deep PII / masking audit or compliance prep → `luciq-masking-rules`
 
-Always include `luciq-pii` in this list when Bug Reporting, Session
+Always include `luciq-masking-rules` in this list when Bug Reporting, Session
 Replay, or APM were configured — the per-view markers applied this
 session are layer 1 of 3, and the user should know how to revisit the
 full posture later.
@@ -379,7 +379,7 @@ None this session — no competing observability SDKs are installed.
 - A user reports a crash, hang, or bug → `luciq-debug`
 - Upgrading the SDK between versions → `luciq-migrate`
 - Verifying an SDK upgrade end-to-end → `luciq-verify`
-- Deep PII / masking audit or compliance prep → `luciq-pii`
+- Deep PII / masking audit or compliance prep → `luciq-masking-rules`
 
 ---
 

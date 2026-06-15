@@ -1,6 +1,6 @@
 # Pre-Production Privacy Checklist
 
-Adapted from the reference document's §7.4. The audit lands this in `LUCIQ_PII.md` with the current state per item — `done` / `pending` / `n/a` — so the team can resolve outstanding items before a launch or compliance review.
+Adapted from the reference document's §7.4. The audit lands this in `LUCIQ_MASKING.md` with the current state per item — `done` / `pending` / `n/a` — so the team can resolve outstanding items before a launch or compliance review.
 
 The checklist is descriptive (what to verify), not prescriptive (one-size policy). State the current state for each item; don't omit items the team chose to skip.
 
@@ -41,5 +41,5 @@ The checklist is descriptive (what to verify), not prescriptive (one-size policy
 ## What this checklist is not
 
 - **Not a legal document.** Resolving every item does not constitute compliance certification. State this verbatim in the handoff.
-- **Not a one-time exercise.** Add a Phase 6 handoff line recommending re-runs of `luciq-pii` before launches and after new sensitive screens land.
+- **Not a one-time exercise.** Add a Phase 6 handoff line recommending re-runs of `luciq-masking-rules` before launches and after new sensitive screens land.
 - **Not a substitute for masking the underlying data.** A checked "auto-mask configured" item only covers types the developer chose; per-view markers cover the gaps, and neither covers raw values stored in app memory or backend databases outside Luciq's surface.

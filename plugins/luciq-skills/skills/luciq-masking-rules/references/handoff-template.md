@@ -1,10 +1,10 @@
-# LUCIQ_PII.md — handoff template
+# LUCIQ_MASKING.md — handoff template
 
 The skill writes this file at the repo root at the end of Phase 6. It's the durable artifact of the PII audit — re-readable next quarter, hand-off-able to legal / compliance, queryable by `luciq-debug` later.
 
 **Rules.**
 
-- If the file already exists, **append** a new dated session block — do not overwrite. The file accumulates the team's PII journey across multiple sessions and contributors.
+- If the file already exists, **append** a new dated session block — do not overwrite. The file accumulates the team's masking journey across multiple sessions and contributors.
 - Cite every finding and every decision: `file:line`, CLAUDE.md line, framework requirement, precedent quote.
 - State the framework named (or *not specified*). Never imply the audit produced compliance certification.
 - Replace every `<placeholder>` below with real values. If a section has no entries, write *"None this session"* rather than deleting the heading — keeps the doc parseable.
@@ -14,7 +14,7 @@ The skill writes this file at the repo root at the end of Phase 6. It's the dura
 ## Template
 
 ```markdown
-# Luciq PII Posture
+# Luciq Masking Posture
 
 This file records the PII / masking decisions made for this app, the
 controls currently in place, and outstanding items. Appended to over
@@ -151,7 +151,7 @@ If none, write: *None detected.*
 
 ### Next audit
 
-Recommend re-running `luciq-pii`:
+Recommend re-running `luciq-masking-rules`:
 - Before each major release.
 - After any new sensitive screen ships.
 - After any change to the SSUI schema (if applicable).
@@ -165,7 +165,7 @@ Recommend re-running `luciq-pii`:
 This is what a real session looks like after the skill writes it. Use as a sanity check on the format.
 
 ```markdown
-# Luciq PII Posture
+# Luciq Masking Posture
 
 App: HealthApp
 Platform: iOS (SwiftUI)
@@ -266,7 +266,7 @@ Operator: Heba Mekawi
 
 ### Next audit
 
-Recommend re-running `luciq-pii`:
+Recommend re-running `luciq-masking-rules`:
 - Before the next App Store release.
 - After any new PHI-rendering screen ships.
 - After HIPAA Privacy Rule updates.
