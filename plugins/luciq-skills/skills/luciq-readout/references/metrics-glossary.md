@@ -13,9 +13,11 @@ The shapes below were confirmed against live MCP responses, but the MCP evolves 
 5. [`crash_patterns` — and the adoption signal](#crash_patterns--and-the-adoption-signal)
 6. [`list_bugs`](#list_bugs)
 7. [`list_reviews`](#list_reviews)
-8. [Per-occurrence detail tools](#per-occurrence-detail-tools)
-9. [Filter-naming differences across tools](#filter-naming-differences-across-tools)
-10. [What the MCP does NOT expose](#what-the-mcp-does-not-expose)
+8. [`list_surveys` / `survey_details` — NPS / CSAT](#list_surveys--survey_details--nps--csat)
+9. [Per-occurrence detail tools](#per-occurrence-detail-tools)
+10. [Tools the readout does not use](#tools-the-readout-does-not-use)
+11. [Filter-naming differences across tools](#filter-naming-differences-across-tools)
+12. [What the MCP does NOT expose](#what-the-mcp-does-not-expose)
 
 ## Identifiers, modes, platforms
 
@@ -106,6 +108,7 @@ What the numbers mean:
 `crash_patterns(slug, mode, number, pattern_key, filters?, sort_by?, direction?)`. Returns the distribution of ONE crash group (`number`) across the chosen `pattern_key`.
 
 ```jsonc
+// pattern_key = app_versions  (carries adoption + total_sessions_count)
 {
   "total_occurrences_count": 1214,
   "total_sessions_count": 2994,
@@ -115,14 +118,22 @@ What the numbers mean:
     { "value": "3.1.4 (4)", "occurrences_count": 213, "adoption": 1351, ... }
   ]
 }
+
+// pattern_key = oses  (no adoption / total_sessions_count on this key — confirmed live)
+{
+  "total_occurrences_count": 1214,
+  "patterns_list": [
+    { "value": "iOS 14.2", "occurrences_count": 64, "first_seen": "...", "last_seen": "..." }
+  ]
+}
 ```
 
 `pattern_key` values: `app_versions`, `devices`, `oses`, `current_views`, `app_status` (foreground/background), `experiments`.
 
 - `patterns_list[].value` — the bucket label (a version, device, OS, screen, status, or experiment).
 - `patterns_list[].occurrences_count` — occurrences of this crash in that bucket.
-- `patterns_list[].adoption` — a per-bucket session/exposure count for the bucket. **This is the one adoption signal the MCP exposes.** It is scoped to this crash group's pattern query, not the whole app.
-- `total_occurrences_count`, `total_sessions_count` — group-level totals across the pattern.
+- `patterns_list[].adoption` — a per-bucket session/exposure count for the bucket. **This is the one adoption signal the MCP exposes.** It is scoped to this crash group's pattern query, not the whole app. **It is not on every `pattern_key`:** confirmed present on `app_versions` and absent on `oses` in live responses, so query `pattern_key=app_versions` when you need adoption, and don't assume it's there on a key that omitted it — check the response.
+- `total_occurrences_count` — group-level total, returned on every key. `total_sessions_count` accompanies the `app_versions` response (absent on `oses` in testing). Trust the live response over this note.
 
 **How to use adoption honestly.** When you state "version 3.1.4 has more crashes than 3.0.4," the `adoption` per bucket lets you say whether that's because 3.1.4 has far more exposure. Cite it to `crash_patterns` and scope it correctly: it describes *this crash group's* distribution, not app-wide rollout. Do not generalize a single group's `adoption` into an app-level adoption percentage, and never invent adoption for a version where you only have `app_insights`. The `experiments` pattern key is how you attribute a regression to a flag or rollout.
 
@@ -143,16 +154,56 @@ What the numbers mean:
 - `body` is the verbatim review text. **Quote it directly** in PM / VP readouts; a paraphrase becomes your claim instead of the user's words.
 - Reviews are the external quality proxy execs ask about. A rating trend is a fair C-suite headline; individual review quotes belong in PM-tier readouts.
 
+## `list_surveys` / `survey_details` — NPS / CSAT
+
+The in-app voice-of-customer signal, distinct from store reviews. Surveys are run inside the app; reviews are posted to the App Store / Play.
+
+`list_surveys(slug, mode, filters?, limit?, offset?)` lists published / paused / draft surveys, newest-first. Filter `status[]` (`0` draft, `1` published, `2` paused) and `type[]` (`0` custom, `1` nps, `2` app_store). Rows carry `id`, `title`, `type` (`"nps"` / `"custom"`), `status`, `responses_count`, `created_at`. Use it to find the live NPS survey's `id`.
+
+`survey_details(slug, mode, id, filters?, page?)` returns the survey definition plus response statistics and a page of individual responses (25/page). For an **NPS** survey the headline is the `nps` object:
+
+```jsonc
+"nps": {
+  "promoters": 50, "passives": 35, "detractors": 40,
+  "promoters_pct": 40.0, "passives_pct": 28.0, "detractors_pct": 32.0,
+  "score": 8
+}
+```
+
+| Field | Meaning | Readout note |
+| --- | --- | --- |
+| `nps.score` | The Net Promoter Score (promoters % − detractors %), an integer. | A fair C-suite / VP headline alongside the App Store rating. State it as "NPS", not as a percentage. |
+| `nps.promoters` / `passives` / `detractors` (+ `_pct`) | Response counts and shares per NPS class. | The split is the VP-tier context: a positive-looking score can still hide a large detractor base. |
+| `responses[].responses[].value` | The per-question answer. For the 0-10 NPS question it's the score; for the open follow-up ("How can we do better?") it's the **verbatim** user text. | Quote the verbatim follow-up answers as PM-tier evidence — like reviews, never paraphrase into a claim. Filter to detractors/passives with `filters.nps` for the negative themes. |
+| `responses[].country` / `device` / `os` | Per-response segment. | Lets a PM cut feedback by segment, same as reviews. |
+
+Empty / no survey: `list_surveys` returning nothing, or a survey with `responses_count: 0`, means **no NPS signal** for the scope. Report that; do not estimate a score from review ratings — they're different instruments.
+
 ## Per-occurrence detail tools
 
-For the EM tier only. `(slug, mode, number)` addresses a crash group; occurrences within it are addressed by ULID token.
+For the EM tier only. `(slug, mode, number)` addresses a crash group; occurrences within it are addressed by ULID token. The four compose the step-4b chain in `SKILL.md`.
 
-- `crash_details(slug, mode, number)` — synchronous. Returns `exception`, `exception_name`, `crash_cause`, `severity`, `priority_id`, `status_id`, `threads_count`, `sdk_version`, `team`, and a `stack_frames[]` array (each frame: `index`, `library`, `description`, `type` = `system`/`application`, `is_grouping_frame`). The application frames are the ones a fix targets.
-- `crash_diagnostics(...)` — **async**; returns `status: generating` until ready. Re-call until it resolves.
-- `list_occurrences_tokens(...)` — returns ULID tokens for individual occurrences. ULIDs are time-prefixed; `max(tokens)` lexicographically is the newest.
-- `get_occurrence_details(slug, mode, number, ulid)` — full single-session payload (device metrics, screen flow, session profiler). Heavy; pull only for the deepest EM drill-down.
+- `crash_details(slug, mode, number)` — synchronous. Returns `exception`, `exception_name`, `crash_cause`, `severity`, `priority_id`, `status_id`, `threads_count`, `sdk_version`, `team`, and a `stack_frames[]` array (each frame: `index`, `library`, `description`, `type` = `system`/`application`, `is_grouping_frame`). The application frames are the ones a fix targets; lead the EM with the `is_grouping_frame` and the deepest `application` frame before the system frames.
+- `list_occurrences_tokens(slug, mode, number)` — returns `states_tokens` (an array of ULID tokens for individual occurrences) and `total_occurrences`. ULIDs are time-prefixed; `max(tokens)` lexicographically is the newest. (The array is a page of recent occurrences, not necessarily all of `total_occurrences`.)
+- `get_occurrence_details(slug, mode, number, ulid)` — full single-session payload under `state.fields`: `app_version`, `current_view`, `os`, `device`, `memory` (`used/total MB`), `storage`, `duration`, `app_status` (foreground/background), `country`/`city`, plus `logs` (signed URLs to compressed logs and experiments files) and the `user`. One concrete repro context. Heavy; pull only for the deepest EM drill-down.
+- `crash_diagnostics(slug, mode, number)` — **async**; returns `status: generating` with a `retry_after_seconds` until ready, then `status: ready` with an `aggregation` block: `patterns` (screen-flow navigation paths with `support_pct` / `support_count`), `total_sessions`, `distributions` (`devices`, `os_versions`, `app_versions`, `current_views`, `app_status` — each a label→count map), and `metrics` (`memory_used_percent`, `battery_level`, `storage_used_percent`, `duration` — each with `mean`, `p50`, `p90`, and histogram `buckets`). Also re-states `crash_details` and the full `stacktrace`. This is the aggregate-across-occurrences view; `crash_patterns` is the per-key distribution. Re-call while `generating`.
 
-A full stacktrace is EM-tier depth. It must never appear in a C-suite, VP, PM, or QA readout — see the omit-lists in `persona-playbooks.md`.
+A full stacktrace and occurrence detail are EM-tier depth. They must never appear in a C-suite, VP, PM, or QA readout — see the omit-lists in `persona-playbooks.md`.
+
+## Tools the readout does not use
+
+| Tool | Why excluded |
+| --- | --- |
+| `update_bug` | **Write / mutating tool** — changes a bug's status / priority / assignment. A readout is strictly read-only; it must never alter the data it reports. Never call it, by any path. |
+| `bug_details` | One bug's deep payload (logs, breadcrumbs, repro steps). The readout uses `list_bugs` for volume / themes; single-bug depth is `luciq-debug`'s job. Pull a top-bug snippet only if a quick check shows it adds readout value; default exclude. (Callable via the client — excluded by scope, not availability.) |
+| `apm_list_groups` / `apm_group_view` / `apm_occurrence` | Per-span APM deep-drill (one slow screen / endpoint / flow down to a trace). The readout reports performance at the `app_insights.apm` aggregate; span-level depth is `luciq-debug`'s territory. Not the readout's primary performance source. See the constraint note below for the optional direct-call path when a persona needs span detail. |
+
+### Known constraint — four tools stripped from the MCP client
+
+Four tools — `update_bug`, `apm_list_groups`, `apm_group_view`, `apm_occurrence` — carry a **top-level `anyOf` / `allOf` / `oneOf` / `not` combinator** in their server-side `inputSchema` (the `apm_*` tools use `allOf` with `if`/`then` to gate `sort.by` and `filters` per `metric`; `update_bug` uses `anyOf` + `not`). The Anthropic Messages API rejects a top-level combinator on a tool's input schema, so Claude Code strips these four from the in-session tool list. Confirmed live: a `tools/list` against the server returns all 18 tools, and exactly these four carry a top-level combinator; the other 14 are callable via the normal MCP client. This is a known server-side issue (the combinators belong below the top level), not something a readout fixes.
+
+- **`update_bug`** — the strip changes nothing for a readout; a write tool is out of scope regardless.
+- **`apm_*`** — the readout's performance dimension comes from the fully-callable `app_insights.apm` aggregate. If a persona genuinely needs per-span detail, the read-only `apm_list_groups` can be reached by a **direct JSON-RPC `tools/call`** to the MCP HTTP endpoint (`{"jsonrpc":"2.0","method":"tools/call","params":{"name":"apm_list_groups","arguments":{...}}}`) with the same `Email` / `Token` headers the MCP client is configured with. That returns, per metric (`network` / `screen_loading` / `launch` / `flows` / `frame_drop`), the per-group `pattern` / `name`, `apdex_score`, `failure_rate`, `latency_p95_ms`, and `occurrences_count` — the slowest-endpoint and slowest-screen lists. Confirmed live (e.g. a top failing network group at ~5.2% failure rate / p95 ~708ms, out of 41 network groups). Label any figure pulled this way as sourced via a direct `apm_list_groups` call, and never use the same path to reach `update_bug` or any write tool.
 
 ## Filter-naming differences across tools
 
@@ -170,10 +221,13 @@ These bite. Confirm the call shape before concluding "no data":
 
 Do not estimate, reconstruct, or imply any of these:
 
-- **App-level adoption / rollout percentage.** Not in `app_insights`. The only adoption datum is per-crash-group `adoption` in `crash_patterns`, correctly scoped.
+- **App-level adoption / rollout percentage.** Not in `app_insights`. The only adoption datum is per-crash-group `adoption` in `crash_patterns` (on the `app_versions` key), correctly scoped.
 - **MTTR / time-to-resolve.** Not exposed.
 - **Retention, DAU/MAU, revenue.** Not in scope of these tools. Tie stability to user impact qualitatively; don't fabricate a business metric.
 - **A reconstructed value for an errored or empty `app_insights` section.** Report it unavailable.
-- **Session replay or per-span APM detail** beyond the `apm` section's aggregates.
+- **An NPS score where no survey exists or it has no responses.** NPS comes only from an actual `survey_details` `nps` object; don't infer it from review ratings (different instrument).
+- **Per-span APM detail** beyond the `apm` section's aggregates is not the readout's primary source. The `apm_*` tools that expose it are stripped from the MCP client (see the constraint note above) and are `luciq-debug`'s territory; a readout reaches them only by the optional direct JSON-RPC call when a persona truly needs span depth, and labels the result accordingly. Session replay is not exposed to these tools.
 
-When the user asks for one of these, say it isn't exposed rather than producing a plausible-looking number.
+What the MCP does expose but the readout still won't touch: **`update_bug`** (and any write tool). It can change data; a readout never mutates the data it reports. See "Tools the readout does not use" above.
+
+When the user asks for one of these, say it isn't exposed (or isn't a readout's job) rather than producing a plausible-looking number.
