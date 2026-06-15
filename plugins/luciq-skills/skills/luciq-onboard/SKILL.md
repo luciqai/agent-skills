@@ -392,19 +392,32 @@ In FAST mode, skip this phase. The handoff doc still includes the verification s
 
 Write `LUCIQ_ONBOARDING.md` at the repo root using the template in `references/handoff-template.md`. The doc is the durable artifact of the session — re-readable next week, hand-off-able to a teammate, queryable by `luciq-debug` later.
 
-Contents:
+The doc is structured as **two halves separated by a hard `---` divider**. Don't merge them, don't reorder, don't add a third section. The split is what makes the doc usable by both a PM/exec skim and an engineer audit.
 
-- **Products active** — each with the file:line edited and (if verified) the timestamp of the first report.
-- **Products deferred** — each with its revisit condition.
-- **Products covered by another SDK** — each with the SDK name and file:line.
-- **What's left for you** — the doc-pointer items from each active product, deduplicated.
-- **Dashboard capabilities now active** — auto-derived / dashboard-only capabilities whose prereqs the user just satisfied (FFS, App Health, Issues List, etc.). Sourced from `references/post-onboarding-capabilities.md`. These are *not* products to apply — they're things the user can now open and use because the products this session turned on feed them.
-- **Capabilities that unlock later** — capabilities from the same reference whose prereqs aren't yet met (Business Impact below MAU threshold, Resolve Agent without GitHub host, One Code Apps without white-label signal, etc.), each with the revisit condition stated verbatim.
-- **Conflict notes from Phase 2** — every conflict the analysis found, even if not addressed this session.
-- **Dashboard URL for this app.**
-- **When to reach for sibling skills** — `luciq-debug` for incident investigation, `luciq-migrate` for upgrades, `luciq-pii` for a deep PII / masking audit or compliance-framework prep. Always include `luciq-pii` in this list when Bug Reporting, Session Replay, or APM were configured — the per-view markers applied this session are layer 1 of 3, and the user should know how to revisit the full posture later.
+**🎉 Top half — the celebration.** Plain English only. Anyone — engineer, PM, exec — should grasp what shipped in under a minute. No API names, no file:line citations, no SDK jargon. Contains:
 
-If `LUCIQ_ONBOARDING.md` already exists, *append* a new dated session block — don't overwrite. The file accumulates the team's Luciq journey.
+- A stat strip on one line: conflicts count, *All PII masked*, any other earned win this session genuinely delivered.
+- One short paragraph (2–3 sentences) of what the app can do now that it couldn't yesterday — lead with the team's benefit.
+- **Enabled now** — a two-column table per active product: emoji + name, and a one-sentence user-facing value (what the team/user gets, never what the API does).
+- **Ready when you are** — a two-column table per deferred product: emoji + name, and a plain-English "turn on when…" trigger.
+- **Do this next** — three concrete steps + the three primary dashboard URLs. This is the verification round-trip from Phase 5, restated for the durable doc.
+
+**🔧 Bottom half — the audit trail.** Cite-heavy, complete, organized for engineers. Opens with an explicit *"skip if you just wanted the wins above"* italic line. Covers:
+
+- **What was wired (and where)** — table per product: code change with file:line, key decision with citation. Mark *⚠️ Not verified yet* until the user confirms first data; replace with *✅ Verified <timestamp>* once activation lands.
+- **What's left for you (no code needed)** — doc-pointer items from each active product, deduplicated.
+- **"Ready when you are" — implementation notes** — per-product pointer for when the trigger fires.
+- **Dashboard capabilities** — split into *Live now* (auto-derived from this session's products) and *Unlock later* (with revisit condition stated verbatim), both sourced from `references/post-onboarding-capabilities.md`.
+- **Conflicts detected (independent of Luciq)** — every conflict from Phase 2, even if the user didn't address it this session. Accountability survives.
+- **Competitor coverage** — products the customer chose to stay on a competitor for, with their reason verbatim if given.
+- **How the agent figured this out** — context docs cited, money path, auth flow, sensitive views, accessibility posture, detected SDK style, workspace precedent.
+- **When to reach for sibling skills** — `luciq-debug`, `luciq-migrate`, `luciq-verify`, `luciq-pii`. Always include `luciq-pii` when Bug Reporting, Session Replay, or APM were configured — per-view markers applied this session are layer 1 of 3, and the user should know how to revisit the full posture later.
+
+**Footer.** Session metadata (mode, operator, SDK name + version, package manager, product name, import) lives in an italic one-liner at the very bottom — present for the audit trail, absent from the celebration.
+
+**Dashboard URL sourcing.** Derive URLs from MCP `list_applications` or the live Luciq dashboard. Never construct paths by stitching slug + capability name — surface shapes change between versions and constructed URLs become broken links.
+
+If `LUCIQ_ONBOARDING.md` already exists, *append* a new dated session block — don't overwrite. The file accumulates the team's Luciq journey across sessions and contributors.
 
 ## Style
 
