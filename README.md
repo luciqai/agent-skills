@@ -21,6 +21,8 @@ The plugin install also wires up the Luciq MCP server, so the skills get product
 
 Skills available after install:
 - `/luciq-skills:luciq-setup`. SDK install and configuration.
+- `/luciq-skills:luciq-onboard`. Personalized product walkthrough after the SDK is installed.
+- `/luciq-skills:luciq-masking-rules`. PII / masking audit and compliance-framework prep (HIPAA / GDPR / PCI / SOC2).
 - `/luciq-skills:luciq-debug`. Production signal investigation.
 - `/luciq-skills:luciq-migrate`. Instabug to Luciq migration and SDK upgrades.
 - `/luciq-skills:luciq-verify`. End-to-end SDK upgrade verification.
@@ -65,6 +67,38 @@ Install and configure the Luciq SDK end-to-end. Edits your build files, inserts 
 - `"Add Luciq to this Flutter project"`
 - `"Set up Luciq for Android, use a floating button invocation"`
 - `"Initialize Luciq and mask the payment fields"`
+
+---
+
+### `luciq-onboard`
+
+Personalized walkthrough of the Luciq product suite for an app that already has the SDK installed. Reads your repo (code, `CLAUDE.md`, `README`, `AGENTS.md`), detects any existing mobile observability SDKs and their config posture (Sentry, Crashlytics, Bugsnag, Datadog, Embrace, New Relic, App Center, UXCam, Smartlook, MetricKit), then recommends the Luciq products that actually fit — in three positively-framed buckets (*Recommended now* / *Optional* / *Can be added later*), with cited rationale at every step. Auto-enumerates individual PII-bound views per sensitive screen and proposes per-view privacy markers (`.luciq_privateView()` / `Modifier.luciqPrivate()` / `LuciqPrivateView`) with per-match confirmation. Ends with one consolidated activation moment that proves Luciq is working end-to-end, and writes `LUCIQ_ONBOARDING.md` so the next session picks up exactly where this one left off.
+
+**Try saying:**
+- `"Onboard me to Luciq"`
+- `"What Luciq products should I set up?"`
+- `"Walk me through Luciq"`
+- `"What am I missing in my Luciq setup?"`
+
+> **Pairs with** the Luciq MCP server — authenticated MCP unlocks the *"your other apps already do this"* precedent quotes; the skill still works without it.
+>
+> **Hands off PII deep-dives to** `luciq-masking-rules` — onboard configures per-view masking inline (layer 1 of 3); the deep audit (auto-mask types, network mask key list, consent gating, grayscale, FLAG_SECURE, SSUI `isPrivate`, compliance presets, pre-prod checklist) is `luciq-masking-rules`'s job.
+
+---
+
+### `luciq-masking-rules`
+
+PII / masking audit and compliance-framework prep for an app that already has the SDK installed. Scans all three masking layers — screen / view markers, network logs, defense-in-depth (consent gating, grayscale, FLAG_SECURE, `usersPageEnabled`, SSUI `isPrivate`) — surfaces gaps against the framework you name (HIPAA / GDPR / PCI-DSS / SOC2 / CCPA / FERPA), and walks the controls that close them one at a time with cited rationale. Ends with a visual masking verification on the dashboard and writes `LUCIQ_MASKING.md` with the pre-production privacy checklist and copy-pasteable server-side support requests.
+
+**Try saying:**
+- `"Audit my Luciq PII posture"`
+- `"Prep Luciq for HIPAA review"`
+- `"What's masked in Luciq right now?"`
+- `"Add masking to my checkout screen"`
+
+> **Pairs with** `luciq-onboard` — onboard handles per-view markers during the product walk; `luciq-masking-rules` covers the remaining layers and re-runs whenever a new sensitive screen ships or a compliance review approaches.
+>
+> **Guidance only.** Compliance is a broader program than masking config; the skill states this verbatim in its handoff doc and points decisions back to legal / compliance.
 
 ---
 

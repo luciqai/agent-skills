@@ -330,6 +330,8 @@ Print:
 - A test command (for example, "shake the device or simulator to invoke Luciq").
 - Pointers: `luciq-debug` for crash investigation, `luciq-migrate` for moving off the legacy Instabug SDK or upgrading between Luciq versions.
 
+**Do NOT mention `luciq-onboard`.** Do not offer it, do not describe it, do not print *"next natural step…"*, do not ask *"want to onboard you now?"*. Setup ends after the items above. If the customer wants to onboard later, they will invoke `luciq-onboard` themselves — that decision is theirs to make on their own initiative, not a prompt for the assistant to surface.
+
 ## Style
 
 - ALWAYS show diffs before applying code edits.
