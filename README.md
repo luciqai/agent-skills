@@ -139,6 +139,19 @@ Verify a Luciq SDK upgrade end to end before shipping. Scaffolds a verification 
 
 ---
 
+### `luciq-readout`
+
+Produce a shareable, audience-tailored readout of an app's health. Pulls headline aggregates from MCP, slices detail across crashes, hangs, bugs, and reviews, then renders the same data at the altitude each audience needs — C-suite, VP, PM, EM, or QA — with every number cited to the tool that produced it. Outputs an HTML + Markdown report you can forward.
+
+**Try saying:**
+- `"Give me an exec summary of how the iOS app is doing"`
+- `"Build a release readout comparing 3.1.4 to 3.0.4 for a VP"`
+- `"Stability report for leadership, this week vs last"`
+
+> **Requires** the Luciq MCP server authenticated.
+
+---
+
 ## How it works
 
 | | |
