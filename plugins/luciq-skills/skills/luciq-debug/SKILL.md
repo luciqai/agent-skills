@@ -92,7 +92,7 @@ The APM group name is the request signature (method + URL path template, e.g. `G
 - When `spans_table` localized the cost to one segment (e.g. a DB span, a downstream call, a serialization span), grep that segment's operation name — the bottleneck is usually inside that call, not in the request setup.
 - Use the `dimensions` breakdown to constrain the hypothesis: a regression isolated to one OS version, one device tier, or one app version points at a different cause (client-side change, OS behavior, rollout) than one that's uniform across cohorts (backend/dependency).
 
-If the symbol/endpoint does not exist locally, the project is at a different commit than the build the crash/endpoint came from. Surface that fact rather than guessing at a fix.
+If the symbol or endpoint does not exist locally, the repo isn't its source: a different commit than the build for a crash symbol, or a different service/dependency for an endpoint. Surface that fact rather than guessing at a fix.
 
 ### Step 5. Form a hypothesis
 
@@ -223,7 +223,7 @@ If you catch yourself thinking any of these, you are about to ship a fabricated 
 - "Confidence is high because the top frame matches my prior." One source is not three. Lower confidence to low or medium.
 - "I'll apply the fix without a diff because it's obviously right." Show the diff. Get confirmation. Always.
 - "The hypothesis cites the symbol but not which MCP tool produced it." Add the citation, or weaken the hypothesis.
-- "APM returned a 403/501, so there's no regression." A tool error isn't a clean result, SKIP the step, say APM was unavailable, never infer "no regression." Only 5xx STOPs; 4xx/501 return a body to inspect.
+- "APM returned a 403/501, so there's no regression." A tool error isn't a clean result, SKIP the step, say APM was unavailable, never infer "no regression." Only a genuine server-down 5xx (500/502/503) STOPs; 403 and 501 return a body to inspect.
 - "I filtered APM with `app_versions`/`experiments`/`devices` and got nothing, must be broken." Those are crash-channel names. APM uses `app_version`, `experiment`, `device: { operator, values }`, re-run before concluding.
 - "p95 doubled, so the endpoint's code is slow. I'll optimize it." Not yet. run `dimensions` (one cohort?) and `spans_table` (which segment?) first. The cost may be a downstream call or one OS version; optimizing the wrong layer fixes nothing.
 - "Throughput dropped, so performance regressed." A throughput drop with flat latency usually means fewer callers, not a slower path. Correlate with a release / flag before calling it a defect.
