@@ -109,6 +109,7 @@ Investigate any production signal: crash, hang, bug report, performance regressi
 **Try saying:**
 - `"Why is crash AB-1234 happening?"`
 - `"What broke since version 3.2.0?"`
+- `"Which endpoints got slower since 3.2.0?"` *(APM)*
 - `"Our App Store rating dropped last week, what's going on?"`
 
 > **Requires** the Luciq MCP server authenticated. The Claude Code plugin install wires it automatically; manual setup is at the [MCP install guide](https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/luciq-mcp-server).
