@@ -176,6 +176,7 @@ When `list_app_hangs` returns an Android hang:
 
 When `apm_list_groups` sorted by `apdex_change` shows a group degrading between versions:
 
+- Sanity-check the target before trusting the apdex. `apm_group_view summary` returns the group's configured apdex target as `threshold_ms` (also on every `apm_list_groups` item). If `threshold_ms` sits below `50th_percentile_ms`, the target is under the median — more than half of otherwise-healthy requests score unsatisfied, so a low or declining apdex is a target-config problem, not a code defect. Weigh `threshold_ms` against the endpoint's business role (a list/read call should be near-real-time, a few hundred ms; a heavy export needn't be) before attributing a fix to code.
 - Confirm with the absolute numbers, not just apdex: pull `apm_group_view summary` for `50th_percentile_ms` and `95th_percentile_ms` before and after. A p50 that's flat with a p95 that exploded is a tail problem (a slow cohort or a slow dependency), not a uniform slowdown.
 - Always run `dimensions` to localize. A regression confined to one OS version or device tier is a different bug than one uniform across cohorts.
 - Use `spans_table` to attribute the time. The fix targets the dominant span — chasing the request-setup code when the cost is in a DB span wastes effort.
