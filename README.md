@@ -24,6 +24,7 @@ Skills available after install:
 - `/luciq-skills:luciq-onboard`. Personalized product walkthrough after the SDK is installed.
 - `/luciq-skills:luciq-masking-rules`. PII / masking audit and compliance-framework prep (HIPAA / GDPR / PCI / SOC2).
 - `/luciq-skills:luciq-debug`. Production signal investigation.
+- `/luciq-skills:luciq-group-bugs`. Consolidate the bug list by marking duplicates from your own grouping logic.
 - `/luciq-skills:luciq-migrate`. Instabug to Luciq migration and SDK upgrades.
 - `/luciq-skills:luciq-verify`. End-to-end SDK upgrade verification.
 
@@ -149,6 +150,19 @@ Produce a shareable, audience-tailored readout of an app's health. Pulls headlin
 - `"Stability report for leadership, this week vs last"`
 
 > **Requires** the Luciq MCP server authenticated.
+
+---
+
+### `luciq-group-bugs`
+
+Consolidate your bug list by marking duplicates according to your **own** grouping logic. Describe a rule in plain language — "same screen and same failed request", "basically the same title", "share a tag set" — and the skill pulls a scoped set of bugs, compiles your rule into an explainable grouping key per bug, and renders a dry-run plan showing exactly which bug merges into which master and the verbatim key that united them. It marks the duplicates only after you approve, and can undo everything it merged this session. Mirrors Luciq's automatic grouping (a normalized fingerprint of failed network requests and user steps) while letting you define the rule.
+
+**Try saying:**
+- `"Group my bugs on the checkout screen that hit the same failed request"`
+- `"Mark the bugs with basically the same title as duplicates"`
+- `"Consolidate the bug list by tag"`
+
+> **Requires** the Luciq MCP server authenticated **and** the `bugs.list.modify` permission to apply merges. Without the permission it still produces the dry-run plan. This is the one skill that *writes* — it always shows a plan and waits for your approval before any merge.
 
 ---
 
