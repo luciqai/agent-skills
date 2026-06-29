@@ -275,7 +275,7 @@ experiment, latency_percentile,
 user_attributes (object, keyed by name)
 ```
 
-`apm_list_groups` additionally has: `key_metric`, `group_name`, `count`, `dissat_count`, `apdex`, `apdex_change`, `95th_percentile_ms`, `50th_percentile_ms`, `total_failure_rate`, `client_failure_rate`, `server_failure_rate`.
+`apm_list_groups` additionally has: `key_metric`, `group_name`, `count`, `dissat_count`, `apdex`, `apdex_change`, `95th_percentile_ms`, `50th_percentile_ms`, `total_failure_rate`, `client_failure_rate`, `server_failure_rate`, `threshold_ms` (the group's configured apdex target latency; per-group, per-metric, user-configurable — stored as `threshold_mus` µs and divided to ms). `apm_group_view summary` returns the same target as `group.threshold_ms`.
 
 ### Custom attributes are NUMBERED slots 1–20
 
