@@ -114,9 +114,9 @@ Channel preference: **APM > Bug > Crash**. The skill picks the first channel tha
 | `"Request body has not been logged because it exceeds the maximum size of 10240 bytes"` | `request` field | SDK truncated the body before the customer's redaction callback ran | C3a INFO (not PASS) — body bypassed customer redaction; raise visibility but don't FAIL |
 | `<the customer's redaction token>` (e.g. `"<REDACTED>"`) | `request` / `response` field | Customer's redaction callback ran and replaced the body | C3a / C3b PASS |
 
-**`C7` (no SDK self-traffic) needs an exclude list**: outbound Luciq SDK requests to `api.instabug.com/api/sdk/v3/*` DO appear in the captured network log on this branch — the SDK does not self-filter. The customer's rule pack should specify `network.url_exclude_hosts` (e.g. `["api.instabug.com", "*.luciq.com"]`) for C7 to evaluate cleanly. Without an exclude list, C7 effectively can't PASS on a build that emits any SDK telemetry.
+**`C7` (no SDK self-traffic) needs an exclude list**: outbound Luciq SDK requests to `api.instabug.com/api/sdk/v3/*` DO appear in the captured network log — the SDK does not self-filter. The customer's rule pack should specify `network.url_exclude_hosts` (e.g. `["api.instabug.com", "*.luciq.com"]`) for C7 to evaluate cleanly. Without an exclude list, C7 effectively can't PASS on a build that emits any SDK telemetry.
 
-**`IBG-*` headers carry the app token plaintext**: outbound SDK requests carry `IBG-APP-TOKEN` (the dashboard credential), `IBG-CUUID`, `IBG-OS-VERSION`, etc., as plaintext headers. These are NOT auto-redacted to `*****`. If the customer wants the app token masked in the captured log, they add `IBG-APP-TOKEN` to `redaction.sensitive_headers` in the rule pack.
+**`IBG-*` headers are not auto-masked**: outbound SDK requests carry `IBG-APP-TOKEN` (a client-side app identifier), `IBG-CUUID`, `IBG-OS-VERSION`, etc. These are not redacted to `*****` by default. If the customer wants the app token masked in the captured log, they add `IBG-APP-TOKEN` to `redaction.sensitive_headers` in the rule pack.
 
 **Remediation when `C1`–`C7` FAIL**:
 - `C1` URL drift → the customer's URL normalization callback no longer fires, or the new SDK has a renamed hook. Compare the customer's integration code against the SDK's current URL-rewrite API in the platform integration guide.
@@ -212,8 +212,8 @@ Some rules do not apply on every platform. The audit emits `N/A` (not SKIP, not 
 | --- | --- | --- | --- | --- |
 | iOS (`IOS`) | N/A (no `ANR` type; iOS UI hangs via `list_app_hangs`) | Applicable | Eligible — probe to confirm | Top-most `UIViewController` class name |
 | Android (`ANDROID`) | Applicable | Applicable (treated as `CRASH` until exposed otherwise) | Eligible — probe to confirm | Top-most `Activity` / `Fragment` |
-| Flutter (`DART`) | Applicable | Applicable | **N/A permanently on this branch** — do not probe | Route name or widget |
-| React Native (`JAVASCRIPT`) | Applicable | Applicable | **N/A permanently on this branch** — do not probe | Screen name or navigator route |
+| Flutter (`DART`) | Applicable | Applicable | **N/A permanently** — do not probe | Route name or widget |
+| React Native (`JAVASCRIPT`) | Applicable | Applicable | **N/A permanently** — do not probe | Screen name or navigator route |
 
 ## Cross-occurrence sanity (optional)
 

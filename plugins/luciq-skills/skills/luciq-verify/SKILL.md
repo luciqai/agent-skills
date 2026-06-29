@@ -88,7 +88,7 @@ The skill **degrades gracefully** by tier. Detect which tier applies before doin
 | T1 (telemetry only) | Neither installed, but `list_crashes` or `apm_list_groups` returns ≥ 1 record in the last 30 days from the bumped SDK version | Audit the most recent organic occurrence; `S*` synthetic-marker checks become SKIP; `C0b` (recency) becomes WARN |
 | T0 (empty) | No telemetry, no harness | Cannot audit. Run Phase 1 (Setup), stop, ask the user to produce one occurrence, re-invoke |
 
-APM channel availability is a sub-detection: APM's `filters.platform` is `ios | android` only on this branch — Flutter (DART) and React Native (JAVASCRIPT) projects have APM permanently `N/A`. Don't probe APM on those platforms; the bug + crash channels carry the full audit there. (Detail: `references/payload-schemas.md`.)
+APM channel availability is a sub-detection: APM's `filters.platform` is `ios | android` only — Flutter (DART) and React Native (JAVASCRIPT) projects have APM permanently `N/A`. Don't probe APM on those platforms; the bug + crash channels carry the full audit there. (Detail: `references/payload-schemas.md`.)
 
 ## 1. Setup
 
@@ -381,7 +381,7 @@ These are the failure modes that produce a misleading "PASS" report. If you catc
 **Channel and identifier confusion**
 - "I'll filter `list_crashes` by `platform: flutter` and got nothing — the integration must be broken." Wrong call shape. Crash filters use UPPERCASE platform values (`DART` for Flutter, `JAVASCRIPT` for RN). The lowercase form is only for `list_applications`. Re-run before concluding anything.
 - "I queried `apm_group_view` with `experiments: [<x>]` and it errored." The APM filter is singular (`experiment`); the crash filter is plural (`experiments`). They are not aliases.
-- "This is a Flutter project so I'll probe APM and degrade if it fails." Don't probe. APM's platform enum is `ios | android` on this branch — DART / JAVASCRIPT is permanently `N/A`. Set the channel to N/A in Phase 0.
+- "This is a Flutter project so I'll probe APM and degrade if it fails." Don't probe. APM's platform enum is `ios | android` — DART / JAVASCRIPT is permanently `N/A`. Set the channel to N/A in Phase 0.
 - "I'll use the same `(slug, mode, number, ulid)` identifier for the bug." Bugs are addressed by `(slug, mode, number)` only — there is no ULID. The bug-side identifier is `state_number` (integer) inside `state.fields`.
 
 **Channel-precedence and data shape**
