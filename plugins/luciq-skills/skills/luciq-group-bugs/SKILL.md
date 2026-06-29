@@ -7,7 +7,7 @@ description: Use when the customer wants to consolidate, group, or deduplicate t
 
 Consolidate a customer's bug list by marking duplicates according to **their own** grouping logic. The mechanism is **filter, then cluster by an explainable key**: compile the customer's logic into (1) a `list_bugs` filter set that bounds the candidate pool and (2) a per-bug **grouping key** built from the exact fields their logic names, then group bugs that share a key and merge each group into one master.
 
-This is the plugin's first **write** skill. `update_bug`'s `mark_as_duplicate` action is destructive (`destructive_hint: true`): the duplicate's occurrences move into the master's group and the duplicate's status and priority are **overwritten** by the master's. There is no bulk undo on the server. So the entire spine of this skill is **propose → prove → confirm → write**: the skill computes a dry-run plan, shows the exact key that unites every group, and calls `update_bug` only after the customer approves the plan. It never writes from logic alone.
+This is the plugin's first **write** skill. `update_bug`'s `mark_as_duplicate` action is destructive (`destructive_hint: true`): the duplicate's occurrences move into the master's group and the duplicate's status, priority, and assignee are **overwritten** by the master's — and are not rolled back when the bug is later unmarked. There is no bulk undo on the server. So the entire spine of this skill is **propose → prove → confirm → write**: the skill computes a dry-run plan, shows the exact key that unites every group, and calls `update_bug` only after the customer approves the plan. It never writes from logic alone.
 
 Every merge in the plan is auditable: the customer can see *why* two bugs grouped (the verbatim key) before a single write happens. A merge the customer didn't approve never happens.
 
@@ -35,6 +35,8 @@ The MCP exposes (verbatim names) — this skill uses exactly four:
 
 **Permission.** `update_bug` requires `bugs.list.modify`. If the authenticated token lacks it, the skill can still fetch candidates and render the dry-run plan, but it CANNOT apply — say so at the plan stage and stop before the write.
 
+**Web-fetch for log-based keys.** Grouping by network failures or user steps additionally needs (a) the `bugs.network_logs.view` / `bugs.user_steps.view` permissions, so `bug_details` includes the archive URLs, and (b) a web-fetch capability to retrieve those signed URLs — the MCP tools return only the URL, not the log contents. Keys built from inline fields (title, category, screen, tag, version, user attribute) need neither. If either is unavailable, the log-based recipes can't run; say so rather than substituting a weaker key.
+
 **`update_bug` is callable inline.** Its input schema is a flat object (no top-level `anyOf` / `oneOf` / `not`), so unlike the `apm_*` tools it is **not** stripped by the AI-94 top-level-combinator issue. Call it through the normal MCP client; no direct-JSON-RPC workaround is needed.
 
 ## The cardinal rule
@@ -57,8 +59,8 @@ Grouping Progress:
 - [ ] 7. Pick the master per group = oldest bug (overridable by the customer)
 - [ ] 8. Render the dry-run PLAN (groups, master, members, the verbatim key, the skipped list)
 - [ ] 9. ⛔ HARD GATE — wait for explicit customer approval
-- [ ] 10. Apply: update_bug action=mark_as_duplicate per member, recording each write in a ledger
-- [ ] 11. Report results; offer undo-last (unmark the bugs merged this session)
+- [ ] 10. Snapshot each member's status/priority, then apply: update_bug action=mark_as_duplicate per member, recording each write
+- [ ] 11. Report results; offer undo-last (detach only, OR detach + restore status/priority)
 ```
 
 ### Step 1 — Resolve app and mode
@@ -71,13 +73,12 @@ Ask the customer, in plain language, how they want bugs grouped. Offer a few sta
 
 - **By title** — bugs whose titles describe the same problem.
 - **By screen** — bugs reported from the same `current_view`.
-- **By failed request** — bugs whose network logs share the same failed endpoint(s) and status (this mirrors production SPQ-350 grouping).
+- **By failed request** — bugs whose network logs share the same failed endpoint(s) and status.
 - **By tag or category** — bugs sharing a tag set or category.
-- **By app version** — same crash/issue scoped to a version.
+- **By app version** — same issue scoped to a version.
 - **By user attribute** — bugs from users with the same attribute value (e.g. `plan = pro`).
-- **A combination** — e.g. "same screen *and* same failed request".
 
-The customer can describe their own; the starters are examples, not a closed menu.
+**Dimensions combine — treat the starters as multi-select, not pick-one.** The customer can choose more than one at once (e.g. "same screen **and** same failed request", or "same title **and** same app version"). Each chosen dimension becomes one component of the composite key (see `references/grouping-keys.md`). The customer can also describe their own; the starters are examples, not a closed menu.
 
 ### Step 3 — Compile the logic (the deterministic gate)
 
@@ -90,11 +91,16 @@ Translate the logic into two artifacts (recipes are in `references/grouping-keys
 
 ### Step 4 — Fetch candidates
 
-Call `list_bugs` with the compiled filter set, scoped to `(slug, mode)`. **Cap** the number pulled (default ~300). If the scope is larger than the cap, warn the customer, show what is covered, and offer to narrow the filters or proceed on the capped set. **Never silently truncate** — a partial set presented as complete is a silent error.
+Call `list_bugs` with the compiled filter set, scoped to `(slug, mode)`. `list_bugs` returns **at most 50 bugs per call** (`limit` max 50, default 20), so to assemble a candidate pool larger than one page, **paginate with `offset`** (0, 50, 100, …) until you hit the cap or the results run out. Cap the total pulled (default ~300, i.e. ~6 pages). If the scope exceeds the cap, warn the customer, show what is covered, and offer to narrow the filters or raise the cap. **Never silently truncate** — a partial set presented as complete is a silent error.
 
 ### Step 5 — Enrich (conditional)
 
-`list_bugs` already returns most groupable metadata (title, `current_views`, tags, categories, version). Only call `bug_details` when the key recipe needs per-bug signals it doesn't carry — network logs (failed requests), user steps, or user attributes. Enrich only the candidates in scope, and only for the fields the key uses.
+`list_bugs` returns only a thin CSV row per bug: `title`, `categories`, `type`, `duplicate_type`, `email`, `status_id`, `priority_id`, `number`, `reported_at`, `last_activity`, `duplicated_bugs_count`. Any key field beyond those comes from `bug_details`. Call `bug_details` per candidate only when the key recipe needs it, and only for the candidates in scope. Two tiers of enrichment:
+
+- **Inline fields** — `current_view`, `tags`, `app_version`, and `user_attributes` are returned directly in the `bug_details` response (`state.fields.*` / top-level `tags`). Read them straight off the payload.
+- **Log-archive signals** — the network-log and user-step signals are **not** inline. `bug_details` returns only a **signed archive URL** under `state.logs.network_log.url` / `state.logs.user_steps.url` (and only if the token has `bugs.network_logs.view` / `bugs.user_steps.view`). To build `failed_requests_sig` or `user_steps_sig` you must, per candidate: (1) read the URL from `bug_details`, (2) **fetch** it (plain HTTPS GET — the URL is pre-signed, no auth header), (3) **decompress + parse** the archive (typically base64 → zlib → JSON), then (4) derive the signature. This needs a web-fetch capability alongside the MCP tools; the Claude Code / Cursor host provides one. If the permission is missing, the URL is absent, or the log is empty, the bug is **skipped** (see "missing fields"), never guessed.
+
+(See the field-source map and the fetch procedure in `references/grouping-keys.md`.)
 
 ### Step 6 — Compute keys and form groups
 
@@ -114,24 +120,29 @@ Present the plan and **wait for explicit approval.** If the token lacks `bugs.li
 
 ### Step 10 — Apply
 
-For each member in each approved group, call:
+Marking a bug as a duplicate **overwrites its status, priority, and assignee** with the master's (`inherit_parent_values` on the server), and unmarking does **not** roll those back. So **before** marking each member, snapshot its current `status_id` and `priority_id` (already present on the candidate's `list_bugs` row) into the session ledger — that snapshot is what makes "restore status/priority" possible in undo. Then, for each member in each approved group, call:
 
 ```
 update_bug(slug, mode, number: <member>, action: "mark_as_duplicate", original_bug_number: <master>)
 ```
 
-Apply sequentially and record each result (ok / failure, with the bug number) in a session ledger. Guards:
+Apply sequentially and record each result (ok / failure, the bug number, and the pre-merge status/priority snapshot) in the session ledger. Guards:
 - **Self-merge guard** — never mark the master as a duplicate of itself.
 - **Already-grouped** — if a candidate is already a duplicate/master, surface it in the plan and exclude it from re-merge by default.
 - **Continue on failure** — if one `update_bug` fails, record it, keep going, and report all failures at the end. Never silently drop a member.
 
 ### Step 11 — Report and offer undo-last
 
-Summarize what merged (groups, masters, member counts) and list any failures. Then offer **undo-last**: using the session ledger, call `update_bug(action: "unmark_as_duplicate")` for each member merged this session to detach them. Only offer this for merges this skill made this session — do not offer to unmark pre-existing groups.
+Summarize what merged (groups, masters, member counts) and list any failures. Then offer **undo-last** in two modes, using the session ledger:
+
+- **Detach only** — `update_bug(action: "unmark_as_duplicate")` per member. Restores each bug to standalone but leaves the parent's status/priority on it (unmark does not roll those back).
+- **Detach + restore status/priority** — after unmarking each member, re-apply its snapshotted values via `update_bug(status_id:, priority_id:)`.
+
+Tell the customer up front that **assignee cannot be restored** in either mode — `update_bug` has no assignee parameter, so a merge's assignee change is irreversible through this skill. Only offer undo for merges this skill made this session; never unmark pre-existing groups.
 
 ## Out of scope
 
-This skill is bugs-only and deliberately does not touch `crash_*`, `apm_*`, `list_app_hangs`, `app_insights`, surveys, or reviews. It does not change a bug's status, priority, or tags except as the unavoidable side effect of `mark_as_duplicate` (which the customer is told about up front). It does not regroup across apps/modes, and it does not move bugs between two existing masters (that's beyond v1 — unmark then re-mark instead).
+This skill is bugs-only and deliberately does not touch `crash_*`, `apm_*`, `list_app_hangs`, `app_insights`, surveys, or reviews. It does not change a bug's status, priority, tags, or assignee except as the unavoidable side effect of `mark_as_duplicate` (which the customer is told about up front, including that assignee can't be restored). It does not regroup across apps/modes, and it does not move bugs between two existing masters (that's beyond v1 — unmark then re-mark instead).
 
 ## Style
 
@@ -152,5 +163,7 @@ If you catch yourself thinking any of these, you are about to ship a wrong or un
 - "I'll quietly skip the member that failed to merge." Surface every failure in the end report.
 - "I'll mark the master as a duplicate too." Self-merge guard — the master is never a duplicate of itself.
 - "The token can't write, but I'll try the merges anyway." Stop at the plan stage and tell the customer the permission is missing.
+- "Undo will put everything back the way it was." It won't — unmark restores neither status/priority (only the snapshot + re-apply does) nor assignee (not at all). Say what undo can and can't restore.
+- "I'll group by screen / tag / version straight from the list_bugs rows." Those fields aren't in the `list_bugs` response — pull them from `bug_details` first.
 
 The pattern: every shortcut trades "looks done" for "actually correct and reversible". A destructive write the customer didn't approve is the one failure this skill exists to prevent.

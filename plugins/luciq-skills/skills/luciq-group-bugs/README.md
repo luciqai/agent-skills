@@ -14,7 +14,7 @@ You describe how you want bugs grouped, in plain language. The skill:
 2. Compiles your logic into an **explainable grouping key** per bug — built from the fields your logic names (title, screen, tags, category, failed requests, version, user attribute).
 3. Forms groups from bugs that share a key, picks a master per group (oldest by default), and renders a **dry-run plan** showing exactly which bug merges into which — and the verbatim key that united them.
 4. Marks the duplicates (`update_bug`) **only after you approve**.
-5. Offers a one-step **undo** of everything it merged this session.
+5. Offers a two-mode **undo** of what it merged this session — detach only, or detach and restore each bug's pre-merge status/priority.
 
 It mirrors how Luciq's automatic grouping works (a normalized fingerprint of failed network requests and user steps), but lets *you* define the rule.
 
@@ -25,10 +25,10 @@ It mirrors how Luciq's automatic grouping works (a normalized fingerprint of fai
 This is a **write** skill — `update_bug`'s `mark_as_duplicate` is destructive:
 
 - the duplicate's occurrences move into the master's group, and
-- the duplicate's **status and priority are overwritten** by the master's,
-- and there's no bulk undo on the server.
+- the duplicate's **status, priority, and assignee are overwritten** by the master's (and unmarking doesn't roll them back), and
+- there's no bulk undo on the server.
 
-So the skill never writes from a rule alone. It always **proposes → proves → confirms → writes**: you see the full plan, with the exact key behind every group, before a single merge happens. A merge you didn't approve never happens.
+So the skill never writes from a rule alone. It always **proposes → proves → confirms → writes**: you see the full plan, with the exact key behind every group, before a single merge happens. A merge you didn't approve never happens. To make undo meaningful, it snapshots each duplicate's status/priority *before* merging, so the "detach + restore" undo can put those back — though **assignee can't be restored** through the MCP and the skill says so up front.
 
 It's also **deterministic by design**. If your logic can't be reduced to concrete fields (e.g. "group by vibe" / "same user journey"), it stops and asks you to restate it concretely — it will not semantically guess its way into an irreversible merge.
 

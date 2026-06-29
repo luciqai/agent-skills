@@ -155,7 +155,7 @@ Produce a shareable, audience-tailored readout of an app's health. Pulls headlin
 
 ### `luciq-group-bugs`
 
-Consolidate your bug list by marking duplicates according to your **own** grouping logic. Describe a rule in plain language — "same screen and same failed request", "basically the same title", "share a tag set" — and the skill pulls a scoped set of bugs, compiles your rule into an explainable grouping key per bug, and renders a dry-run plan showing exactly which bug merges into which master and the verbatim key that united them. It marks the duplicates only after you approve, and can undo everything it merged this session. Mirrors Luciq's automatic grouping (a normalized fingerprint of failed network requests and user steps) while letting you define the rule.
+Consolidate your bug list by marking duplicates according to your **own** grouping logic. Describe a rule in plain language — "same screen and same failed request", "basically the same title", "share a tag set" — and the skill pulls a scoped set of bugs, compiles your rule into an explainable grouping key per bug, and renders a dry-run plan showing exactly which bug merges into which master and the verbatim key that united them. It marks the duplicates only after you approve, and offers a two-mode undo of what it merged this session (detach only, or detach and restore each bug's pre-merge status/priority).
 
 **Try saying:**
 - `"Group my bugs on the checkout screen that hit the same failed request"`
