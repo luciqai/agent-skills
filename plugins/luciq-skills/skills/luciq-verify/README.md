@@ -350,7 +350,7 @@ The skill refuses to audit production traffic without the explicit mode flag.
 ## File map
 
 ```
-plugins/luciq-skills/
+plugins/luciq/
 ├── commands/
 │   └── luciq-verify.md          ← /luciq-verify slash command (invokes this skill)
 └── skills/
@@ -370,30 +370,30 @@ The references are loaded by the skill only when the corresponding phase needs t
 
 ## Status
 
-**This skill is currently in draft.** The workflow, rule catalog, payload schemas, and harness contract are designed and verified against:
+The workflow, rule catalog, payload schemas, and harness contract are designed and verified against:
 
 - Real `get_occurrence_details` payloads (iOS CRASH, NON_FATAL, FATAL_UI_HANG — all share one shape)
 - Real `bug_details` payload (iOS Bug — with split log archives, root-level `experiments`, integer `state_number`)
 - Real fetched **bug-channel archives** (`network_log`, `user_events`, `instabug_log`) — all plain JSON, element shapes documented in `references/payload-schemas.md`
 - Real fetched **crash-channel `compressed_logs`** — confirmed encoding is **base64 → zlib → JSON object** with sub-archives keyed by name (e.g. `network_log`)
-- The MCP server source on the `feat/APM-network` branch (input schemas + RSpec response fixtures)
+- The live Luciq MCP server API (input schemas + observed response shapes)
 
 What's still being verified:
 
 - Android / Flutter / React Native occurrence payloads (only iOS verified live; structure expected to be identical, only `current_view` semantics differ per platform).
-- APM tools on a real account (verified from MCP source + fixtures, not yet probed live).
+- APM tools on a real account (verified from the MCP API, not yet probed live).
 - `console_log` and `user_data` bug-channel archives (empty in every sample observed so far; element shape TBD on first non-empty sample).
 
 When those land, the relevant "verify live" notes in the references will be replaced with concrete field paths or parsers.
 
 ### Behavioral findings worth knowing before you write your rule pack
 
-These came out of inspecting real SDK traffic and may surprise customers:
+Behaviors to account for when writing your rule pack:
 
 1. **The SDK ships its own telemetry to `api.instabug.com`** and that traffic appears in the captured network log. C7 ("no SDK self-traffic") cannot PASS unless your rule pack's `network.url_exclude_hosts` lists those hosts. The default rule pack includes `api.instabug.com` and `*.luciq.com` for this reason.
 2. **The SDK auto-redacts sensitive header values to `*****`** (e.g. `Authorization: *****`). That's the SDK's own sentinel — distinct from your customer redaction token. C4 PASSes when it sees this.
-3. **The SDK truncates request bodies > 10240 bytes** with a literal "Request body has not been logged because it exceeds the maximum size of 10240 bytes" string. This bypasses your redaction callback. The audit treats it as INFO, not PASS — your large requests aren't covered by your masking rules.
-4. **The `IBG-APP-TOKEN` header is NOT auto-redacted.** That's your dashboard credential, plaintext in every outbound SDK request. If you want it masked in the log, add `IBG-APP-TOKEN` to `redaction.sensitive_headers`.
+3. **The SDK truncates request bodies > 10240 bytes**, replacing the body with a literal "Request body has not been logged because it exceeds the maximum size of 10240 bytes" string. Because this happens before the redaction callback runs, the audit treats such bodies as INFO (body not evaluated), not PASS or FAIL.
+4. **The `IBG-APP-TOKEN` header is not auto-masked.** Like the other `IBG-*` headers, the app token (a client-side app identifier) rides on outbound SDK requests and is not redacted to `*****` by default. If you want it masked in the captured log, add `IBG-APP-TOKEN` to `redaction.sensitive_headers`.
 5. **The `instabug_log` archive is your app's logs (via `Luciq.log.i/.w/.e/.v`),** not the SDK's internal log. C9 ("no SDK warn/error") scans `console_log` (or grep inside the decoded `compressed_logs`), not `instabug_log`.
 
 ---
