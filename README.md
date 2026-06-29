@@ -26,6 +26,9 @@ Skills available after install:
 - `/luciq-skills:luciq-debug`. Production signal investigation.
 - `/luciq-skills:luciq-migrate`. Instabug to Luciq migration and SDK upgrades.
 - `/luciq-skills:luciq-verify`. End-to-end SDK upgrade verification.
+- `/luciq-skills:luciq-alert-config`. Create, change, or inspect a specific alert.
+- `/luciq-skills:luciq-alert-gaps`. Find unmonitored metrics and add the missing alerts.
+- `/luciq-skills:luciq-alert-noise`. Reduce noisy alerts and cut alert fatigue.
 
 ### Cursor
 
@@ -148,6 +151,45 @@ Produce a shareable, audience-tailored readout of an app's health. Pulls headlin
 - `"Give me an exec summary of how the iOS app is doing"`
 - `"Build a release readout comparing 3.1.4 to 3.0.4 for a VP"`
 - `"Stability report for leadership, this week vs last"`
+
+> **Requires** the Luciq MCP server authenticated.
+
+---
+
+### `luciq-alert-config`
+
+Create and manage an individual Luciq alert (rule). Translates a natural-language intent — "alert me when crash-free sessions drop below 99%" — into a valid `write_alerts` payload by reading the app's `init` catalog first and building strictly from it. Never guesses an id, threshold, or whether a metric is even available; asks for anything missing and surfaces tool rejections honestly.
+
+**Try saying:**
+- `"Alert me when ANR rate goes above 1%"`
+- `"Change the threshold on my crash-spike alert"`
+- `"Disable that alert"` / `"Show me my alerts"`
+
+> **Requires** the Luciq MCP server authenticated.
+
+---
+
+### `luciq-alert-gaps`
+
+Find what you're *not* monitoring and add the missing alerts. Cross-references current metric health (via MCP) against your existing alert rules and proposes alerts only for metrics that are both unhealthy (or material) and uncovered — never duplicating coverage or alerting on healthy metrics.
+
+**Try saying:**
+- `"Am I missing any alerts?"`
+- `"What should I be alerting on?"`
+- `"I just installed Luciq — what alerts should I create?"`
+
+> **Requires** the Luciq MCP server authenticated. **Pairs with** `luciq-alert-config` to author each proposed alert.
+
+---
+
+### `luciq-alert-noise`
+
+Reduce noisy, chatty alerts and cut alert fatigue. Inspects each alert's trigger frequency via MCP and recommends targeted fixes — raise threshold, narrow scope, throttle, merge, or disable — without ever blindly silencing a safety-critical alert.
+
+**Try saying:**
+- `"My alerts are too noisy"`
+- `"Clean up / audit my alerts"`
+- `"Which alerts are spammy?"`
 
 > **Requires** the Luciq MCP server authenticated.
 
