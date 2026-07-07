@@ -13,7 +13,7 @@ Find the alert rules that fire too often to be useful, and fix them at the sourc
 - The user wants to **create, change, or manage one specific alert** they describe — use `luciq-alert-config`.
 - The user is investigating *why* something crashed/hung — use `luciq-debug`.
 - First-time SDK install or wiring `Luciq.start(...)` — use `luciq-setup`.
-- The user wants to resolve/acknowledge a specific firing (incident), not change the rule. That is a one-call `write_triggered_alerts` action, not a noise audit — just do it directly.
+- The user wants to resolve/acknowledge a specific firing (incident), not change the rule. That is a one-call `write_incidents` action, not a noise audit — just do it directly.
 
 If the request fits one of the above, STOP and route there.
 
@@ -28,10 +28,10 @@ Tools this skill uses (verbatim names):
 | `read_alerts` | `list` | All alert rules + their `conditions_met_count` (the rolling trigger count) and current `status`. Sort by `highest_triggered_count` to surface the worst first. |
 | `read_alerts` | `details` | Full payload of one rule. Call before updating, to mirror the existing shape. |
 | `read_alerts` | `init` | Per-app catalog of valid types/triggers/conditions/actions/operators and lookup IDs. Call before any update. |
-| `read_triggered_alerts` | `list` | Actual firing history with `status` (open / resolved), `type`, `count`, and timestamps. Use to judge whether firings were actionable. |
+| `read_incidents` | `list` | Actual firing history with `status` (open / resolved), `type`, `count`, and timestamps. Use to judge whether firings were actionable. |
 | `write_alerts` | `update` | Apply a remediation to a rule. State-changing — confirm first. |
 | `write_alerts` | `delete` | Remove a fully redundant rule. State-changing — confirm first. |
-| `write_triggered_alerts` | `resolve` | Clear stale open firings as a side cleanup. |
+| `write_incidents` | `resolve` | Clear stale open firings as a side cleanup. |
 
 You MUST base every "this alert is noisy" claim on a value the MCP returned. Do not infer noise from a rule's title or your priors.
 
@@ -64,7 +64,7 @@ If nothing is loud, report that plainly — "no noisy alerts, here's what you ha
 
 ### Step 3. Diagnose each loud rule
 
-For each candidate, decide *why* it is loud before deciding the fix. When the count alone is ambiguous, call `read_triggered_alerts(action: "list", filters: { ... }, sort_by: "count")` to see whether the firings were distinct real events or the same thing over and over.
+For each candidate, decide *why* it is loud before deciding the fix. When the count alone is ambiguous, call `read_incidents(action: "list", filters: { ... }, sort_by: "count")` to see whether the firings were distinct real events or the same thing over and over.
 
 Map the cause to the right remediation:
 
@@ -104,7 +104,7 @@ Respect the payload rules the `write_alerts` tool documents — most importantly
 
 ### Step 7. Optional — clear stale firings
 
-If the audit surfaced open triggered alerts that are clearly stale (resolved in reality but still `open`), offer to clear them via `write_triggered_alerts(action: "resolve", ulid)`. This is cleanup, not noise reduction — keep it separate and only on request.
+If the audit surfaced open triggered alerts that are clearly stale (resolved in reality but still `open`), offer to clear them via `write_incidents(action: "resolve", ulid)`. This is cleanup, not noise reduction — keep it separate and only on request.
 
 ## Authoring changes correctly (read before any write_alerts call)
 
