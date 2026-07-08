@@ -31,7 +31,7 @@ Why this preference: APM exposes per-request structured data; the bug payload sp
 
 ## The Luciq MCP tool surface
 
-Verified verbatim from the MCP server source (`feat/APM-network` branch). Tool names below are exact.
+Verified against the live Luciq MCP server API. Tool names below are exact.
 
 ### Crash / hang / non-fatal path
 
@@ -54,7 +54,7 @@ Verified verbatim from the MCP server source (`feat/APM-network` branch). Tool n
 
 ### APM path
 
-| Tool | Purpose | Response (from RSpec fixtures) |
+| Tool | Purpose | Response shape |
 | --- | --- | --- |
 | `apm_list_groups` | Rank groups for the app + new SDK version (`metric: network`). Sort: `failure_rate \| latency \| apdex \| apdex_change \| occurrences \| dissat_count`. | `{ metric, groups: [{ uuid, name, key_metrics }], next_offset, total }` |
 | `apm_group_view` | Per-group panels. Views: `summary \| apdex_chart \| throughput_chart \| failure_rate \| spans_table \| dimensions \| outliers`. | `{ metric, group_uuid, views: { <view_name>: { data } } }` + `ignored_views` array for views not applicable to the metric. |
@@ -130,7 +130,7 @@ Different tools use different cases and value names. Match each tool's form exac
 | --- | --- | --- |
 | `list_applications.platform` (request + response) | lowercase | `ios \| android \| react_native \| flutter` |
 | `list_crashes.filters.platform`, `list_app_hangs.filters.platform` | UPPERCASE | `IOS \| ANDROID \| DART \| JAVASCRIPT` |
-| `apm_*.filters.platform` | lowercase, **iOS / Android only** | `ios \| android` (no `dart` or `javascript` on this branch) |
+| `apm_*.filters.platform` | lowercase, **iOS / Android only** | `ios \| android` (no `dart` or `javascript`) |
 
 This means APM is **N/A for Flutter (DART) and React Native (JAVASCRIPT) projects** — do not probe APM for these platforms.
 
@@ -294,11 +294,11 @@ Today only `metric: network` exists. Future metrics (e.g. `flows`) auto-wire whe
 
 ### Availability — TWO independent constraints
 
-**Account/branch availability**: APM tools shipped on the `feat/APM-network` branch and may not be GA on every account. Error semantics from the MCP layer:
+**Account availability**: APM tools may not be GA on every account. Error semantics from the MCP layer:
 - 4xx and 501 (`metric_not_implemented`) → forwarded as a tool response body (NOT raised). Inspect the JSON for `{ error: ... }`. SKIP with the reason. The skill must not `try/catch` here.
 - 5xx → raises `StandardError` from the MCP layer. STOP and surface the upstream failure.
 
-**Platform support**: APM's `filters.platform` is `ios | android` only on this branch. DART and JAVASCRIPT projects: APM channel is permanently **N/A** (not SKIP). Don't probe. Set in Phase 0 at maturity detection.
+**Platform support**: APM's `filters.platform` is `ios | android` only. DART and JAVASCRIPT projects: APM channel is permanently **N/A** (not SKIP). Don't probe. Set in Phase 0 at maturity detection.
 
 ## Filter naming differences across channels
 
@@ -405,9 +405,9 @@ So the crash-channel `compressed_logs` is the bundled equivalent of the bug-chan
 
 **SDK size-truncation marker**: requests with bodies > 10240 bytes have their `request` field replaced with the literal string `"Request body has not been logged because it exceeds the maximum size of 10240 bytes"`. This is NOT the customer's redaction token — it means the SDK's size limit hit BEFORE the customer's redaction callback ran. The audit must distinguish: matching this string is INFO ("body bypassed customer redaction due to size"), not PASS ("redacted") and not FAIL ("leak").
 
-**SDK self-traffic in the log**: outbound requests from the Luciq SDK to its own backend (`api.instabug.com/api/sdk/v3/...`) DO appear in the captured network log on this branch. The SDK does not self-filter by default. C7's "no SDK self-traffic" rule needs the customer's rule pack to provide an exclude list (e.g. `api.instabug.com`, `*.luciq.com`), or treat presence of such hosts as either a known-state OK or a finding to surface — customer's call.
+**SDK self-traffic in the log**: outbound requests from the Luciq SDK to its own backend (`api.instabug.com/api/sdk/v3/...`) DO appear in the captured network log. The SDK does not self-filter by default. C7's "no SDK self-traffic" rule needs the customer's rule pack to provide an exclude list (e.g. `api.instabug.com`, `*.luciq.com`), or treat presence of such hosts as either a known-state OK or a finding to surface — customer's call.
 
-**`IBG-*` headers are plaintext**: outbound SDK requests carry `IBG-APP-TOKEN`, `IBG-OS`, `IBG-SDK-VERSION`, `IBG-CUUID`, `IBG-OS-VERSION` headers. The app token (`IBG-APP-TOKEN`) is the dashboard credential. It is NOT auto-redacted to `*****`. If the customer wants this masked in the captured log, they add `IBG-APP-TOKEN` to `redaction.sensitive_headers`.
+**`IBG-*` headers are not auto-masked**: outbound SDK requests carry `IBG-APP-TOKEN`, `IBG-OS`, `IBG-SDK-VERSION`, `IBG-CUUID`, `IBG-OS-VERSION` headers. The app token (`IBG-APP-TOKEN`) is a client-side app identifier. It is not redacted to `*****` by default. If the customer wants this masked in the captured log, they add `IBG-APP-TOKEN` to `redaction.sensitive_headers`.
 
 ### What `instabug_log` actually contains
 
