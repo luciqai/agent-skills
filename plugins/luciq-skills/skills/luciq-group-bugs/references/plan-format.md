@@ -16,7 +16,7 @@ The plan is the contract the customer approves before any write. It must make ev
 ## Layout
 
 ```
-GROUPING PLAN — app: telepass-tpay (production)
+GROUPING PLAN — app: acme-shop (production)
 Logic: same screen + same failed requests
 Key recipe: current_view + failed_requests_sig
 Candidates: 142 pulled (cap 300 — full scope covered)
@@ -58,7 +58,7 @@ Approve this plan to apply, reassign any master first, or tell me to adjust the 
 After the customer approves and the apply loop runs, report:
 
 ```
-APPLIED — app: telepass-tpay (production)
+APPLIED — app: acme-shop (production)
 GROUP 1: #4048, #4101 → master #4012   ✅
 GROUP 2: #4090 → master #4077          ✅
 Failures: none

@@ -31,7 +31,7 @@ Apply these consistently — they are the difference between "matches" and "almo
 
 ## Signal definitions
 
-- **`failed_requests_sig`** — from the bug's network log, take **only non-2xx** entries, render each as `METHOD path STATUS` (path normalized as above), sort, and join. Example: `GET /tlp-digital/.../daily-maintenance 404, POST /transmit/.../authenticate 401`. Successful (2xx) requests are excluded — this is a *failure* signature.
+- **`failed_requests_sig`** — from the bug's network log, take **only non-2xx** entries, render each as `METHOD path STATUS` (path normalized as above), sort, and join. Example: `GET /api/orders/sync 404, POST /api/auth/login 401`. Successful (2xx) requests are excluded — this is a *failure* signature.
 - **`user_steps_sig`** — from the bug's user steps, the condensed screen sequence plus the last couple of actions, e.g. `screen: HomeActivity → CheckoutActivity | last: tap pay_button, tap confirm_button`. De-duplicate consecutive repeated screens before rendering.
 - **`user_attribute[<name>]`** — the value of the named user attribute (e.g. `plan`), normalized (lowercased, trimmed).
 

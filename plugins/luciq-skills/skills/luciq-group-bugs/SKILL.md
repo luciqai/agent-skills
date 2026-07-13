@@ -37,7 +37,7 @@ The MCP exposes (verbatim names) — this skill uses exactly four:
 
 **Web-fetch for log-based keys.** Grouping by network failures or user steps additionally needs (a) the `bugs.network_logs.view` / `bugs.user_steps.view` permissions, so `bug_details` includes the archive URLs, and (b) a web-fetch capability to retrieve those signed URLs — the MCP tools return only the URL, not the log contents. Keys built from inline fields (title, category, screen, tag, version, user attribute) need neither. If either is unavailable, the log-based recipes can't run; say so rather than substituting a weaker key.
 
-**`update_bug` is callable inline.** Its input schema is a flat object (no top-level `anyOf` / `oneOf` / `not`), so unlike the `apm_*` tools it is **not** stripped by the AI-94 top-level-combinator issue. Call it through the normal MCP client; no direct-JSON-RPC workaround is needed.
+**`update_bug` is callable inline.** Its input schema is a flat object (no top-level `anyOf` / `oneOf` / `not`), so unlike the `apm_*` tools it is **not** stripped by the top-level-combinator limitation. Call it through the normal MCP client; no direct-JSON-RPC workaround is needed.
 
 ## The cardinal rule
 

@@ -179,7 +179,7 @@ Dashboard: https://app.luciq.ai/apps/xyz789
 
 Mode: GUIDED
 Compliance framework: HIPAA (named by user at trigger)
-Operator: Heba Mekawi
+Operator: Alex Rivera
 
 > Guidance only — this document does not constitute compliance
 > certification. Consult legal / compliance for the full obligation set
