@@ -38,6 +38,37 @@ Skills available after install:
 /plugin install luciq-skills@luciq.ai
 ```
 
+### Kiro CLI
+
+Kiro reads steering files, not plugins. The installer copies each skill into
+`.kiro/steering/` with `inclusion: manual` and wires the Luciq MCP server into
+`.kiro/settings/mcp.json`:
+
+```bash
+npx luciq-skills install --kiro            # project-local (.kiro/)
+npx luciq-skills install --kiro --global   # all workspaces (~/.kiro/)
+```
+
+Because inclusion is manual, the steering files stay out of context until you
+reference one in a Kiro session:
+
+```
+#luciq-debug why is crash AB-1234 happening?
+#luciq-setup add Luciq to this Android project
+```
+
+Manual fallback:
+
+```bash
+mkdir -p .kiro/steering
+for f in agent-skills/plugins/luciq-skills/skills/luciq-*/SKILL.md; do
+  name=$(basename "$(dirname "$f")")
+  { printf -- '---\ninclusion: manual\n'; sed '1d' "$f"; } > ".kiro/steering/$name.md"
+done
+# then add the Luciq MCP server to .kiro/settings/mcp.json:
+#   { "mcpServers": { "luciq": { "type": "http", "url": "https://api.luciq.ai/api/mcp" } } }
+```
+
 ### npx
 
 ```bash
