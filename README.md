@@ -57,17 +57,11 @@ reference one in a Kiro session:
 #luciq-setup add Luciq to this Android project
 ```
 
-Manual fallback:
-
-```bash
-mkdir -p .kiro/steering
-for f in agent-skills/plugins/luciq-skills/skills/luciq-*/SKILL.md; do
-  name=$(basename "$(dirname "$f")")
-  { printf -- '---\ninclusion: manual\n'; sed '1d' "$f"; } > ".kiro/steering/$name.md"
-done
-# then add the Luciq MCP server to .kiro/settings/mcp.json:
-#   { "mcpServers": { "luciq": { "type": "http", "url": "https://api.luciq.ai/api/mcp" } } }
-```
+For live MCP data, open `.kiro/settings/mcp.json` and replace
+`<YOUR_LUCIQ_TOKEN>` with your Luciq token — Kiro hot-reloads on save. The
+server is wired through the [`mcp-remote`](https://www.npmjs.com/package/mcp-remote)
+proxy because Kiro's built-in OAuth flow isn't yet compatible with the Luciq
+server.
 
 ### npx
 

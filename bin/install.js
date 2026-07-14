@@ -59,11 +59,24 @@ function copyDir(src, dest) {
 
 function wireMcp(settingsPath, kiro) {
   const mcpConfig = JSON.parse(fs.readFileSync(MCP_SRC, "utf8"));
-  // Kiro's mcp.json schema has no `type` field — a remote server is
-  // identified by its `url`. Strip it so Kiro accepts the entry.
+  // Kiro's built-in remote MCP client can't complete OAuth against the Luciq
+  // server, so route it through the mcp-remote stdio proxy with a static
+  // bearer token. The token is passed via an env var because mcp-remote
+  // mishandles an inline --header value containing a space (`Bearer <token>`).
   if (kiro) {
-    for (const server of Object.values(mcpConfig.mcpServers)) {
-      delete server.type;
+    for (const [name, server] of Object.entries(mcpConfig.mcpServers)) {
+      if (!server.url) continue;
+      mcpConfig.mcpServers[name] = {
+        command: "npx",
+        args: [
+          "-y",
+          "mcp-remote",
+          server.url,
+          "--header",
+          "Authorization:${AUTH_HEADER}",
+        ],
+        env: { AUTH_HEADER: "Bearer <YOUR_LUCIQ_TOKEN>" },
+      };
     }
   }
   let settings = {};
@@ -111,7 +124,9 @@ function installKiro() {
       "Kiro session to load one:\n" +
       "  #luciq-setup    — integrate the Luciq SDK\n" +
       "  #luciq-debug    — investigate crashes and production signals\n" +
-      "  #luciq-migrate  — migrate from Instabug or upgrade SDK versions\n"
+      "  #luciq-migrate  — migrate from Instabug or upgrade SDK versions\n" +
+      "\nOne more step for live MCP data: open " + mcpPath + " and replace\n" +
+      "<YOUR_LUCIQ_TOKEN> with your Luciq token. Kiro hot-reloads on save.\n"
   );
 }
 
