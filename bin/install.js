@@ -29,7 +29,6 @@ function getKiroDirs() {
     : path.join(process.cwd(), ".kiro");
   return {
     steering: path.join(base, "steering"),
-    mcp: path.join(base, "settings", "mcp.json"),
   };
 }
 
@@ -57,28 +56,8 @@ function copyDir(src, dest) {
   }
 }
 
-function wireMcp(settingsPath, kiro) {
+function wireMcp(settingsPath) {
   const mcpConfig = JSON.parse(fs.readFileSync(MCP_SRC, "utf8"));
-  // Kiro's built-in remote MCP client can't complete OAuth against the Luciq
-  // server, so route it through the mcp-remote stdio proxy with a static
-  // bearer token. The token is passed via an env var because mcp-remote
-  // mishandles an inline --header value containing a space (`Bearer <token>`).
-  if (kiro) {
-    for (const [name, server] of Object.entries(mcpConfig.mcpServers)) {
-      if (!server.url) continue;
-      mcpConfig.mcpServers[name] = {
-        command: "npx",
-        args: [
-          "-y",
-          "mcp-remote",
-          server.url,
-          "--header",
-          "Authorization:${AUTH_HEADER}",
-        ],
-        env: { AUTH_HEADER: "Bearer <YOUR_LUCIQ_TOKEN>" },
-      };
-    }
-  }
   let settings = {};
   if (fs.existsSync(settingsPath)) {
     try {
@@ -101,7 +80,7 @@ function wireMcp(settingsPath, kiro) {
 }
 
 function installKiro() {
-  const { steering: steeringDest, mcp: mcpPath } = getKiroDirs();
+  const { steering: steeringDest } = getKiroDirs();
   const scope = isGlobal ? "global (~/.kiro/)" : "local (.kiro/)";
 
   console.log("\nInstalling Luciq skills as Kiro steering [" + scope + "]...\n");
@@ -117,16 +96,14 @@ function installKiro() {
     console.log("  Installed: " + skill + " (#" + skill + ")");
   }
 
-  wireMcp(mcpPath, true);
-
   console.log(
     "\nDone. Steering files use inclusion: manual — reference them in a\n" +
       "Kiro session to load one:\n" +
       "  #luciq-setup    — integrate the Luciq SDK\n" +
       "  #luciq-debug    — investigate crashes and production signals\n" +
       "  #luciq-migrate  — migrate from Instabug or upgrade SDK versions\n" +
-      "\nOne more step for live MCP data: open " + mcpPath + " and replace\n" +
-      "<YOUR_LUCIQ_TOKEN> with your Luciq token. Kiro hot-reloads on save.\n"
+      "\nThe Luciq MCP server is set up separately — see the MCP setup guide:\n" +
+      "  https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/luciq-mcp-server\n"
   );
 }
 
@@ -156,24 +133,8 @@ function install() {
   );
 }
 
-function removeMcpEntry(mcpPath, fileLabel) {
-  if (!fs.existsSync(mcpPath)) return;
-  try {
-    const settings = JSON.parse(fs.readFileSync(mcpPath, "utf8"));
-    if (settings.mcpServers && settings.mcpServers.luciq) {
-      delete settings.mcpServers.luciq;
-      fs.writeFileSync(mcpPath, JSON.stringify(settings, null, 2) + "\n");
-      console.log("  MCP server entry removed.");
-    }
-  } catch {
-    console.warn(
-      "  Warning: could not update " + fileLabel + " — remove MCP entry manually."
-    );
-  }
-}
-
 function uninstallKiro() {
-  const { steering: steeringDest, mcp: mcpPath } = getKiroDirs();
+  const { steering: steeringDest } = getKiroDirs();
   const scope = isGlobal ? "global" : "local";
 
   console.log("\nUninstalling Luciq Kiro steering [" + scope + "]...\n");
@@ -190,7 +151,6 @@ function uninstallKiro() {
     }
   }
 
-  removeMcpEntry(mcpPath, "mcp.json");
   console.log("\nDone.\n");
 }
 

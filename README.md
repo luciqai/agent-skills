@@ -41,8 +41,7 @@ Skills available after install:
 ### Kiro CLI
 
 Kiro reads steering files, not plugins. The installer copies each skill into
-`.kiro/steering/` with `inclusion: manual` and wires the Luciq MCP server into
-`.kiro/settings/mcp.json`:
+`.kiro/steering/` with `inclusion: manual`:
 
 ```bash
 npx luciq-skills install --kiro            # project-local (.kiro/)
@@ -57,11 +56,8 @@ reference one in a Kiro session:
 #luciq-setup add Luciq to this Android project
 ```
 
-For live MCP data, open `.kiro/settings/mcp.json` and replace
-`<YOUR_LUCIQ_TOKEN>` with your Luciq token — Kiro hot-reloads on save. The
-server is wired through the [`mcp-remote`](https://www.npmjs.com/package/mcp-remote)
-proxy because Kiro's built-in OAuth flow isn't yet compatible with the Luciq
-server.
+The Luciq MCP server is set up separately — see the [MCP setup guide](https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/luciq-mcp-server)
+for the Kiro config.
 
 ### npx
 
