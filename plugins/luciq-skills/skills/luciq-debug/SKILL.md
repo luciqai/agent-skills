@@ -39,6 +39,17 @@ The MCP exposes (verbatim names):
 
 YOU MUST cite which of these produced any piece of evidence in your hypothesis. Do not invent capabilities the MCP does not expose. See "Out of scope" below for what the MCP deliberately does not return.
 
+## Reference files
+
+Detailed material is split out so the SKILL.md stays workflow-focused. Read the relevant reference when the workflow points to it:
+
+| Reference | When to read |
+| --- | --- |
+| `references/metrics/preamble.md` | Before interpreting any APM duration. Units, percentiles-over-means, what `threshold_ms` means, and what the launch tools actually return. |
+| `references/metrics/<metric>/<platform>.md` | Before interpreting a specific APM metric. The measured window, stage boundaries, account gating, per-stage optimization targets, validation checks, and the conditions under which the data misleads. Currently populated for `app-launch` (`ios`, `android`, `react-native`, `flutter`). |
+
+On React Native or Flutter, read the wrapper file **and** the native platform file it names — the wrapper adds no timing of its own, so the native file governs the data.
+
 ## Workflow
 
 Run the following loop. Every step is gated on evidence.
@@ -70,6 +81,7 @@ Sequence the available Luciq MCP tools deliberately for the entry point:
 - Review signals: `list_reviews` filtered to low ratings, then correlate with crash and hang activity in the same window.
 - APM regression: choose the `metric` for the signal, then `apm_list_groups` sorted by `apdex_change` (signed delta) across the two `app_version` values, take the most-degraded groups, then `apm_group_view` with `dimensions` to localize each regression to a cohort (OS, device, country, version), then `apm_occurrence` with `selector: worst` for a concrete worst case to reason over.
 - APM group deep dive: `apm_list_groups` for the metric sorted by its pain key to find the group, then `apm_group_view` — `summary` for the headline metrics, then the view that matches the pain: `spans_table` (or `stages_breakdown` for launch/screen_loading) for a slow segment, `outliers` for the tail driving p95 (not on `frame_drop`), or the `failure_rate` view for a failing network group, then `apm_occurrence` (`worst`), which is the worst-failed request when the pain is failures, not the slowest.
+- Before interpreting any duration for a metric, read `references/metrics/preamble.md` and `references/metrics/<metric>/<platform>.md`. The measured window rarely matches what the user assumes it measures, and for `launch` the total stops before the first frame is drawn. Do not quote a latency as "startup time" without that context.
 - On a 403/501 from an APM tool, SKIP the APM step with the reason; never infer "no regression" from a tool error.
 
 ### Step 3. Symbolicate if obfuscated (crash / hang track)
@@ -182,6 +194,16 @@ When `apm_list_groups` sorted by `apdex_change` shows a group degrading between 
 - Use `spans_table` to attribute the time. The fix targets the dominant span — chasing the request-setup code when the cost is in a DB span wastes effort.
 - Use `outliers` when p95/p99 moved but the median didn't — the tail requests carry the signature.
 
+### APM app launch
+
+When the signal is a slow or regressing app launch (`metric: launch`), read `references/metrics/preamble.md` and the platform file before quoting a number, then:
+
+- The window ends before the first frame is drawn — iOS at `applicationDidBecomeActive`, Android at `Activity.onResume`. A launch total is time-to-activation or time-to-resume, **not** time-to-interactive, unless the app calls `endAppLaunch()`. Check `stages_breakdown` for that stage before claiming the number reflects what users perceive.
+- Missing launch data is not the same as fast launches. Launch capture, each launch type, and `endAppLaunch()` itself are provisioned per account and default to off, so absent data can mean unprovisioned. If `endAppLaunch` is missing from `stages_breakdown` but present in the code, the fix is with Luciq support, not the app.
+- Do not compare launch types across platforms. Android reports as `warm` what iOS reports as `hot`, and cold totals begin at different points. Segment by `type` and by platform before aggregating.
+- On iOS, prewarmed and background-initiated launches are indistinguishable in the data and can each run for minutes. Read `latency_p50_ms` alongside `latency_p95_ms` and inspect `outliers` before calling a p95 move a regression.
+- Attribute with `stages_breakdown`, then map the dominant stage to code using the platform file's optimization targets. On React Native and Flutter a native stage dominating means the cause is not in JS or Dart.
+
 ### APM failure-rate spike
 
 When `apm_list_groups` sorted by `failure_rate` flags a group:
@@ -230,5 +252,7 @@ If you catch yourself thinking any of these, you are about to ship a fabricated 
 - "Throughput dropped, so performance regressed." A throughput drop with flat latency usually means fewer callers, not a slower path. Correlate with a release / flag before calling it a defect.
 - "I'll slice by the `email` custom attribute." APM addresses custom attributes by numbered slot (1–20), not name, and the slot→name map is org config you can't infer. Ask the user which slot it is.
 - "I'll quote a latency number from a group without saying which tool/view gave it." Cite `apm_list_groups` vs `apm_group_view <view>`. they're different aggregations and conflating them misstates the evidence.
+- "Launch p95 is 3s, so the app takes 3s to become usable." The launch window closes before the first frame is drawn. Without an `endAppLaunch` stage that number is time-to-activation, not time-to-interactive, and the real figure is higher. Read `references/metrics/app-launch/<platform>.md` before framing it as startup time.
+- "There's no cold launch data, so cold launches are fine." Launch capture is provisioned per account and defaults to off, and Android drops cold entirely under a renamed process. Absent data is an instrumentation finding until you've checked gating and the manifest.
 
 The pattern: every shortcut here trades "sounds confident" for "actually true." The skill's job is to be true.
