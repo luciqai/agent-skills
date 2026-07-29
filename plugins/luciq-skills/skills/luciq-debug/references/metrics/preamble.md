@@ -30,7 +30,7 @@ Read this before interpreting any APM duration, then read the per-metric platfor
 
 | Platform | Type | Starts at | Ends at |
 |---|---|---|---|
-| iOS | `cold` | Process creation | First `applicationDidBecomeActive` |
+| iOS | `cold` | Process creation | The **first** `applicationDidBecomeActive` of the process |
 | iOS | `hot` | `applicationWillEnterForeground` | `applicationDidBecomeActive` |
 | Android | `cold` | SDK init, before `Application.onCreate` | First `Activity.onResume` |
 | Android | `warm` | First `Activity.onCreate` | `Activity.onResume` |
@@ -50,9 +50,10 @@ and is largely outside it.
 
 | Fact | Applies to |
 |---|---|
-| Prewarmed launches include dormant idle time and inflate the tail; **no field marks them** | iOS |
+| Prewarmed launches include dormant idle time and inflate the tail; `cold` only, and **no field marks them** | iOS |
 | Background-initiated cold starts can run for minutes; **no field marks them either** | iOS |
 | Stage durations are self-time — work in nested stages is subtracted | iOS |
+| Stages can sum to less than the total — the unattributed remainder is real work, often the largest contributor | iOS |
 | No `warm` type exists — a suspended-then-resumed app reports as `hot` | iOS |
 | `cold` does **not** start at process creation; earlier startup work is invisible | Android |
 | `warm` includes configuration-change relaunches (rotation, theme, locale) | Android |
@@ -61,8 +62,9 @@ and is largely outside it.
 | No `hot` records exist — hot capture is disabled in this SDK | React Native |
 | Reduced Android `cold` coverage is structural, not a misconfiguration | Flutter |
 
-Launch types are **not comparable across platforms**: Android reports as `warm` what iOS reports as
-`hot`, and cold totals begin at different points. Segment by platform before aggregating.
+Launch types are **not comparable across platforms**: the same user-visible scenario can land in
+different types, and cold totals begin at different points. Segment by platform before aggregating;
+never compare a type across platforms.
 
 ## Capture is gated per account
 

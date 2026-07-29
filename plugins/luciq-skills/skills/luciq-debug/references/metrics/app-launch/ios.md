@@ -88,24 +88,24 @@ nesting, never to rank.
 Cold launches report one of two stage sets. The detailed breakdown is an account capability; when it is
 not enabled you receive only the two-stage form.
 
-**Two-stage form** — these sum to the total:
+**Two-stage form** — `preMain` and `appStartup` are contiguous and together span process creation →
+activation:
 
 | Stage | Boundaries |
 |---|---|
-| `preMain` | Process creation → an early point during dynamic-library loading, before `main()` |
+| `preMain` | Process creation → a point late in pre-`main()` initialization, after dynamic-library loading and most static initializers have run |
 | `appStartup` | That point → `applicationDidBecomeActive` |
 
 **Detailed form** — `appStartup` is not reported, and the stages **do not sum to the total**:
 
 | Stage | Boundaries |
 |---|---|
-| `preMain` | Process creation → early pre-`main()` point |
+| `preMain` | Process creation → the same late pre-`main()` point |
 | `appInit` | That point → `application(_:didFinishLaunchingWithOptions:)` completes |
 | `sceneConnect` | Run loop begins processing the scene-connect event → `scene(_:willConnectTo:options:)` returns |
 | `viewDidLoad` | First view controller's `viewDidLoad` |
 | `viewWillAppear` | First view controller's `viewWillAppear` |
 | `viewDidAppear` | First view controller's `viewDidAppear` |
-| `endAppLaunch` | Automatic launch end → your `endAppLaunch()` call |
 
 **The unattributed remainder.** In the detailed form, no stage covers
 `didFinishLaunching → applicationDidBecomeActive` beyond `sceneConnect` and the three view-lifecycle
@@ -114,8 +114,13 @@ and `didBecomeActive` observers all fall into an unnamed remainder. Compute it a
 `total − Σ(stage self-times)`. It is frequently the largest single contributor and is a legitimate
 optimization target even though no stage names it.
 
-**Hot launches** report only `appStartup`, spanning the whole foreground-to-active window. No breakdown
-is available.
+**`endAppLaunch` — both forms.** Independent of the stage-breakdown capability: whenever the app calls
+`endAppLaunch()` after the automatic launch end, that stage is appended and the total extends to the
+call. Boundaries: automatic launch end → the call. Include it before comparing a two-stage group's
+stages against its total — the two automatic stages alone stop at activation.
+
+**Hot launches** report one automatic stage, `appStartup`, spanning the whole foreground-to-active
+window. No breakdown is available; `endAppLaunch` applies as described above.
 
 ## 3. Optimization targets by stage
 
@@ -137,12 +142,13 @@ conclusion.
 |---|---|---|
 | Total is not time-to-interactive | No `endAppLaunch` stage in `stages_breakdown` | Grep for `endAppLaunch`. **Absent from the code** → recommend instrumenting it before optimizing anything post-activation. **Present in the code** → the account capability is not provisioned (§0); the fix is with Luciq support, not a code change. |
 | Tail contamination | `latency_p95_ms` far above `latency_p50_ms`, or `outliers` dominated by multi-second values | Prewarmed and background-initiated launches are indistinguishable in this data and can run for minutes. Do not call it a regression on p95 alone — check `latency_p50_ms` and inspect `outliers`, and look for background entry points (`didReceiveRemoteNotification`, `performFetchWithCompletionHandler`, `BGTaskScheduler`). |
-| Premature end call | Stage sum in `stages_breakdown` exceeds the group total | `endAppLaunch()` runs before activation. Locate and move the call site; treat the affected group as unreliable. |
-| Unmeasurable end call | `endAppLaunch` stage present but zero | Same call site, same fix — it runs too early to measure an interval. |
+| Premature end call | Stage sum in `stages_breakdown` exceeds the group total | `endAppLaunch()` runs before activation. Reliable only in the two-stage form: in the detailed form the unattributed remainder absorbs the shortfall, so absence of this signal does not clear the call site — read it in the codebase instead. Locate and move it; treat the affected group as unreliable. |
 | Unattributed remainder | `total − Σ(stage self-times)` on detailed groups | Expected, and often dominant. Attribute it to root view-controller construction, autolayout, and the first render pass — inspect `SceneDelegate`, the root VC's `loadView`/`viewDidLoad`, and `didBecomeActive` observers. |
-| Breakdown unavailable | Only `preMain` and `appStartup` present, or `stages_breakdown` in `ignored_views` | Only coarse attribution is possible. Say so rather than over-reading two stages. |
+| Breakdown unavailable | `appStartup` present, or `stages_breakdown` in `ignored_views` | Only coarse attribution is possible. Say so rather than over-reading two stages. |
 | Late SDK initialization | `sceneConnect` and the view-lifecycle stages absent while `appInit` is present | Find where the SDK is started. Stage coverage is partial; the total is still valid. |
+| SwiftUI first screen | View-lifecycle stages absent while `sceneConnect` is present | Expected — hosting controllers are not instrumented. Do not report as missing data; attribute that time to the remainder. |
 | Missing screen name | `first_screen` absent in `dimensions` | Likely a name over 60 characters — common for SwiftUI hosting controllers. Do not infer the screen was unidentifiable. |
+| Placeholder screen name | An `N/A` bucket in the `first_screen` `dimensions` breakdown | Hot-only fallback when nothing resolved. Exclude it from screen-level conclusions; it is not a real screen. |
 | Cross-type screen grouping | Grouping on `first_screen` across `cold` and `hot` groups | Invalid — the two types resolve names differently. Segment by `type` first. |
 | Apdex target misconfigured | `threshold_ms` below `50th_percentile_ms` | A low or falling `apdex_score` is a target-config problem, not a code defect. Weigh the target against what a launch should plausibly cost before attributing it to code. |
 
@@ -176,14 +182,21 @@ initialized before drawing conclusions about the missing stages.
 `first_screen` may be absent. This is common in SwiftUI apps, where the resolved name is a long generic
 hosting-controller type.
 
-**Screen names are not comparable between cold and hot.** Cold records name the underlying UIKit
-view-controller class; hot records prefer a resolved SwiftUI view name where one exists. Do not join or
-group across the two types on `first_screen`.
+**Screen names are not comparable between cold and hot.** Cold launches always name the resolved UIKit
+view-controller class, with no fallbacks. Hot launches prefer an app-supplied name where one has been
+set — a SwiftUI name appears only where the app explicitly tagged that view — and otherwise fall back
+through a web-view composite, the view-controller class, the window class, and finally the literal
+`N/A`. There is no automatic SwiftUI type resolution on either path. Do not group across the two types
+on `first_screen`.
 
-**SwiftUI lifecycle apps.** The total, `preMain`, `appStartup`, and `appInit` are all valid. But
-`appInit` is largely framework time you do not control, and the three view-lifecycle stages measure
-hosting-controller lifecycle — **not** SwiftUI `body` evaluation. Do not attribute those stages to
-SwiftUI view code.
+**SwiftUI lifecycle apps.** The total, `preMain`, `appStartup`, and `appInit` are all valid, but
+`appInit` is largely framework time you do not control, and the three view-lifecycle stages are
+normally **absent**: hosting controllers are not instrumented, so no view-lifecycle stage is recorded
+for them. Do not read that absence as missing data. The time those stages would have covered falls into
+the unattributed remainder, which is correspondingly larger in these apps — optimize against the
+remainder rather than waiting for stages that will not arrive. Where the three stages do appear, the
+first screen resolved to a UIKit view controller rather than a hosting controller, and they measure
+that controller's UIKit lifecycle, never SwiftUI `body` evaluation.
 
 **Multiple windows and scenes.** Only the first scene of a launch is measured. Opening an additional
 window produces no launch record, and there is no per-scene breakdown.
@@ -196,10 +209,13 @@ controller asynchronously may see cold-launch volume below expectation.
 
 **`endAppLaunch()` called too early.** If the call happens before `applicationDidBecomeActive`, the
 total ends at your earlier timestamp, no `endAppLaunch` stage is emitted, and the remaining stages were
-measured against the later automatic end. The signature is **a stage sum larger than the total**. Move
-the call site; treat affected data as unreliable.
+measured against the later automatic end. In the two-stage form that shows as **a stage sum larger than
+the total**; in the detailed form the unattributed remainder absorbs the shortfall and the group looks
+normal. Verify the call site rather than the arithmetic; move it, and treat affected data as unreliable.
+A zero-valued `endAppLaunch` stage is a different, harmless case: the call landed at effectively the
+same instant as the automatic end, so it measured nothing and the total is still time-to-activation.
 
-**`endAppLaunch()` is honoured once per launch.** Later calls are rejected.
+**`endAppLaunch()` is honoured once per launch.** Repeat calls within the same launch are ignored.
 
 ## 6. Getting a true first-frame number
 
