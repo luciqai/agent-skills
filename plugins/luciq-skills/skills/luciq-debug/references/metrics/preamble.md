@@ -8,8 +8,10 @@ Read this before interpreting any APM duration, then read the per-metric platfor
 - **Latencies in the MCP surface are milliseconds** (`latency_p50_ms`, `latency_p95_ms`,
   `threshold_ms`). The SDK measures in microseconds; the API divides by 1000 before returning. Never
   mix the two.
-- **Prefer percentiles.** Durations are unclamped — no upper bound is applied — so means are dragged by
-  a tail that can be arbitrarily long. Use `latency_p50_ms` and `latency_p95_ms`.
+- **Read `latency_p50_ms` and `latency_p95_ms` together, and never average either across groups or
+  versions.** The API returns percentiles, already computed — a percentile of percentiles is not a
+  percentile. A flat p50 with a moved p95 is a tail problem, one slow cohort or dependency, not a
+  uniform slowdown. Durations are unclamped, so that tail can be arbitrarily long.
 - **`threshold_ms` is the group's configured apdex target, not a measurement.** If it sits below
   `50th_percentile_ms`, more than half of otherwise-healthy occurrences score unsatisfied, so a low or
   falling apdex is a target-configuration problem rather than a code defect. Check it before
