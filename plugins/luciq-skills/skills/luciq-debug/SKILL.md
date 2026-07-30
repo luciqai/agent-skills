@@ -49,9 +49,9 @@ Detailed material is split out so the SKILL.md stays workflow-focused. Read the 
 | `references/metrics/<metric>/overview.md` | Next. What the metric measures, what each tool returns for it, the coverage and account gating that decide whether absence is a measurement, and the cross-platform facts. |
 | `references/metrics/<metric>/<platform>.md` | Last. The platform's anchors, which stacks are instrumented, stage boundaries, optimization targets, validation checks, and the conditions under which the data misleads. |
 
-Populated for `network` (`ios`, `android`) and `app-launch` (`ios`, `android`, `react-native`, `flutter`).
+Populated for `network` and `app-launch`, each with `ios`, `android`, `react-native`, `flutter`.
 
-On React Native or Flutter, read the wrapper file **and** the native platform file it names — the wrapper adds no timing of its own, so the native file governs the data. Network has no wrapper files yet: read `network/overview.md`, which carries the hybrid facts, plus the native file.
+On React Native or Flutter, read the wrapper file **and** the native platform file it names. For launch the wrapper adds no timing of its own, so the native file governs the number; for network the wrapper does its own timing on the JS thread or Dart isolate, so the wrapper file governs it.
 
 ## Workflow
 
@@ -260,7 +260,7 @@ If you catch yourself thinking any of these, you are about to ship a fabricated 
 - "Launch p95 is 3s, so the app takes 3s to become usable." The window closes before the first frame is drawn, so without an `endAppLaunch` stage that number is time-to-activation and the real figure is higher.
 - "There's no cold launch data, so cold launches are fine." Capture is provisioned per account and defaults to off, and Android reports none under a renamed process. Absent data is an instrumentation finding until you check both.
 - "There's little or no network data, so the app makes few requests." Capture is off by default on Android (a build flag) and needs a per-call-site client swap on Flutter. Check setup before reading absence as traffic.
-- "The client-side failure rate is near zero, so the network is healthy." On iOS with body capture off, client failures are recorded as successes — the number is deflated, not good. On Android the same number is inflated by cancellations. Correct for the platform first.
+- "The client-side failure rate is near zero, so the network is healthy." Every platform distorts that number: iOS records client failures as successes when body capture is off, Android inflates it with cancellations, and Flutter drops failed requests entirely — which also biases its latency percentiles *low*, because the slowest requests are the missing ones. A flattering p95 on Flutter is not evidence of a fast network. Correct for the platform first.
 - "A slow request means slow code in the app's networking layer." The app's own interceptors and client-side queueing are outside the measured window on both native platforms. A blocking token-refresh interceptor cannot inflate the request it delayed.
 
 The pattern: every shortcut here trades "sounds confident" for "actually true." The skill's job is to be true.

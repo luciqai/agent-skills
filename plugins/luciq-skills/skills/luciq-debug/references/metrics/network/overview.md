@@ -9,9 +9,10 @@ model. Then read the platform file: `references/metrics/network/<platform>.md`.
 > limitations change often, and **a limitation that has since been fixed will make you discount valid
 > data.**
 
-Platform files exist for **iOS and Android** only. On React Native or Flutter, read this file plus the
-native platform file for the platform under analysis, and apply the hybrid rows in the facts table
-below — there is no wrapper file yet.
+On React Native or Flutter, read the wrapper file **and** the native platform file it names. Unlike
+launch, the wrapper does its own timing here — the duration is taken on the JS thread or Dart isolate,
+not by the native SDK — so the wrapper file governs the number and the native file governs the account
+gating and the privacy model.
 
 ## Coverage is not automatic on every platform
 
