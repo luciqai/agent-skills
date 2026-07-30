@@ -30,6 +30,7 @@ Skills available after install:
 - `/luciq-skills:luciq-alert-config`. Create, change, or inspect a specific alert.
 - `/luciq-skills:luciq-alert-gaps`. Find unmonitored metrics and add the missing alerts.
 - `/luciq-skills:luciq-alert-noise`. Reduce noisy alerts and cut alert fatigue.
+- `/luciq-skills:luciq-cli`. Luciq from the terminal — symbol uploads, CI wiring, and scriptable data commands.
 
 ### Cursor
 
@@ -227,6 +228,22 @@ Reduce noisy, chatty alerts and cut alert fatigue. Inspects each alert's trigger
 - `"Which alerts are spammy?"`
 
 > **Requires** the Luciq MCP server authenticated.
+
+---
+
+### `luciq-cli`
+
+Drive Luciq from a terminal, a build pipeline, or a script. Installs and authenticates the `luciq` CLI, uploads symbol files for every platform — dSYMs, ProGuard/R8 mappings, NDK `.so` files, React Native source maps, Flutter Dart symbols — and wires those uploads into CI (GitHub Actions, Fastlane, Gradle, Bitrise, CircleCI, an Xcode build phase) with the token read from a secret. Also turns a data question into a repeatable command: resolves the app via `luciq apps list`, picks typed flags over raw `--filters`, and only pipes to `jq` after confirming the output is JSON. Treats `luciq help` as outranking its own reference tables, so a rejected flag gets corrected instead of retried.
+
+**Try saying:**
+- `"Upload the dSYMs for this build to Luciq"`
+- `"Add Luciq symbol upload to our release workflow"`
+- `"Our Android crashes aren't deobfuscated — fix it"`
+- `"Give me a command that lists open crashes and pipes it into jq"`
+
+> **Needs no MCP server** — symbol uploads have no MCP equivalent, so this is the only path for them. Everything authenticates with one CLI token and targets an app by `--slug` + `--mode`. Data commands run the same server-side tools as the MCP under the same permissions, so the CLI is never a way around a permission or plan block.
+>
+> **Hands off to** `luciq-debug` for root-causing a signal and `luciq-readout` for reports: a question is MCP's job, a command is this skill's.
 
 ---
 
