@@ -45,10 +45,13 @@ Detailed material is split out so the SKILL.md stays workflow-focused. Read the 
 
 | Reference | When to read |
 | --- | --- |
-| `references/metrics/preamble.md` | Before interpreting any APM duration. Units, how to read p50 against p95, what `threshold_ms` means, and what the launch tools actually return. |
-| `references/metrics/<metric>/<platform>.md` | Before interpreting a specific APM metric. The measured window, stage boundaries, account gating, per-stage optimization targets, validation checks, and the conditions under which the data misleads. Currently populated for `app-launch` (`ios`, `android`, `react-native`, `flutter`). |
+| `references/metrics/preamble.md` | Before interpreting any APM number. Units, how to read p50 against p95, what `threshold_ms` means, and the aggregates-not-records model that every check has to be built around. |
+| `references/metrics/<metric>/overview.md` | Next. What the metric measures, what each tool returns for it, the coverage and account gating that decide whether absence is a measurement, and the cross-platform facts. |
+| `references/metrics/<metric>/<platform>.md` | Last. The platform's anchors, which stacks are instrumented, stage boundaries, optimization targets, validation checks, and the conditions under which the data misleads. |
 
-On React Native or Flutter, read the wrapper file **and** the native platform file it names — the wrapper adds no timing of its own, so the native file governs the data.
+Populated for `network` (`ios`, `android`) and `app-launch` (`ios`, `android`, `react-native`, `flutter`).
+
+On React Native or Flutter, read the wrapper file **and** the native platform file it names — the wrapper adds no timing of its own, so the native file governs the data. Network has no wrapper files yet: read `network/overview.md`, which carries the hybrid facts, plus the native file.
 
 ## Workflow
 
@@ -203,11 +206,21 @@ When `apm_list_groups` flags a launch group (`metric: launch`):
 - Use `dimensions` with `pattern_key: first_screen` to find which entry screen carries the cost, and `outliers` when p95 moved but p50 did not.
 - Run the platform file's validation table before quoting any number. Several conditions make a launch total mean something other than "the app is slow," and they are not visible in the number itself.
 
+### APM network
+
+When `apm_list_groups` flags a network group (`metric: network`):
+
+- Establish coverage before reading absence as a measurement. Network capture is **not automatic on Android or Flutter** — Android needs the Gradle plugin plus `networkInterception.enabled = true`, which defaults to false, and Flutter needs a client swap at every call site. A total absence of data is usually setup, not performance.
+- There is **no `stages_breakdown` view for network**. Attribute with `spans_table`, and use `apm_occurrence` for one request's stage detail. Match returned span names against the overview's boundary table rather than assuming them.
+- The list row gives `latency_p95_ms` and `failure_rate` only — no p50, no occurrence count. Get those from `summary` or `dimensions`.
+- Segment on `radio` before comparing latency, and remember client-side queueing and (on Android) the app's own interceptor chain sit **outside** the measured window, so neither shows up here.
+
 ### APM failure-rate spike
 
 When `apm_list_groups` sorted by `failure_rate` flags a group:
 
 - Split `total_failure_rate` into `client_failure_rate` vs `server_failure_rate`. Client failures (4xx, timeouts, cancellations) point at the app; server failures (5xx) point at the backend. They lead to opposite fixes.
+- Apply the platform's client-side correction before quoting the client rate. **iOS under-reports it** — with body capture off, client failures are recorded as successes. **Android over-reports it** — cancellations are counted as failures. The network platform file gives the check for each.
 - Filter the group by `failure_name` / `failure_type` to see whether it's one error class or many.
 - Cross-reference the window with `list_crashes` and `bug_details` — a failure-rate spike that coincides with a crash spike on the same call path is usually one root cause, not two.
 
@@ -253,5 +266,8 @@ If you catch yourself thinking any of these, you are about to ship a fabricated 
 - "I'll quote a latency number from a group without saying which tool/view gave it." Cite `apm_list_groups` vs `apm_group_view <view>`. they're different aggregations and conflating them misstates the evidence.
 - "Launch p95 is 3s, so the app takes 3s to become usable." The window closes before the first frame is drawn, so without an `endAppLaunch` stage that number is time-to-activation and the real figure is higher.
 - "There's no cold launch data, so cold launches are fine." Capture is provisioned per account and defaults to off, and Android reports none under a renamed process. Absent data is an instrumentation finding until you check both.
+- "There's little or no network data, so the app makes few requests." Capture is off by default on Android (a build flag) and needs a per-call-site client swap on Flutter. Check setup before reading absence as traffic.
+- "The client-side failure rate is near zero, so the network is healthy." On iOS with body capture off, client failures are recorded as successes — the number is deflated, not good. On Android the same number is inflated by cancellations. Correct for the platform first.
+- "A slow request means slow code in the app's networking layer." The app's own interceptors and client-side queueing are outside the measured window on both native platforms. A blocking token-refresh interceptor cannot inflate the request it delayed.
 
 The pattern: every shortcut here trades "sounds confident" for "actually true." The skill's job is to be true.

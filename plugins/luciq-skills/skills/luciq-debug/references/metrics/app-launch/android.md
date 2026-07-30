@@ -1,7 +1,7 @@
 # App Launch — Android
 
-Read `references/metrics/preamble.md` first. It carries the units, the aggregation rules, and what the
-MCP actually returns for launch.
+Read `references/metrics/preamble.md` and `references/metrics/app-launch/overview.md` first. They
+carry the units, the aggregation rules, the measured window, and what the MCP returns for launch.
 
 > **Verified against:** Luciq Android SDK 19.2.0. §5 describes current limitations, several of which are
 > expected to be fixed — treat it as the most version-sensitive section here.
