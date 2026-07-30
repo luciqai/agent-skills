@@ -221,10 +221,10 @@ decisions made during onboarding sessions, and the conditions for
 revisiting deferred items. Appended to over time; do not rewrite from
 scratch.
 
-App: **eCommerce** (iOS1-iOS, production token)
+App: **eCommerce** (acme-ios, production token)
 Platform: iOS (SwiftUI)
 Archetype: e-commerce (fashion retail)
-Dashboard: https://app.luciq.ai/apps/ios1
+Dashboard: https://app.luciq.ai/apps/acme-ios
 
 ---
 
@@ -271,9 +271,9 @@ minutes. That's the moment everything goes from *set up* to *actually
 working*.
 
 **Your three dashboards:**
-- 📊 App Health → https://app.luciq.ai/apps/ios1/health
-- 📊 Issues (ranked by impact) → https://app.luciq.ai/apps/ios1/issues
-- 📊 Frustration-Free Sessions → https://app.luciq.ai/apps/ios1/ffs
+- 📊 App Health → https://app.luciq.ai/apps/acme-ios/health
+- 📊 Issues (ranked by impact) → https://app.luciq.ai/apps/acme-ios/issues
+- 📊 Frustration-Free Sessions → https://app.luciq.ai/apps/acme-ios/ffs
 
 ---
 
@@ -371,7 +371,7 @@ None this session — no competing observability SDKs are installed.
 - **Detected SDK style** — none; greenfield observability, Luciq defaults
   used.
 - **Workspace precedent** — Luciq MCP authenticated; multiple iOS apps
-  in the account (TestQC, iOS1-iOS, Test-iOS). iOS1-iOS production token
+  in the account (acme-ios, acme-ios-qa, acme-ios-staging). acme-ios production token
   in use.
 
 ## When to reach for sibling skills
