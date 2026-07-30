@@ -37,11 +37,13 @@ Apply these consistently — they are the difference between "matches" and "almo
 
 ## Field source map
 
-`list_bugs` returns a **CSV row** per bug with exactly these columns — nothing else:
+`list_bugs` returns `{"bugs": [...]}` — one thin object per bug, with exactly these fields and nothing else:
 
 ```
 priority_id, status_id, categories, email, number, reported_at, last_activity, title, type, duplicated_bugs_count, duplicate_type
 ```
+
+`title` can be `null`, and `categories` is a nested `{name, subs}` object rather than a flat list — normalize both before keying on them.
 
 Everything a richer key needs comes from `bug_details`:
 
@@ -49,7 +51,7 @@ Everything a richer key needs comes from `bug_details`:
 | --- | --- | --- |
 | title | `list_bugs` | use `normalize_title` |
 | categories | `list_bugs` | already a set |
-| type / duplicate_type / email / status_id / priority_id / number / reported_at / last_activity | `list_bugs` | other CSV columns |
+| type / duplicate_type / email / status_id / priority_id / number / reported_at / last_activity | `list_bugs` | the remaining fields on the row |
 | `current_view` | **`bug_details`** → `state.fields.current_view` | not in `list_bugs` (not even a filter) |
 | tags | **`bug_details`** → top-level `tags` | `tag` is a `list_bugs` *filter* only; the value isn't returned |
 | app version | **`bug_details`** → `state.fields.app_version` | `app_version` is a `list_bugs` *filter* only; the value isn't returned |

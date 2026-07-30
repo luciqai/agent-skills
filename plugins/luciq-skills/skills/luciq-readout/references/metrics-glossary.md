@@ -83,7 +83,7 @@ What the numbers mean:
 
 ## `list_crashes` / `list_app_hangs`
 
-`list_crashes(slug, mode, filters?, sort_by?, direction?, limit?, offset?)`. Returns rows (CSV-style) with, per crash group:
+`list_crashes(slug, mode, filters?, sort_by?, direction?, limit?, offset?)`. Returns `{"crashes": [...]}` — `list_app_hangs` uses the same `crashes` key — with, per crash group:
 
 `number, exception, crash_cause, crash_type, platform, status_id, current_view, occurrences_counter, affected_users_counter, min_app_version, max_app_version, first_occurred_at, last_occurred_at, severity, app_version, team, signals, exception_name, ...`
 
