@@ -45,10 +45,13 @@ Detailed material is split out so the SKILL.md stays workflow-focused. Read the 
 
 | Reference | When to read |
 | --- | --- |
-| `references/metrics/preamble.md` | Before interpreting any APM duration. Units, how to read p50 against p95, what `threshold_ms` means, and what the launch tools actually return. |
-| `references/metrics/<metric>/<platform>.md` | Before interpreting a specific APM metric. The measured window, stage boundaries, account gating, per-stage optimization targets, validation checks, and the conditions under which the data misleads. Currently populated for `app-launch` (`ios`, `android`, `react-native`, `flutter`). |
+| `references/metrics/preamble.md` | Before interpreting any APM number. Units, how to read p50 against p95, what `threshold_ms` means, and the aggregates-not-records model that every check has to be built around. |
+| `references/metrics/<metric>/overview.md` | Next. What the metric measures, what each tool returns for it, the coverage and account gating that decide whether absence is a measurement, and the cross-platform facts. |
+| `references/metrics/<metric>/<platform>.md` | Last. The platform's anchors, which stacks are instrumented, stage boundaries, optimization targets, validation checks, and the conditions under which the data misleads. |
 
-On React Native or Flutter, read the wrapper file **and** the native platform file it names — the wrapper adds no timing of its own, so the native file governs the data.
+Populated for `network` and `app-launch`, each with `ios`, `android`, `react-native`, `flutter`.
+
+On React Native or Flutter, read the wrapper file **and** the native platform file it names. For launch the wrapper adds no timing of its own, so the native file governs the number; for network the wrapper does its own timing on the JS thread or Dart isolate, so the wrapper file governs it.
 
 ## Workflow
 
@@ -75,13 +78,13 @@ Determine the kind of signal being debugged. If the user has not specified, ask.
 Sequence the available Luciq MCP tools deliberately for the entry point:
 
 - Crashes: `list_crashes`, `crash_details`, `crash_patterns`, then `list_occurrences_tokens` and `get_occurrence_details` for one or more sessions.
-- Hangs: `list_app_hangs` filtered to the recent window. iOS hangs surface as `FATAL_UI_HANG`, Android as `ANDROID_FATAL_HANG`.
+- Hangs: `list_app_hangs` filtered to the recent window.
 - Bug reports: `list_bugs` then `bug_details`. The response includes URLs to compressed logs (network, console, session profiler) when available.
 - Regressions: filter `list_crashes` by the two versions, diff the result, then call `crash_patterns` with `pattern_key: app_versions` for the highest-impact new groups.
 - Review signals: `list_reviews` filtered to low ratings, then correlate with crash and hang activity in the same window.
 - APM regression: choose the `metric` for the signal, then `apm_list_groups` sorted by `apdex_change` (signed delta) across the two `app_version` values, take the most-degraded groups, then `apm_group_view` with `dimensions` to localize each regression to a cohort (OS, device, country, version), then `apm_occurrence` with `selector: worst` for a concrete worst case to reason over.
 - APM group deep dive: `apm_list_groups` for the metric sorted by its pain key to find the group, then `apm_group_view` — `summary` for the headline metrics, then the view that matches the pain: `spans_table` (or `stages_breakdown` for launch/screen_loading) for a slow segment, `outliers` for the tail driving p95 (not on `frame_drop`), or the `failure_rate` view for a failing network group, then `apm_occurrence` (`worst`), which is the worst-failed request when the pain is failures, not the slowest.
-- Before interpreting a metric's durations, read its **Reference files**
+- Before interpreting a metric's numbers, read its **Reference files**
 - On a 403/501 from an APM tool, SKIP the APM step with the reason; never infer "no regression" from a tool error.
 
 ### Step 3. Symbolicate if obfuscated (crash / hang track)
@@ -188,8 +191,8 @@ When `list_app_hangs` returns an Android hang:
 
 When `apm_list_groups` sorted by `apdex_change` shows a group degrading between versions:
 
-- Sanity-check the target before trusting the apdex. `apm_group_view summary` returns the group's configured apdex target as `threshold_ms` (also on every `apm_list_groups` item). If `threshold_ms` sits below `50th_percentile_ms`, the target is under the median — more than half of otherwise-healthy requests score unsatisfied, so a low or declining apdex is a target-config problem, not a code defect. Weigh `threshold_ms` against the endpoint's business role (a list/read call should be near-real-time, a few hundred ms; a heavy export needn't be) before attributing a fix to code.
-- Confirm with the absolute numbers, not just apdex: pull `apm_group_view summary` for `50th_percentile_ms` and `95th_percentile_ms` before and after. A p50 that's flat with a p95 that exploded is a tail problem (a slow cohort or a slow dependency), not a uniform slowdown.
+- Sanity-check `threshold_ms` against `50th_percentile_ms` before trusting the apdex — see the preamble for why. Then weigh it against the endpoint's business role: a list/read call should be near-real-time, a few hundred ms; a heavy export needn't be. A target set for the wrong role is a config fix, not a code fix.
+- Confirm with the absolute numbers, not just apdex: pull `apm_group_view summary` for `50th_percentile_ms` and `95th_percentile_ms` before and after.
 - Always run `dimensions` to localize. A regression confined to one OS version or device tier is a different bug than one uniform across cohorts.
 - Use `spans_table` to attribute the time. The fix targets the dominant span — chasing the request-setup code when the cost is in a DB span wastes effort.
 - Use `outliers` when p95/p99 moved but the median didn't — the tail requests carry the signature.
@@ -203,11 +206,21 @@ When `apm_list_groups` flags a launch group (`metric: launch`):
 - Use `dimensions` with `pattern_key: first_screen` to find which entry screen carries the cost, and `outliers` when p95 moved but p50 did not.
 - Run the platform file's validation table before quoting any number. Several conditions make a launch total mean something other than "the app is slow," and they are not visible in the number itself.
 
+### APM network
+
+When `apm_list_groups` flags a network group (`metric: network`):
+
+- Establish coverage first — capture is not automatic on Android or Flutter, so run the overview's coverage table against the codebase before reading absence as a measurement.
+- There is **no `stages_breakdown` view for network**. Attribute with `spans_table`, and use `apm_occurrence` for one request's stage detail. Match returned span names against the overview's boundary table rather than assuming them.
+- The list row gives `latency_p95_ms` and `failure_rate` only — no p50, no occurrence count. Get those from `summary` or `dimensions`.
+- Segment on `radio` before comparing latency. Then check the platform file for what the measured window excludes; the app's own queueing and interceptors are not in it.
+
 ### APM failure-rate spike
 
 When `apm_list_groups` sorted by `failure_rate` flags a group:
 
 - Split `total_failure_rate` into `client_failure_rate` vs `server_failure_rate`. Client failures (4xx, timeouts, cancellations) point at the app; server failures (5xx) point at the backend. They lead to opposite fixes.
+- Apply the platform's client-side correction before quoting the client rate. Both native platforms distort it, in opposite directions — the network platform file gives the check for each.
 - Filter the group by `failure_name` / `failure_type` to see whether it's one error class or many.
 - Cross-reference the window with `list_crashes` and `bug_details` — a failure-rate spike that coincides with a crash spike on the same call path is usually one root cause, not two.
 
@@ -226,13 +239,6 @@ The skill is grounded in what the Luciq MCP exposes today. It deliberately does 
 - Reason about App Store rating drops as a primary investigation entry point. `list_reviews` is correlation, not causation.
 
 When new MCP tools land (release comparison, session replay), this skill grows with them. Until then, if the user asks for one of those, say so plainly.
-
-## Style
-
-- Do not fabricate stack traces, line numbers, or counts.
-- Do not propose a fix without naming the root cause.
-- Do not apply edits without showing a diff and getting confirmation.
-- If MCP returns nothing for a query, surface that. Do not fill in plausible-looking data.
 
 ## Red Flags - STOP and surface to the user
 
@@ -253,5 +259,8 @@ If you catch yourself thinking any of these, you are about to ship a fabricated 
 - "I'll quote a latency number from a group without saying which tool/view gave it." Cite `apm_list_groups` vs `apm_group_view <view>`. they're different aggregations and conflating them misstates the evidence.
 - "Launch p95 is 3s, so the app takes 3s to become usable." The window closes before the first frame is drawn, so without an `endAppLaunch` stage that number is time-to-activation and the real figure is higher.
 - "There's no cold launch data, so cold launches are fine." Capture is provisioned per account and defaults to off, and Android reports none under a renamed process. Absent data is an instrumentation finding until you check both.
+- "There's little or no network data, so the app makes few requests." Capture is off by default on Android (a build flag) and needs a per-call-site client swap on Flutter. Check setup before reading absence as traffic.
+- "The client-side failure rate is near zero, so the network is healthy." Every platform distorts that number: iOS records client failures as successes when body capture is off, Android inflates it with cancellations, and Flutter drops failed requests entirely — which also biases its latency percentiles *low*, because the slowest requests are the missing ones. A flattering p95 on Flutter is not evidence of a fast network. Correct for the platform first.
+- "A slow request means slow code in the app's networking layer." The app's own interceptors and client-side queueing are outside the measured window on both native platforms. A blocking token-refresh interceptor cannot inflate the request it delayed.
 
 The pattern: every shortcut here trades "sounds confident" for "actually true." The skill's job is to be true.

@@ -1,6 +1,7 @@
 # App Launch — React Native
 
-Read `references/metrics/preamble.md` first, then **also read the native platform file** —
+Read `references/metrics/preamble.md` and `references/metrics/app-launch/overview.md` first, then
+**also read the native platform file** —
 `references/metrics/app-launch/ios.md` or `references/metrics/app-launch/android.md`. This file is a
 supplement, never a replacement: the React Native layer adds no timing of its own.
 

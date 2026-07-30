@@ -1,6 +1,7 @@
 # App Launch — Flutter
 
-Read `references/metrics/preamble.md` first, then **also read the native platform file** —
+Read `references/metrics/preamble.md` and `references/metrics/app-launch/overview.md` first, then
+**also read the native platform file** —
 `references/metrics/app-launch/ios.md` or `references/metrics/app-launch/android.md`. This file is a
 supplement, never a replacement: the Flutter plugin adds no launch timing of its own.
 
