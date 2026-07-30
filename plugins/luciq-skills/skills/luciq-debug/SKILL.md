@@ -78,13 +78,13 @@ Determine the kind of signal being debugged. If the user has not specified, ask.
 Sequence the available Luciq MCP tools deliberately for the entry point:
 
 - Crashes: `list_crashes`, `crash_details`, `crash_patterns`, then `list_occurrences_tokens` and `get_occurrence_details` for one or more sessions.
-- Hangs: `list_app_hangs` filtered to the recent window. iOS hangs surface as `FATAL_UI_HANG`, Android as `ANDROID_FATAL_HANG`.
+- Hangs: `list_app_hangs` filtered to the recent window.
 - Bug reports: `list_bugs` then `bug_details`. The response includes URLs to compressed logs (network, console, session profiler) when available.
 - Regressions: filter `list_crashes` by the two versions, diff the result, then call `crash_patterns` with `pattern_key: app_versions` for the highest-impact new groups.
 - Review signals: `list_reviews` filtered to low ratings, then correlate with crash and hang activity in the same window.
 - APM regression: choose the `metric` for the signal, then `apm_list_groups` sorted by `apdex_change` (signed delta) across the two `app_version` values, take the most-degraded groups, then `apm_group_view` with `dimensions` to localize each regression to a cohort (OS, device, country, version), then `apm_occurrence` with `selector: worst` for a concrete worst case to reason over.
 - APM group deep dive: `apm_list_groups` for the metric sorted by its pain key to find the group, then `apm_group_view` — `summary` for the headline metrics, then the view that matches the pain: `spans_table` (or `stages_breakdown` for launch/screen_loading) for a slow segment, `outliers` for the tail driving p95 (not on `frame_drop`), or the `failure_rate` view for a failing network group, then `apm_occurrence` (`worst`), which is the worst-failed request when the pain is failures, not the slowest.
-- Before interpreting a metric's durations, read its **Reference files**
+- Before interpreting a metric's numbers, read its **Reference files**
 - On a 403/501 from an APM tool, SKIP the APM step with the reason; never infer "no regression" from a tool error.
 
 ### Step 3. Symbolicate if obfuscated (crash / hang track)
@@ -191,8 +191,8 @@ When `list_app_hangs` returns an Android hang:
 
 When `apm_list_groups` sorted by `apdex_change` shows a group degrading between versions:
 
-- Sanity-check the target before trusting the apdex. `apm_group_view summary` returns the group's configured apdex target as `threshold_ms` (also on every `apm_list_groups` item). If `threshold_ms` sits below `50th_percentile_ms`, the target is under the median — more than half of otherwise-healthy requests score unsatisfied, so a low or declining apdex is a target-config problem, not a code defect. Weigh `threshold_ms` against the endpoint's business role (a list/read call should be near-real-time, a few hundred ms; a heavy export needn't be) before attributing a fix to code.
-- Confirm with the absolute numbers, not just apdex: pull `apm_group_view summary` for `50th_percentile_ms` and `95th_percentile_ms` before and after. A p50 that's flat with a p95 that exploded is a tail problem (a slow cohort or a slow dependency), not a uniform slowdown.
+- Sanity-check `threshold_ms` against `50th_percentile_ms` before trusting the apdex — see the preamble for why. Then weigh it against the endpoint's business role: a list/read call should be near-real-time, a few hundred ms; a heavy export needn't be. A target set for the wrong role is a config fix, not a code fix.
+- Confirm with the absolute numbers, not just apdex: pull `apm_group_view summary` for `50th_percentile_ms` and `95th_percentile_ms` before and after.
 - Always run `dimensions` to localize. A regression confined to one OS version or device tier is a different bug than one uniform across cohorts.
 - Use `spans_table` to attribute the time. The fix targets the dominant span — chasing the request-setup code when the cost is in a DB span wastes effort.
 - Use `outliers` when p95/p99 moved but the median didn't — the tail requests carry the signature.
@@ -210,17 +210,17 @@ When `apm_list_groups` flags a launch group (`metric: launch`):
 
 When `apm_list_groups` flags a network group (`metric: network`):
 
-- Establish coverage before reading absence as a measurement. Network capture is **not automatic on Android or Flutter** — Android needs the Gradle plugin plus `networkInterception.enabled = true`, which defaults to false, and Flutter needs a client swap at every call site. A total absence of data is usually setup, not performance.
+- Establish coverage first — capture is not automatic on Android or Flutter, so run the overview's coverage table against the codebase before reading absence as a measurement.
 - There is **no `stages_breakdown` view for network**. Attribute with `spans_table`, and use `apm_occurrence` for one request's stage detail. Match returned span names against the overview's boundary table rather than assuming them.
 - The list row gives `latency_p95_ms` and `failure_rate` only — no p50, no occurrence count. Get those from `summary` or `dimensions`.
-- Segment on `radio` before comparing latency, and remember client-side queueing and (on Android) the app's own interceptor chain sit **outside** the measured window, so neither shows up here.
+- Segment on `radio` before comparing latency. Then check the platform file for what the measured window excludes; the app's own queueing and interceptors are not in it.
 
 ### APM failure-rate spike
 
 When `apm_list_groups` sorted by `failure_rate` flags a group:
 
 - Split `total_failure_rate` into `client_failure_rate` vs `server_failure_rate`. Client failures (4xx, timeouts, cancellations) point at the app; server failures (5xx) point at the backend. They lead to opposite fixes.
-- Apply the platform's client-side correction before quoting the client rate. **iOS under-reports it** — with body capture off, client failures are recorded as successes. **Android over-reports it** — cancellations are counted as failures. The network platform file gives the check for each.
+- Apply the platform's client-side correction before quoting the client rate. Both native platforms distort it, in opposite directions — the network platform file gives the check for each.
 - Filter the group by `failure_name` / `failure_type` to see whether it's one error class or many.
 - Cross-reference the window with `list_crashes` and `bug_details` — a failure-rate spike that coincides with a crash spike on the same call path is usually one root cause, not two.
 
@@ -239,13 +239,6 @@ The skill is grounded in what the Luciq MCP exposes today. It deliberately does 
 - Reason about App Store rating drops as a primary investigation entry point. `list_reviews` is correlation, not causation.
 
 When new MCP tools land (release comparison, session replay), this skill grows with them. Until then, if the user asks for one of those, say so plainly.
-
-## Style
-
-- Do not fabricate stack traces, line numbers, or counts.
-- Do not propose a fix without naming the root cause.
-- Do not apply edits without showing a diff and getting confirmation.
-- If MCP returns nothing for a query, surface that. Do not fill in plausible-looking data.
 
 ## Red Flags - STOP and surface to the user
 
