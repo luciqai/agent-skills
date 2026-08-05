@@ -1,6 +1,6 @@
 ---
 name: luciq-cli
-description: Use when the deliverable is a terminal command, a build-pipeline step, or a script rather than a conversational answer — installing and authenticating the `luciq` CLI, uploading symbol files (iOS dSYMs, Android ProGuard/R8 mappings, NDK `.so` files, React Native source maps, Flutter Dart symbols), wiring those uploads into CI (GitHub Actions, Fastlane, Gradle, Bitrise, CircleCI, an Xcode build phase), or turning a data question into a repeatable `luciq ...` command that pipes into `jq`. Triggers include "install the Luciq CLI", "luciq login", "upload dSYMs / mapping / source maps to Luciq", "my crashes aren't symbolicated", "symbolicate in CI", "automate Luciq", "what's the luciq command for X", "script this Luciq query". Symbol uploads have NO MCP equivalent — the CLI is the only path, so route every symbolication-upload request here. For a one-off answer about production data inside an IDE conversation, the MCP tools are the better instrument (luciq-debug, luciq-readout); for first-time SDK integration use luciq-setup.
+description: Use when the deliverable is a terminal command, a build-pipeline step, or a script rather than a conversational answer — installing and authenticating the `luciq` CLI, uploading symbol files (iOS dSYMs, Android ProGuard/R8 mappings, NDK `.so` files, React Native source maps, Flutter Dart symbols), wiring those uploads into CI (GitHub Actions, Fastlane, Gradle, Bitrise, CircleCI, an Xcode build phase), or turning a data question into a repeatable `luciq ...` command that pipes into `jq`. Also use when the deliverable is DATA rather than an explanation and the volume or repetition makes the CLI the better instrument: exporting or dumping a large set (all crashes, all bugs, every app) to a file or spreadsheet, counting or aggregating across many records or several apps, feeding Luciq data into another script or tool, anything that must run on a schedule or unattended, and anything that needs an exit code to gate a build. Triggers include "export all ...", "dump ... to CSV", "how many ... per version", "totals by ...", "across all our apps", "every Monday", "on a cron", "in our pipeline", "fail the build if ...", "pipe into ...", "install the Luciq CLI", "luciq login", "upload dSYMs / mapping / source maps to Luciq", "my crashes aren't symbolicated", "symbolicate in CI", "automate Luciq", "what's the luciq command for X", "script this Luciq query". Symbol uploads have NO MCP equivalent — the CLI is the only path, so route every symbolication-upload request here. For a one-off answer about production data inside an IDE conversation, the MCP tools are the better instrument (luciq-debug, luciq-readout); for first-time SDK integration use luciq-setup.
 ---
 
 # Luciq CLI
@@ -8,9 +8,14 @@ description: Use when the deliverable is a terminal command, a build-pipeline st
 Drive Luciq from a shell: `luciq`. Two halves, with different auth and different reasons to exist.
 
 - **Symbol uploads** (`luciq upload …`) — iOS dSYMs, Android ProGuard/R8 mappings, NDK `.so` files, React Native source maps, Flutter Dart symbols. **There is no MCP tool for uploads.** If a crash report is unsymbolicated, the CLI is the only fix, and a build pipeline is where it belongs.
-- **Data commands** (`luciq crashes|bugs|apm|reviews|surveys|apps|issues|opportunities|alerts|incidents|insights`) — each one proxies to the *same server-side tool* the Luciq MCP server exposes, under the *same* role permissions and plan entitlements. The CLI's value over MCP is not extra data; it is **determinism and composability**: an exact command you can commit, schedule, diff, and pipe.
+- **Data commands** (`luciq crashes|bugs|apm|reviews|surveys|apps|issues|opportunities|alerts|incidents|insights`) — each one proxies to the *same server-side tool* the Luciq MCP server exposes, under the *same* role permissions and plan entitlements. The CLI's value over MCP is not extra data; it is **determinism, composability, and volume**. Determinism and composability are the primary case: an exact command you can commit, schedule, diff, and pipe. Volume is the quieter one: the MCP returns whole records into the conversation, so answering "how many per version" through it means reading every record in order to count them. The CLI can do the counting before anything reaches the conversation.
 
-The whole skill turns on one distinction: **is the user asking a question, or asking for a command?** A question is MCP's job. A command, a pipeline step, or a script is this skill's job.
+The skill turns on two questions, in order.
+
+1. **Is the deliverable a command, a pipeline step, or a script?** If yes, this skill's job.
+2. **If they asked a question, would the CLI still be the better instrument?** It is whenever the answer needs *many* records but the user wants *few* (a count, a total, a breakdown), spans several apps, has to land in a file or another tool, has to run unattended or on a schedule, or has to gate something on an exit code. Reach for the CLI in those cases even though nobody said "command".
+
+A genuinely conversational one-off about a single item is still MCP's job: one crash, one bug, one readout for a human. **The test is not how the request was phrased, it is what the job actually needs.**
 
 ## CLI or MCP — decide before doing anything
 
@@ -20,6 +25,11 @@ The whole skill turns on one distinction: **is the user asking a question, or as
 | Wire symbolication into CI, Fastlane, Gradle, a release script, or cron | **CLI** |
 | "Give me a command I can re-run / commit / schedule" | **CLI** |
 | Output must pipe into `jq`, a shell script, or another tool | **CLI** |
+| Export or dump a large set to a file or spreadsheet | **CLI** |
+| A count, total, or breakdown that needs many records to compute | **CLI** — aggregate in the pipe |
+| Anything spanning several apps at once | **CLI** |
+| Must run on a schedule or unattended | **CLI** — no MCP client in cron |
+| Must gate a build on the result | **CLI** — the MCP has no exit code |
 | Non-interactive environment (CI job, cron, container) with no MCP client | **CLI** |
 | "Why is crash AB-1234 happening?" — root-cause with repo context | MCP → `luciq-debug` |
 | "How is the app doing this week?" — a readout for humans | MCP → `luciq-readout` |
@@ -145,6 +155,22 @@ luciq crashes list --slug my-app --mode production --status open --limit 20 \
   --filters '{"devices":["iPhone15,2"],"os_versions":["17.4"]}'
 ```
 
+**Aggregate on the command line, do not read records in order to count them.** When the user wants a number, a breakdown, or a short list, do the reduction in the pipe. Every record printed is a record read into the conversation, and on a real account that is hundreds of them for an answer three lines long.
+
+```bash
+# WRONG: pages every open crash into the conversation just to group them
+luciq crashes list --slug my-app --mode production --status open --limit 50 --offset 0
+luciq crashes list --slug my-app --mode production --status open --limit 50 --offset 50   # ...and so on
+
+# RIGHT: same answer, reduced before it is ever read
+for off in 0 50 100 150; do
+  luciq crashes list --slug my-app --mode production --status open --limit 50 --offset $off
+done | jq -s '[.[].crashes[]] | group_by(.app_version)
+               | map({version: .[0].app_version, count: length}) | sort_by(-.count)'
+```
+
+On a 208-crash account the first form is roughly 39,000 characters and the second is under 200. The same rule covers exports and handoffs: redirect into the file the user asked for (`> crashes.csv`) or pipe straight into their tool. Do not print a large payload and then describe it.
+
 **Output is mostly JSON, but not uniformly, and the JSON is enveloped.** The CLI pretty-prints whatever parses as JSON and passes anything else through verbatim. Verified against live data:
 
 | Command | Output |
@@ -222,6 +248,8 @@ If you catch yourself thinking any of these, stop:
 - "I'll pipe it to `jq` with `.[]`." The JSON is enveloped (`.bugs[]`, `.crashes[]`, `.network_groups[]`), and `alerts list` / `incidents list` aren't JSON at all.
 - "I'll paste the `apps list` output so we can see the apps." It contains every app's token. Project the fields you need instead.
 - "MCP is blocked, I'll shell out to the CLI instead." Same backend, same permissions, same plan gates — the block will hold. Report it.
+- "I'll page all the records in and then count them." That is the CLI used as a slower MCP. If the user asked for a count, a total, or a breakdown, the counting belongs in `jq` before anything is read.
+- "They asked a question, so this is MCP's job." Not if the answer needs hundreds of records, spans several apps, has to land in a file, or has to run unattended. Phrasing is not the test.
 - "I'll paginate until it's all in." Watch the 100-req/60-s IP budget, and never pass off page one as the full set.
 - "I'll just run the write; it's obviously what they meant." Writes are gated on explicit approval, shown verbatim first.
 - "`luciq info` will help me debug this." It prints the token in plaintext. Use `luciq whoami`.
