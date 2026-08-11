@@ -30,7 +30,8 @@ Skills available after install:
 - `/luciq-skills:luciq-alert-config`. Create, change, or inspect a specific alert.
 - `/luciq-skills:luciq-alert-gaps`. Find unmonitored metrics and add the missing alerts.
 - `/luciq-skills:luciq-alert-noise`. Reduce noisy alerts and cut alert fatigue.
-- `/luciq-skills:luciq-cli`. Luciq from the terminal — symbol uploads, CI wiring, and scriptable data commands.
+- `/luciq-skills:luciq-symbolicate`. Make crash reports readable — symbol uploads for every platform, and wiring them into a release pipeline.
+- `/luciq-skills:luciq-automate`. Get Luciq data out of the conversation — exports, aggregation, scheduled reports, build gating.
 
 ### Cursor
 
@@ -231,17 +232,35 @@ Reduce noisy, chatty alerts and cut alert fatigue. Inspects each alert's trigger
 
 ---
 
-### `luciq-cli`
+### `luciq-symbolicate`
 
-Drive Luciq from a terminal, a build pipeline, or a script. Installs and authenticates the `luciq` CLI, uploads symbol files for every platform — dSYMs, ProGuard/R8 mappings, NDK `.so` files, React Native source maps, Flutter Dart symbols — and wires those uploads into CI (GitHub Actions, Fastlane, Gradle, Bitrise, CircleCI, an Xcode build phase) with the token read from a secret. Also turns a data question into a repeatable command: resolves the app via `luciq apps list`, picks typed flags over raw `--filters`, and only pipes to `jq` after confirming the output is JSON. Treats `luciq help` as outranking its own reference tables, so a rejected flag gets corrected instead of retried.
+Make crash reports readable. Installs and authenticates the `luciq` CLI, uploads symbol files for every platform — dSYMs, ProGuard/R8 mappings, NDK `.so` files, React Native source maps, Flutter Dart symbols — and wires those uploads into CI (GitHub Actions, Fastlane, Gradle, Bitrise, CircleCI, an Xcode build phase) with the token read from a secret. Built around the three flags that fail *silently*: get `--mode`, `--version-name` or `--version-code` wrong and the upload succeeds, nothing errors, and nothing deobfuscates. So it reads the version off the build system rather than from memory, and requires one manual upload to print `✓` before it will touch a CI file.
 
 **Try saying:**
+- `"Our Android crashes aren't deobfuscated — fix it"`
+- `"The stack trace in Luciq is just hex addresses"`
 - `"Upload the dSYMs for this build to Luciq"`
 - `"Add Luciq symbol upload to our release workflow"`
-- `"Our Android crashes aren't deobfuscated — fix it"`
-- `"Give me a command that lists open crashes and pipes it into jq"`
 
-> **Needs no MCP server** — symbol uploads have no MCP equivalent, so this is the only path for them. Everything authenticates with one CLI token and targets an app by `--slug` + `--mode`. Data commands run the same server-side tools as the MCP under the same permissions, so the CLI is never a way around a permission or plan block.
+> **Needs no MCP server** — symbol uploads have no MCP equivalent, so the CLI is the only path for them. One CLI token authenticates everything and targets an app by `--slug` + `--mode`; uploads additionally need `settings.mapping_files.modify`.
+>
+> **Hands off to** `luciq-debug` once the trace is readable, and `luciq-automate` for exports, scheduled reports and build gating.
+
+---
+
+### `luciq-automate`
+
+Get Luciq data out of the conversation and into a file, another tool, a scheduled job, or a build's exit code. Exports and dumps large sets to CSV or JSON, counts and aggregates across many records or several apps, feeds data into a script, runs unattended on a schedule, and gates a release on a metric. Resolves the app via `luciq apps list`, picks typed flags over raw `--filters`, and only pipes to `jq` after confirming the output is JSON. Aggregates in the pipe rather than paging every record into the conversation to count them: on a 208-crash account that is the difference between ~39,000 characters and under 200.
+
+**Try saying:**
+- `"Export every open crash across all our apps to a CSV"`
+- `"How many open crashes per app version? Just the counts"`
+- `"Run this crash summary every Monday at 8am"`
+- `"Stop the release if crash-free sessions drop below 99%"`
+
+> **Needs no MCP server** — but data commands run the *same* server-side tools as the MCP under the same permissions and plan gates, so the CLI is never a way around a block. What it adds is determinism, volume, and an exit code.
+>
+> **Hands off to** `luciq-debug` and `luciq-readout` for a conversational one-off, `luciq-group-bugs` for rule-based dedup, and the `luciq-alert-*` skills for alert authoring.
 >
 > **Hands off to** `luciq-debug` for root-causing a signal and `luciq-readout` for reports: a question is MCP's job, a command is this skill's.
 
