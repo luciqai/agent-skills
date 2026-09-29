@@ -192,18 +192,19 @@ Verify exact dependency coordinates, version, and init signature against the liv
      luciq_flutter:
    ```
 2. **Fetch the package**: `flutter packages get`
-3. **Import** in the file where you initialize: `import 'package:luciq_flutter/luciq_flutter.dart';`
-4. **Initialize** in `initState()` (verify the exact API signature on the live guide):
+3. **Raise the iOS deployment target** before `pod install` (or the first iOS build): the `luciq_flutter` podspec sets `s.ios.deployment_target = '15.4'` (19.9.4 — check `~/.pub-cache/hosted/pub.dev/luciq_flutter-*/ios/luciq_flutter.podspec` for the installed version), while a default Flutter project targets iOS 12.0. Set `platform :ios, '15.4'` in `ios/Podfile` and `IPHONEOS_DEPLOYMENT_TARGET = 15.4` on the Runner target. Otherwise `pod install` fails with only CocoaPods' generic "required a higher minimum deployment target" error.
+4. **Import** in the file where you initialize: `import 'package:luciq_flutter/luciq_flutter.dart';`
+5. **Initialize** in `initState()` (verify the exact API signature on the live guide):
    ```dart
    Luciq.init(
      token: 'APP_TOKEN',
      invocationEvents: [InvocationEvent.shake, InvocationEvent.floatingButton],
    );
    ```
-5. **iOS permissions** — add to `Info.plist` (required for media attachments):
+6. **iOS permissions** — add to `Info.plist` (required for media attachments):
    - `NSMicrophoneUsageDescription`
    - `NSPhotoLibraryUsageDescription`
-6. **Android permissions**: auto-injected into `AndroidManifest.xml` — no manual edits needed. Exception: if you enable screenshot invocation, the SDK requests storage permission at app launch (it monitors the screenshots directory).
+7. **Android permissions**: auto-injected into `AndroidManifest.xml` — no manual edits needed. Exception: if you enable screenshot invocation, the SDK requests storage permission at app launch (it monitors the screenshots directory).
 
 ### React Native
 
