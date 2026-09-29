@@ -382,8 +382,22 @@ Print:
 - User identification call sites.
 - MCP / CLI wired status.
 - **App Store privacy** — the types to declare and whether they are linked, from step 5 (iOS targets only).
-- A test command (for example, "shake the device or simulator to invoke Luciq").
+- The **Test it yourself** checklist below.
 - Pointers: `luciq-debug` for crash investigation, `luciq-migrate` for moving off the legacy Instabug SDK or upgrading between Luciq versions.
+
+### Test it yourself — the user runs this, not the agent
+
+Setup ends at a green build. **Do not launch the app, trigger crashes, or inspect app containers to verify the integration** — that is slow, and the user can do it in three minutes. Print this checklist, adapted to the invocation events and platform actually configured:
+
+> **Test it yourself (≈3 min)**
+> 1. **Bug reporting:** run the app, tap the Luciq floating button (or shake — in the iOS Simulator: *Device → Shake*, Ctrl+Cmd+Z), and send a report that says "test report".
+> 2. **Crash reporting:**
+>    - **Stop the debugger first.** With Xcode (or Android Studio) attached, the debugger catches the crash and the app just freezes — no report is written. On iOS, launch the app from the simulator's home screen, or uncheck *Edit Scheme → Run → Debug executable*.
+>    - Crash the app. If there's no easy way, add a temporary button that calls `fatalError("Luciq test crash")` (Kotlin: `throw RuntimeException("Luciq test crash")`) and remove it afterwards.
+>    - **Open the app again.** Crash reports are sent on the next launch, not at the moment of the crash.
+> 3. Open the Luciq dashboard for this app. The report and the crash should be there within a minute or two.
+>
+> **Nothing showing up?** Check the app token matches the app you're viewing on the dashboard, and that you reopened the app after the crash. On iOS, a `Library/IBGCache` folder in the app's data container means the SDK did start (the on-device folders still carry pre-rebrand names).
 
 **Do NOT mention `luciq-onboard`.** Do not offer it, do not describe it, do not print *"next natural step…"*, do not ask *"want to onboard you now?"*. Setup ends after the items above. If the customer wants to onboard later, they will invoke `luciq-onboard` themselves — that decision is theirs to make on their own initiative, not a prompt for the assistant to surface.
 
@@ -409,6 +423,7 @@ If you catch yourself thinking any of these, you are about to ship a broken inte
 - "I auto-applied the masking rules without showing the user the matches." False positives are likely. Per-match confirmation is mandatory.
 - "`pod install` or `gradle sync` had warnings but the build went green." Warnings about Luciq specifically are not cosmetic. Read them, surface them.
 - "Shake is enough, no need for a button." Keep one visible entry point at least in debug builds — otherwise the first tester reports the SDK as broken.
+- "I'll run the app and crash it to prove the setup works." Don't. Stop at the green build and hand the user the *Test it yourself* checklist.
 - "Two platform markers matched but I picked the obvious one." If the workspace is ambiguous, ask. Cross-platform projects break this assumption routinely.
 - "I'll just hand-edit `project.pbxproj`, it's only a few entries." Use `scripts/add_spm_package.rb`. If it can't run, ask the user to add the package in Xcode — don't improvise object IDs.
 - "Xcode is open but the edit is small." Ask the user to quit Xcode first. An edit under an open Xcode is what produces `Missing package product`.
