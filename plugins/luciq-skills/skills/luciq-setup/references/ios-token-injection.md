@@ -42,7 +42,7 @@ let token = Bundle.main.object(forInfoDictionaryKey: "LuciqAppToken") as? String
 if token.isEmpty || token.hasPrefix("$(") {
     assertionFailure("Luciq token missing — fill in Config/Luciq.xcconfig")
 } else {
-    Luciq.start(withToken: token, invocationEvents: <events from step 4>)
+    Luciq.start(withToken: token, invocationEvents: [.shake, .floatingButton])
 }
 ```
 

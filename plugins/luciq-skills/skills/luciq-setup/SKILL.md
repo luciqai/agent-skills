@@ -181,7 +181,7 @@ Verify exact dependency coordinates, version, and init signature against the liv
    ```dart
    Luciq.init(
      token: 'APP_TOKEN',
-     invocationEvents: [InvocationEvent.shake],
+     invocationEvents: [InvocationEvent.shake, InvocationEvent.floatingButton],
    );
    ```
 5. **iOS permissions** — add to `Info.plist` (required for media attachments):
@@ -204,7 +204,7 @@ Verify exact dependency coordinates, version, and init signature against the liv
 
    Luciq.init({
      token: 'APP_TOKEN',
-     invocationEvents: [InvocationEvent.shake],
+     invocationEvents: [InvocationEvent.shake, InvocationEvent.floatingButton],
    });
    ```
 5. **iOS permissions** — add these keys to `info.plist` (required for media attachments):
@@ -267,7 +267,11 @@ Verify dependency coordinates, version, and init signatures against the live gui
 
 ## 4. Configure invocation
 
-Default to shake gesture plus screenshot. Offer alternatives: floating button, two-finger swipe, or programmatic-only. Apply the user's choice.
+Default to **shake + floating button**. Offer alternatives: screenshot, two-finger swipe, or programmatic-only. Apply the user's choice.
+
+Keep at least one **visible** way to open Luciq — the floating button, or a debug-menu entry that calls the programmatic show API. Shake and screenshot leave nothing on screen, so a working SDK looks dead to whoever tests it: shaking a simulator needs *Device → Shake* (Ctrl+Cmd+Z), and a screenshot invocation needs the photo-library prompt accepted first. If the user wants no visible entry point in production, gate the floating button to debug builds (`#if DEBUG`, `BuildConfig.DEBUG`, `kDebugMode`, `__DEV__`) rather than dropping it.
+
+Avoid screenshot invocation as the default on apps with sensitive screens — it fires on every screenshot the user takes.
 
 ## 5. Configure auto-masking
 
@@ -361,6 +365,7 @@ If you catch yourself thinking any of these, you are about to ship a broken inte
 - "`INFOPLIST_KEY_LuciqAppToken` is simpler." It is silently dropped. Use the xcconfig + real `Info.plist` path.
 - "I auto-applied the masking rules without showing the user the matches." False positives are likely. Per-match confirmation is mandatory.
 - "`pod install` or `gradle sync` had warnings but the build went green." Warnings about Luciq specifically are not cosmetic. Read them, surface them.
+- "Shake is enough, no need for a button." Keep one visible entry point at least in debug builds — otherwise the first tester reports the SDK as broken.
 - "Two platform markers matched but I picked the obvious one." If the workspace is ambiguous, ask. Cross-platform projects break this assumption routinely.
 - "I'll just hand-edit `project.pbxproj`, it's only a few entries." Use `scripts/add_spm_package.rb`. If it can't run, ask the user to add the package in Xcode — don't improvise object IDs.
 - "Xcode is open but the edit is small." Ask the user to quit Xcode first. An edit under an open Xcode is what produces `Missing package product`.

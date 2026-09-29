@@ -69,7 +69,7 @@ import LuciqSDK
 @main
 struct MyApp: App {
     init() {
-        Luciq.start(withToken: <token>, invocationEvents: <events from step 4>)
+        Luciq.start(withToken: <token>, invocationEvents: [.shake, .floatingButton])
     }
     var body: some Scene { WindowGroup { ContentView() } }
 }
