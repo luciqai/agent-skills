@@ -23,6 +23,7 @@
 require 'optparse'
 require 'fileutils'
 require 'pathname'
+require 'open3'
 
 Encoding.default_external = Encoding::UTF_8
 Encoding.default_internal = Encoding::UTF_8
@@ -78,7 +79,8 @@ unless example.exist?
 end
 
 gitignore = src_root.join('.gitignore')
-repo_root = `git -C "#{src_root}" rev-parse --show-toplevel 2>/dev/null`.strip
+repo_root, = Open3.capture2('git', '-C', src_root.to_s, 'rev-parse', '--show-toplevel', err: File::NULL)
+repo_root = repo_root.strip
 gitignore = Pathname.new(repo_root).join('.gitignore') unless repo_root.empty?
 ignore_line = xcconfig_abs.relative_path_from(gitignore.dirname).to_s
 existing = gitignore.exist? ? File.read(gitignore) : ''
