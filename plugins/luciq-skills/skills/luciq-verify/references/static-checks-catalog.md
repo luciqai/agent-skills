@@ -38,7 +38,7 @@ Findings cite **file path + 1-indexed line range** as evidence. Matched text is 
 | --- | --- | --- |
 | `S-INSTALL-001` | SDK declared in the platform's package manifest | iOS: `Podfile` / `Package.resolved` / `Cartfile.resolved` line; Android: `build.gradle`(`.kts`) line; Flutter: `pubspec.yaml` line; RN: `package.json` line |
 | `S-INSTALL-002` | Installed version matches `expected_sdk_version` from rule pack (when set) | Manifest line + parsed version |
-| `S-INSTALL-003` | SDK init call site found (`Luciq.start*`, `Luciq.Builder().build()`, etc.) | File path + line of init call |
+| `S-INSTALL-003` | SDK init call site found (`Luciq.start*`, `Luciq.Builder().build()`, `Luciq.init(` on Flutter / React Native, etc.) | File path + line of init call |
 | `S-INSTALL-004` | No legacy Instabug references coexist with Luciq (relevant during migration) | Files containing `import Instabug` or equivalent |
 
 ## Module activation (`S-MODULE-*`)
@@ -68,7 +68,7 @@ When no toggle pattern is found in source for a default-ON module, the audit emi
 
 | Code | Check | Evidence |
 | --- | --- | --- |
-| `S-INVOKE-001` | At least one invocation event configured | `Luciq.start(... invocationEvents:)`, `LuciqInvocationEvent.*` |
+| `S-INVOKE-001` | At least one invocation event configured | `Luciq.start(... invocationEvents:)`, `Luciq.init(... invocationEvents:)` (Flutter / React Native), `LuciqInvocationEvent.*` |
 | `S-INVOKE-002` | No conflicting invocations (e.g. both `none` AND a real event in different code paths) | Multiple init call sites with mismatched events |
 | `S-INVOKE-PROG` | Programmatic invocation present | `Luciq.show(`, `Luciq.invoke(`, `BugReporting.show(`, `BugReporting.invoke(` |
 | `S-INVOKE-NONE` | Invocation explicitly `none` | `.none` in invocation event setter |

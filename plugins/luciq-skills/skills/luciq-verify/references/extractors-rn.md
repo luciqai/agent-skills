@@ -43,8 +43,8 @@ Emits:
 ### SDK init (`S-INSTALL-003`)
 
 Patterns:
-- `Luciq.start(`
-- `Luciq.start({` (object-arg form)
+- `Luciq.init(`
+- `Luciq.init({` (object-arg form)
 - `import Luciq from '@luciq/react-native'` / `from 'luciq-react-native'`
 
 Init typically lives in `App.tsx` / `App.js` or `index.js`. Note the entry point so the init position relative to `AppRegistry.registerComponent(...)` can be checked — init must run before component registration to capture early JS errors.
@@ -66,7 +66,7 @@ Init typically lives in `App.tsx` / `App.js` or `index.js`. Note the entry point
 ### Invocation events (`S-INVOKE-*`)
 
 Patterns:
-- `invocationEvents:` (object key in `Luciq.start({invocationEvents: [...]})`)
+- `invocationEvents:` (object key in `Luciq.init({invocationEvents: [...]})`)
 - `InvocationEvent.shake`, `InvocationEvent.screenshot`, `InvocationEvent.floatingButton`, `InvocationEvent.twoFingersSwipeLeft`, `InvocationEvent.none`
 
 ### Identity + attributes (`S-IDENTITY-*`)
@@ -105,7 +105,7 @@ RN SDK exposes the full feature-flag API (verified):
 
 ### Module toggle state detection
 
-Look for `Luciq.start({ ... initEnabled: false, ... })` and similar named args in the init object — those are the canonical way to disable a module from the get-go on RN.
+Look for `Luciq.init({ ... initEnabled: false, ... })` and similar named args in the init object — those are the canonical way to disable a module from the get-go on RN.
 
 ## Native side cross-references
 
@@ -119,8 +119,8 @@ Hybrid project anti-patterns:
 
 | Anti-pattern | Detection | Status |
 | --- | --- | --- |
-| `Luciq.start` after `AppRegistry.registerComponent` | Init runs too late; misses early errors | `WARN` |
-| `Luciq.start` inside `if (__DEV__) { ... }` only | Release bundle won't initialize | `FAIL` (unless project is explicitly debug-only) |
+| `Luciq.init` after `AppRegistry.registerComponent` | Init runs too late; misses early errors | `WARN` |
+| `Luciq.init` inside `if (__DEV__) { ... }` only | Release bundle won't initialize | `FAIL` (unless project is explicitly debug-only) |
 | Token in source | Long string literal as `token:` value | `WARN` masked in report |
 | Both `@luciq/react-native` AND `instabug-reactnative` in deps | Migration coexistence | `WARN` — run `luciq-migrate` to finish the rename if mid-migration; long-term coexistence is unsupported |
 | Native + JS version skew | iOS / Android / JS Luciq versions don't match | `WARN` |
