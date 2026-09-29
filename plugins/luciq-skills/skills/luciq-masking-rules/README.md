@@ -16,7 +16,7 @@ The skill specifically:
 - Re-enumerates sensitive views per-platform on every run — the audit is always driven by the current repo state, never a prior session's snapshot.
 - Detects what's masked today across **three layers**:
   - **Layer 1 — Screen / view.** Auto-mask types at SDK init (`TEXT_INPUTS`, `LABELS`, `MEDIA`, `WEB_VIEWS`) + per-view markers on individual PII-bound views.
-  - **Layer 2 — Network.** Auto-masking state (default-on from SDK 14.2.0), the default key list (`authorization`, `password`, `api_key`, `client_secret`, …), and any manual `obfuscateLog` / `omitLog` sites.
+  - **Layer 2 — Network.** Auto-masking state (default-on from SDK 14.2.0), the default key list (`authorization`, `password`, `api_key`, `client_secret`, …), and any manual obfuscate / omit sites (names differ per platform — see `references/network-masking.md`).
   - **Layer 3 — Defense in depth.** Consent gating on Session Replay, grayscale mode, Android `FLAG_SECURE` handling, `usersPageEnabled` posture, server-driven UI `isPrivate` flow.
 - Loads a **compliance preset** when the user names a framework — HIPAA / GDPR / PCI-DSS / SOC2 / CCPA / FERPA. Each preset is starting guidance, not a rubber stamp; the skill states verbatim that compliance is broader than masking config.
 - Walks each gap through **Ask → Apply → Summarize**, same micro-flow as `luciq-onboard`. Per-view markers use the same "first 3-5 individually, then batch-confirm" policy.

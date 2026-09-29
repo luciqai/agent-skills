@@ -107,7 +107,7 @@ Supported event values: `shake`, `screenshot`, `floatingButton`, `twoFingersSwip
 | `S-MASK-NETWORK` | Network auto-masking state | `setNetworkAutoMaskingState`, observed enum value |
 | `S-MASK-SCREEN` | Screenshot/replay masking mode | `MaskingType.MEDIA`, `MaskingType.LABELS`, `setReplaceCapturedSensitiveData` |
 | `S-MASK-HEADERS` | Sensitive headers list configured | Configuration of `Authorization`, `Cookie`, `X-API-Key`, `Set-Cookie` redaction in source |
-| `S-MASK-CALLBACK` | Custom request/response masking callback present | `setNetworkLogRequestCompletionHandler` or equivalent |
+| `S-MASK-CALLBACK` | Custom request/response masking callback present | iOS `setRequestObfuscationHandler` / `setResponseObfuscationHandler`; Flutter `obfuscateLog`; RN `setNetworkDataObfuscationHandler` — or equivalent |
 
 ## dSYM / mapping upload (`S-SYMBOL-*`)
 

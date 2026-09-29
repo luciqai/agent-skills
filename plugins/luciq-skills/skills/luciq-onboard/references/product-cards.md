@@ -91,9 +91,10 @@ Verify product names, SDK class names, and dashboard surface labels against http
 - If your app handles regulated data (PHI, PCI, EU user data), run `luciq-masking-rules` to audit what may end up in crash payloads (thread state, captured network logs, repro-step screenshots) — crash capture is opt-out for the same surfaces masking covers.
 
 **Verification.**
-1. Trigger a controlled, non-fatal test exception via the SDK's test method (or a deliberate `fatalError` in debug).
-2. Wait for the next app launch (crashes are dispatched on next session start).
-3. Open the dashboard's Crashes surface.
+1. Stop the debugger first — with Xcode or Android Studio attached, the debugger catches the crash and the app freezes instead; no report is written. On iOS, launch from the simulator home screen or uncheck *Edit Scheme → Run → Debug executable*.
+2. Trigger a deliberate crash (for example a temporary `fatalError("Luciq test crash")` behind a debug button).
+3. Reopen the app — crashes are sent on the next launch, not at crash time.
+4. Open the dashboard's Crashes surface.
 
 ---
 

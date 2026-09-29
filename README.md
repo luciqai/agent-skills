@@ -68,6 +68,8 @@ npx luciq-skills install            # project-local
 npx luciq-skills install --global   # all projects
 ```
 
+Project installs add the Luciq MCP server to `.mcp.json` at the project root; `--global` adds it at user scope via `claude mcp add`. Restart Claude Code afterwards — a running session doesn't pick up new skills or MCP servers.
+
 ### Manual install (fallback)
 
 **User-global** (works in every project)
