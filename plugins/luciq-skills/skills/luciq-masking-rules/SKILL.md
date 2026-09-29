@@ -118,8 +118,8 @@ Detect network masking state and any custom obfuscate/omit hooks.
 | Signal | Locations to grep |
 |---|---|
 | Auto-mask explicit state | `setNetworkAutoMaskingState(`, `NetworkLogger.autoMaskingEnabled`, `IBGNetworkLogger.autoMaskingEnabled` |
-| Manual obfuscate | `NetworkLogger.obfuscateLog(`, `obfuscateLog(`, custom request-mutator interceptors |
-| Manual omit | `NetworkLogger.omitLog(`, `omitLog(` |
+| Manual obfuscate | iOS `setRequestObfuscationHandler`, `setResponseObfuscationHandler`; Flutter `obfuscateLog(`; React Native `setNetworkDataObfuscationHandler(`; custom request-mutator interceptors |
+| Manual omit | iOS `setNetworkLoggingRequestFilterPredicate`; Flutter `omitLog(`; React Native `setRequestFilterExpression(` |
 | Custom mask key extensions | support-ticket / server-side config — flag as "verify with admin" if no local signal |
 
 Output: `network_masking: { auto_enabled: bool | "default-on", file_line, obfuscate_sites: [...], omit_sites: [...], custom_keys_requested: bool }`. Default is on starting with SDK 14.2.0 — record SDK version (read from Podfile.lock / Package.resolved / build.gradle / package.json / pubspec.yaml) so the recap can state whether auto-masking applies.

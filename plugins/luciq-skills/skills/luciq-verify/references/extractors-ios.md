@@ -129,7 +129,7 @@ Emits:
 | --- | --- |
 | `S-MASK-NETWORK` | `Luciq.setNetworkAutoMaskingState` (note the enum value passed) |
 | `S-MASK-SCREEN` | `setReplaceCapturedSensitiveData`, `setScreenshotMaskingEnabled` |
-| `S-MASK-CALLBACK` | `setNetworkLogRequestCompletionHandler`, `setNetworkLogResponseCompletionHandler` |
+| `S-MASK-CALLBACK` | `setRequestObfuscationHandler`, `setResponseObfuscationHandler` (Swift `NetworkLogger.…`, ObjC `[LCQNetworkLogger …]`); omit via `setNetworkLoggingRequestFilterPredicate` |
 
 ## Xcode project + Info.plist
 

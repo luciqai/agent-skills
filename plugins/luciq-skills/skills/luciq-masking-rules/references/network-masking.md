@@ -43,14 +43,18 @@ Two operations:
 - **Obfuscate** — rewrite sensitive request/response content before it's logged. The log is still captured; the values change.
 - **Omit** — drop the log entirely. Use when even the URL or status code is sensitive (e.g., a `/patients/{mrn}/diagnosis` endpoint).
 
-### Flutter
+### API names per platform
 
-```dart
-NetworkLogger.obfuscateLog(request);  // rewrite
-NetworkLogger.omitLog(request);       // drop
-```
+The names differ by platform, and the multi-platform docs page puts them side by side — an agent integrating iOS has shipped the React Native name. Use the row for the platform you are on, and grep the installed SDK for it before writing the call.
 
-Verify per-platform call signatures against the live docs.
+| Platform | Obfuscate (rewrite) | Omit (drop) | Checked against |
+|---|---|---|---|
+| iOS (Swift) | `NetworkLogger.setRequestObfuscationHandler { request in … }`, `NetworkLogger.setResponseObfuscationHandler { data, response, done in … }` | `NetworkLogger.setNetworkLoggingRequestFilterPredicate(_:responseFilterPredicate:)` | LuciqSDK 19.11.0 headers |
+| Flutter | `NetworkLogger.obfuscateLog((data) async => data.copyWith(…))` | `NetworkLogger.omitLog((data) async => bool)` | `luciq_flutter` 19.9.4 |
+| React Native | `NetworkLogger.setNetworkDataObfuscationHandler(async (data) => data)` | `NetworkLogger.setRequestFilterExpression('…')` | `@luciq/react-native` 19.10.1 |
+| Android / KMP | verify on the live guide | verify on the live guide | — |
+
+iOS Objective-C: `[LCQNetworkLogger setRequestObfuscationHandler:…]`. There is no `NetworkLogger.setNetworkDataObfuscationHandler` on iOS — that is the React Native name.
 
 ### When to propose each
 
@@ -63,8 +67,8 @@ Verify per-platform call signatures against the live docs.
 
 ### Payload masking — three options
 
-1. **Whole-payload omit** — `omitLog(request)` based on URL or method match.
-2. **Selective rewrite** — `obfuscateLog(request)` mutating specific fields, leaving structure intact.
+1. **Whole-payload omit** — the platform's omit call (table above) based on URL or method match.
+2. **Selective rewrite** — the platform's obfuscate call, mutating specific fields and leaving structure intact.
 3. **Pass-through with auto-mask only** — the default; relies on layer 1.
 
 For sensitive endpoints, propose option 2 over option 1 — debuggability matters too. Reserve option 1 for endpoints where even the metadata is sensitive.
