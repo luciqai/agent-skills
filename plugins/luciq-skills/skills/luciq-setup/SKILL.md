@@ -57,7 +57,7 @@ Setup Progress:
 - [ ] 2. Acquire app token
 - [ ] 3. Run per-platform recipe (deps + init)
 - [ ] 4. Configure invocation
-- [ ] 5. Configure auto-masking
+- [ ] 5. Configure auto-masking + privacy disclosure
 - [ ] 6. Wire user identification
 - [ ] 7. Bootstrap Luciq MCP server
 - [ ] 8. Bootstrap Luciq CLI (optional, for symbol upload)
@@ -289,7 +289,7 @@ Keep at least one **visible** way to open Luciq — the floating button, or a de
 
 Avoid screenshot invocation as the default on apps with sensitive screens — it fires on every screenshot the user takes.
 
-## 5. Configure auto-masking
+## 5. Configure auto-masking and privacy disclosure
 
 Goal: identify likely-sensitive UI views and configure SDK-side masking. A naive substring grep produces false positives (validators, comments, test fixtures), so the search must be narrowly scoped and every match must be user-confirmed.
 
@@ -315,9 +315,18 @@ NetworkLogger.setRequestObfuscationHandler { request in
 
 Response bodies use `NetworkLogger.setResponseObfuscationHandler`. For other platforms, find the equivalent on the live guide and check the name as described in *Check symbols against the SDK*. Anything deeper — omitting whole endpoints, compliance presets — belongs to `luciq-masking-rules`; mention it in the hand-off rather than doing it here.
 
+**App Store privacy (iOS, and the iOS side of Flutter / React Native / KMP).** Every feature turned on above changes what the app must declare on its App Store privacy card, and Apple rejects mismatches. Read `references/ios-privacy.md`, then:
+
+1. Read the SDK's `PrivacyInfo.xcprivacy` from the installed package — its *linked* flags change between SDK versions, so never quote them from memory.
+2. Map what this integration enabled to the App Privacy types to declare. The two that surprise people: any screenshot capture (repro steps, attachments, Session Replay) means **Photos or Videos**, and the bug-report email field (on by default) means **Email Address, linked**.
+3. Offer the switches that shrink the list — hide the email field, repro steps without screenshots, no attachments — one line each. Apply only what the user picks.
+4. Put the resulting declaration in the hand-off (step 10). The agent cannot change the App Store listing; the user must.
+
 ## 6. Wire user identification
 
 If the app has authentication, find login and logout flows. Add `identifyUser(...)` and the corresponding sign-out call so reports tie back to your users. Verify the exact identification API on the live guide.
+
+Pass the app's own opaque user ID and leave email and name empty unless the user asks for them — each non-empty argument becomes another type (Email Address, Name) *linked to the user* on the App Store privacy card.
 
 If the app is anonymous-first (no login surface — typical for many B2C utilities, content readers, and games with guest play), skip this step entirely. Do not synthesize a fake user identity, do not insert `identifyUser` at app launch with placeholder values, and do not block the workflow waiting for a login flow that doesn't exist. Note the skip in the hand-off summary so the user can wire identification later if they add auth.
 
@@ -372,6 +381,7 @@ Print:
 - Masking rules applied (with file:line for each).
 - User identification call sites.
 - MCP / CLI wired status.
+- **App Store privacy** — the types to declare and whether they are linked, from step 5 (iOS targets only).
 - A test command (for example, "shake the device or simulator to invoke Luciq").
 - Pointers: `luciq-debug` for crash investigation, `luciq-migrate` for moving off the legacy Instabug SDK or upgrading between Luciq versions.
 
@@ -395,6 +405,7 @@ If you catch yourself thinking any of these, you are about to ship a broken inte
 - "I committed the app token inline because it's just for local testing." Tokens leak via git history. Use env injection or a gitignored secrets file.
 - "I'll show all the apps from `list_applications` and let them pick." Not past 10 — ask for the name or token and filter.
 - "`INFOPLIST_KEY_LuciqAppToken` is simpler." It is silently dropped. Use the xcconfig + real `Info.plist` path.
+- "Privacy labels are the user's business, not setup's." Setup just changed what the binary collects. Say what to declare, or the next App Review submission can be rejected.
 - "I auto-applied the masking rules without showing the user the matches." False positives are likely. Per-match confirmation is mandatory.
 - "`pod install` or `gradle sync` had warnings but the build went green." Warnings about Luciq specifically are not cosmetic. Read them, surface them.
 - "Shake is enough, no need for a button." Keep one visible entry point at least in debug builds — otherwise the first tester reports the SDK as broken.
