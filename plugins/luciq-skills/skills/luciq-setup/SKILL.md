@@ -60,7 +60,7 @@ Setup Progress:
 - [ ] 5. Configure auto-masking + privacy disclosure
 - [ ] 6. Wire user identification
 - [ ] 7. Bootstrap Luciq MCP server
-- [ ] 8. Bootstrap Luciq CLI (optional, for symbol upload)
+- [ ] 8. Symbol upload → hand off to `luciq-symbolicate`
 - [ ] 9. Smoke build
 - [ ] 10. Hand off summary
 ```
@@ -346,13 +346,18 @@ claude mcp add --transport http luciq <URL_FROM_LIVE_GUIDE>
 
 After running, prompt the user to restart their agent (Claude Code, Cursor, Codex, or other supported client) and complete the OAuth flow. Once authenticated, Luciq MCP tools become available qualified as `luciq:<tool_name>` (for example, `luciq:list_crashes`).
 
-## 8. Bootstrap the Luciq CLI (optional)
+## 8. Symbol upload — hand off to `luciq-symbolicate`
 
-If the project will upload symbol artifacts (dSYMs, ProGuard or R8 mapping files, source maps, or split-debug-info) to Luciq for symbolication of obfuscated frames, install the Luciq CLI.
+Without symbol files (iOS dSYMs, Android ProGuard/R8 mappings, React Native source maps, Flutter split-debug-info) the first crashes arrive as raw addresses. Crash reporting works; the traces just can't be read.
 
-YOU MUST verify the install command, supported platforms, and exact upload subcommand on the live integration guide for the user's platform. The CLI's distribution channel and command surface have changed across releases; do not hardcode an install command here.
+Do not install the CLI or write an upload step from this skill. `luciq-symbolicate` owns it: it installs and authenticates the `luciq` CLI, knows the upload subcommand per platform, and wires it into an Xcode build phase, Gradle, Fastlane or CI with the credential read from a secret.
 
-Store credentials via environment variables (`LUCIQ_APP_TOKEN` plus any per-platform secrets the live guide names). NEVER commit credentials inline.
+Ask once: *"Crash traces need symbol files uploaded to be readable. Set that up now? (It's a separate step — about 5 minutes.)"*
+
+- **Yes** → invoke the `luciq-symbolicate` skill and follow it. Come back to step 9 afterwards.
+- **Later** → record it in the hand-off as *"Symbol upload: not set up — first crashes will show raw addresses. Run `luciq-symbolicate` when ready."*
+
+The CLI authenticates with its own CLI token (`luciq login` / `LUCIQ_AUTH_TOKEN`), **not** the app token. NEVER commit either.
 
 ## 9. Smoke build
 
@@ -383,7 +388,8 @@ Print:
 - MCP / CLI wired status.
 - **App Store privacy** — the types to declare and whether they are linked, from step 5 (iOS targets only).
 - The **Test it yourself** checklist below.
-- Pointers: `luciq-debug` for crash investigation, `luciq-migrate` for moving off the legacy Instabug SDK or upgrading between Luciq versions.
+- Symbol upload status from step 8 (set up, or deferred with the one-line reason).
+- Pointers: `luciq-symbolicate` for readable crash traces (if deferred), `luciq-debug` for crash investigation, `luciq-migrate` for moving off the legacy Instabug SDK or upgrading between Luciq versions.
 
 ### Test it yourself — the user runs this, not the agent
 
@@ -424,6 +430,7 @@ If you catch yourself thinking any of these, you are about to ship a broken inte
 - "`pod install` or `gradle sync` had warnings but the build went green." Warnings about Luciq specifically are not cosmetic. Read them, surface them.
 - "Shake is enough, no need for a button." Keep one visible entry point at least in debug builds — otherwise the first tester reports the SDK as broken.
 - "I'll run the app and crash it to prove the setup works." Don't. Stop at the green build and hand the user the *Test it yourself* checklist.
+- "The docs say to download the upload script from the dashboard, so I'll leave symbols for later." Hand off to `luciq-symbolicate` — it has a scriptable path, no dashboard download needed.
 - "Two platform markers matched but I picked the obvious one." If the workspace is ambiguous, ask. Cross-platform projects break this assumption routinely.
 - "I'll just hand-edit `project.pbxproj`, it's only a few entries." Use `scripts/add_spm_package.rb`. If it can't run, ask the user to add the package in Xcode — don't improvise object IDs.
 - "Xcode is open but the edit is small." Ask the user to quit Xcode first. An edit under an open Xcode is what produces `Missing package product`.
