@@ -43,9 +43,9 @@ Emits:
 ### SDK init (`S-INSTALL-003`)
 
 Patterns:
-- `Luciq.start(`
-- `Luciq.start( token:`
-- `await Luciq.start(`
+- `Luciq.init(`
+- `Luciq.init( token:`
+- `await Luciq.init(`
 
 Look for `await` keyword on the surrounding line — Flutter init is async; missing `await` is `WARN`.
 
@@ -56,7 +56,7 @@ Look for `await` keyword on the surrounding line — Flutter init is async; miss
 | Bug Reporting | `BugReporting.setEnabled`, `BugReporting.setState`, `Luciq.setBugReportingEnabled` |
 | Crash Reporting | `CrashReporting.setEnabled`, `CrashReporting.setState`, `Luciq.setCrashReportingEnabled` |
 | APM | `APM.setEnabled` (subset support — APM is mostly auto-instrumented on Flutter) |
-| Session Replay | `SessionReplay.setNetworkLogsEnabled`, `SessionReplay.setUserStepsEnabled`, `SessionReplay.setLuciqLogsEnabled` |
+| Session Replay | `SessionReplay.setEnabled`, `SessionReplay.setNetworkLogsEnabled`, `SessionReplay.setUserStepsEnabled`, `SessionReplay.setLuciqLogsEnabled` |
 | Network Logs | `NetworkLogger.disable`, `NetworkLogger.enable` |
 | Surveys | `Surveys.setEnabled` |
 | Replies | `Replies.setEnabled` |
@@ -65,7 +65,8 @@ Look for `await` keyword on the surrounding line — Flutter init is async; miss
 ### Invocation events (`S-INVOKE-*`)
 
 Patterns:
-- `setInvocationEvents:` (named arg in `Luciq.start`)
+- `invocationEvents:` (named arg in `Luciq.init`)
+- `BugReporting.setInvocationEvents(` (runtime override after init)
 - `InvocationEvent.shake`, `InvocationEvent.screenshot`, `InvocationEvent.floatingButton`, `InvocationEvent.twoFingersSwipeLeft`, `InvocationEvent.none`
 
 ### Identity + attributes (`S-IDENTITY-*`)
@@ -112,8 +113,8 @@ Flutter SDK exposes the full feature-flag API (verified):
 
 | Anti-pattern | Detection | Status |
 | --- | --- | --- |
-| `Luciq.start` without `await` | Init call not preceded by `await` on the same / previous line | `WARN` |
+| `Luciq.init` without `await` | Init call not preceded by `await` on the same / previous line | `WARN` |
 | Init in `main()` after `runApp()` | Init must precede `runApp` to capture early errors | `WARN` |
-| Token in source (vs. read from env / `--dart-define`) | Long string literal as first positional arg to `Luciq.start` | `WARN` masked in report |
+| Token in source (vs. read from env / `--dart-define`) | Long string literal passed as the `token:` named arg to `Luciq.init` | `WARN` masked in report |
 | Both `luciq_flutter` and `instabug_flutter` declared | Both packages in `pubspec.yaml` dependencies | `WARN` — run `luciq-migrate` to finish the rename if mid-migration; long-term coexistence is unsupported |
 | Module disabled in release mode source path | `setXEnabled(false)` outside any `kDebugMode` guard | `INFO` surface for review |
