@@ -86,10 +86,12 @@ plugins/luciq-skills/
     └── luciq-symbolicate/
         ├── README.md                 ← you are here (human-facing)
         ├── SKILL.md                  ← LLM-facing instructions; the workflow definition
-        └── references/
-            ├── upload-matrix.md      ← upload subcommands, artifact locations, required flags, format traps
-            ├── ci-recipes.md         ← GitHub Actions, Fastlane, Gradle, Bitrise, CircleCI, Xcode phase, cron
-            └── troubleshooting.md    ← error → cause → fix, upload permissions, unsymbolicated triage
+        ├── references/
+        │   ├── upload-matrix.md      ← upload subcommands, artifact locations, required flags, format traps
+        │   ├── ci-recipes.md         ← GitHub Actions, Fastlane, Gradle, Bitrise, CircleCI, Xcode phase, cron
+        │   └── troubleshooting.md    ← error → cause → fix, upload permissions, unsymbolicated triage
+        └── scripts/
+            └── add_dsym_upload_phase.rb  ← sandbox-safe Xcode "Upload dSYMs to Luciq" build phase
 ```
 
 References load only when the current step needs them.
