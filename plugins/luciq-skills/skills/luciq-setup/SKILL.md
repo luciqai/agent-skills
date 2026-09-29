@@ -31,6 +31,22 @@ YOU MUST verify SDK API signatures, package names, and MCP transport URLs agains
 | MCP server config | https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/luciq-mcp-server/setup-by-ide |
 | App tokens (when authenticated) | Luciq MCP `list_applications` |
 
+### Check symbols against the SDK, not only the docs
+
+The live guides are the source of truth for *what* to do, but a guide snippet can be wrong: the iOS AI guide has shipped pseudo-code (`IF config_mode == default: … ELSE: …`) inside a Swift block, next to a method name that doesn't exist. Before writing any SDK call beyond the start call, confirm the symbol exists in the installed SDK:
+
+| Platform | Where the public API lives after install |
+| --- | --- |
+| iOS (SPM) | `find ~/Library/Developer/Xcode/DerivedData -maxdepth 8 -type d -path '*SourcePackages/artifacts/luciq-ios-sdk/*/LuciqSDK.xcframework/ios-arm64'` → `Headers/*.h` and `Modules/LuciqSDK.swiftmodule/*.swiftinterface` |
+| iOS (CocoaPods) | `Pods/Luciq/LuciqSDK.xcframework/ios-arm64/…` (same layout) |
+| Flutter | `~/.pub-cache/hosted/pub.dev/luciq_flutter-*/lib/` |
+| React Native | `node_modules/@luciq/react-native/` (`*.d.ts` / `src/`) |
+| Android / KMP | no quick grep — the smoke build in step 9 is the check |
+
+`grep -r "<methodName>"` there. No hit means the name is wrong: search the guide page for the real one, don't guess a variant. On iOS, headers use Objective-C names — `LCQNetworkLogger` is `NetworkLogger` in Swift, `setRequestObfuscationHandler:` is `setRequestObfuscationHandler(_:)`.
+
+If a guide snippet is not valid code in the target language (prose inside a code block, unfilled placeholders), treat it as prose. Do not fill in the gaps and ship the rest verbatim.
+
 ## Workflow checklist
 
 Track every step. STOP on any failed step. Do not continue past a broken state.
@@ -283,7 +299,21 @@ Goal: identify likely-sensitive UI views and configure SDK-side masking. A naive
 4. Verify the masking API signature for the detected platform on the live guide. The masking API has differed across platforms and changed across SDK versions; do not hardcode it.
 5. Apply masking config only for confirmed matches.
 
-Also configure network-log redaction: sensitive headers (Authorization, Cookies) and body fields (password, token).
+**Network logs — rely on the default first.** From SDK 14.2.0 the SDK masks a known set of sensitive header and query keys (auth, token, password, api key, secret variants) on the device, before anything is sent. Confirm the installed version is ≥ 14.2.0 (`Package.resolved`, `Podfile.lock`, `build.gradle`, `pubspec.lock`, `package.json`) and do not write a custom handler for keys the default already covers. The full default list is in `luciq-masking-rules/references/network-masking.md`.
+
+Add a custom handler only for sensitive keys the app actually sends that the default misses (for example `Cookie`, a vendor `X-API-Key`, a body field like `dateOfBirth`). iOS, verified against LuciqSDK 19.11.0:
+
+```swift
+NetworkLogger.setRequestObfuscationHandler { request in
+    var masked = request
+    for header in ["Cookie", "X-API-Key"] where masked.value(forHTTPHeaderField: header) != nil {
+        masked.setValue("*****", forHTTPHeaderField: header)
+    }
+    return masked
+}
+```
+
+Response bodies use `NetworkLogger.setResponseObfuscationHandler`. For other platforms, find the equivalent on the live guide and check the name as described in *Check symbols against the SDK*. Anything deeper — omitting whole endpoints, compliance presets — belongs to `luciq-masking-rules`; mention it in the hand-off rather than doing it here.
 
 ## 6. Wire user identification
 
@@ -360,6 +390,8 @@ If you catch yourself thinking any of these, you are about to ship a broken inte
 - "The build failed but the SDK is installed, so it's probably fine." It isn't. A failing build means a broken integration. Report the failure verbatim.
 - "I skipped checking the live guide because the docs probably haven't changed." That's how you ship a stale signature. Always verify.
 - "I hardcoded the init signature from this file, it looked right." This file is illustrative, not authoritative. The live guide is the source of truth.
+- "The guide shows this method, so it exists." Check it against the installed SDK first. A guide snippet that isn't valid code is prose — don't fill in its gaps.
+- "I'll write a network obfuscation handler to be safe." Not for keys the default auto-masking already covers. Extra handlers are extra code to get wrong.
 - "I committed the app token inline because it's just for local testing." Tokens leak via git history. Use env injection or a gitignored secrets file.
 - "I'll show all the apps from `list_applications` and let them pick." Not past 10 — ask for the name or token and filter.
 - "`INFOPLIST_KEY_LuciqAppToken` is simpler." It is silently dropped. Use the xcconfig + real `Info.plist` path.
