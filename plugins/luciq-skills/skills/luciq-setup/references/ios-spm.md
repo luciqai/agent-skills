@@ -75,7 +75,7 @@ struct MyApp: App {
 }
 ```
 
-Verify the start signature on the live guide, and never pass the token as a string literal (step 2).
+Verify the start signature on the live guide, and read the token from `Info.plist` as shown in `ios-token-injection.md` — never a string literal.
 
 ## Projects with no `Info.plist` file
 
@@ -86,7 +86,7 @@ grep -E "GENERATE_INFOPLIST_FILE|INFOPLIST_FILE" <App>.xcodeproj/project.pbxproj
 ```
 
 - **Standard Apple keys** (usage descriptions) — add them as build settings: `INFOPLIST_KEY_NSMicrophoneUsageDescription = "…";` in the app target's Debug and Release configurations. Xcode injects these because it recognises them.
-- **Custom keys** (such as the app token) — `INFOPLIST_KEY_<Custom>` is **silently dropped**; Xcode only injects keys it knows. Custom keys need a real `Info.plist` file.
+- **Custom keys** (such as the app token) — `INFOPLIST_KEY_<Custom>` is **silently dropped**; Xcode only injects keys it knows. Custom keys need a real `Info.plist` file — `scripts/add_token_config.rb` creates one; see `ios-token-injection.md`.
 
 ## Xcode 16+ project format
 

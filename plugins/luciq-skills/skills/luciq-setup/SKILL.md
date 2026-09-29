@@ -73,7 +73,15 @@ Resolve the token in this order:
 2. Read from environment (`LUCIQ_APP_TOKEN`).
 3. Prompt the user.
 
+**Picking from `list_applications`.** Present the result as a numbered list only when it has 10 apps or fewer. Larger accounts return demo apps, test apps and other teams' apps — a list of a hundred tokens is worse than asking. Instead:
+
+- Ask one question: *"Which Luciq app is this — the app name, or paste its token?"*
+- Given a name, filter the result you already have (case-insensitive substring) and show only the matches.
+- Given a token, look it up in the same result and confirm in one line — *"That token is **<app name>** (<platform>). Using it."* If it isn't there, say so: the token belongs to an app this login can't see, or it has a typo. Ask before shipping with an unconfirmed token.
+
 NEVER commit the token inline. Use a build-time injection, an env var, or a gitignored secrets file. Tokens leak via git history, which is irreversible.
+
+- **iOS:** run `scripts/add_token_config.rb` — gitignored `.xcconfig` → `$(LUCIQ_APP_TOKEN)` in a real `Info.plist` → `Bundle.main`. See `references/ios-token-injection.md`. Do NOT use `INFOPLIST_KEY_<CustomKey>`: Xcode silently drops custom keys, the build stays green, and the token is empty at runtime.
 
 ## 3. Per-platform recipe
 
@@ -349,6 +357,8 @@ If you catch yourself thinking any of these, you are about to ship a broken inte
 - "I skipped checking the live guide because the docs probably haven't changed." That's how you ship a stale signature. Always verify.
 - "I hardcoded the init signature from this file, it looked right." This file is illustrative, not authoritative. The live guide is the source of truth.
 - "I committed the app token inline because it's just for local testing." Tokens leak via git history. Use env injection or a gitignored secrets file.
+- "I'll show all the apps from `list_applications` and let them pick." Not past 10 — ask for the name or token and filter.
+- "`INFOPLIST_KEY_LuciqAppToken` is simpler." It is silently dropped. Use the xcconfig + real `Info.plist` path.
 - "I auto-applied the masking rules without showing the user the matches." False positives are likely. Per-match confirmation is mandatory.
 - "`pod install` or `gradle sync` had warnings but the build went green." Warnings about Luciq specifically are not cosmetic. Read them, surface them.
 - "Two platform markers matched but I picked the obvious one." If the workspace is ambiguous, ask. Cross-platform projects break this assumption routinely.
