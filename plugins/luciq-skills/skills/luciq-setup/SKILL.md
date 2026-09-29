@@ -97,18 +97,21 @@ First check whether a `Package.swift` exists at the project root.
    ```
 2. Run `swift package resolve` to fetch.
 3. Check the resolved `Package.swift` in DerivedData checkouts to confirm the product name and module name — **they are different**: the SPM product may be `Luciq` while the Swift import is `import LuciqSDK`. Use the module name (from the `.xcframework` contents) for `import`, not the product name.
-4. Edit `AppDelegate.swift` (or `.m`): import the module and call the start API. Verify the exact init signature on the live guide.
+4. Add the start call at the app's entry point (`AppDelegate`, or an `init()` on the `@main` `App` struct for SwiftUI — see *Entry point* in `references/ios-spm.md`). Verify the exact init signature on the live guide.
 5. Edit `Info.plist`: add `NSMicrophoneUsageDescription` and `NSPhotoLibraryUsageDescription`.
 
 *Project is `.xcodeproj`-only (no `Package.swift`):*
-SPM works fine for `.xcodeproj` projects via direct `project.pbxproj` edits. Apply all four changes, then run `xcodebuild -resolvePackageDependencies` immediately (no confirmation needed — it only fetches, it does not build):
-1. Add an `XCRemoteSwiftPackageReference` entry with the repo URL and `upToNextMajorVersion` requirement. Verify the repo URL on the live guide.
-2. Add an `XCSwiftPackageProductDependency` entry pointing to that reference. **Verify the product name from the package's own `Package.swift` after resolving** — it is not the same as the Swift import name. (Confirmed: SPM product = `Luciq`, Swift import = `import LuciqSDK`.)
-3. Add the product dependency UUID to `packageProductDependencies` in `PBXNativeTarget`.
-4. Add the package reference UUID to `packageReferences` in `PBXProject`.
-5. Run `xcodebuild -resolvePackageDependencies -project <name>.xcodeproj`. If it fails with "no versions match", check the actual release tags on the repo and update `minimumVersion` to match (the SDK may be at a high major version, e.g. `19.x`).
-6. Edit `AppDelegate.swift` (or `.m`): import the module and call the start API. Verify the exact init signature on the live guide.
-7. Edit `Info.plist`: add `NSMicrophoneUsageDescription` and `NSPhotoLibraryUsageDescription`.
+Read `references/ios-spm.md` first. **Do not hand-edit `project.pbxproj`** — hand-generated object IDs and missed sections are the most common way this step fails.
+1. Ask the user to quit Xcode (one line — see `references/ios-spm.md`, Rule 1). Editing the project while Xcode is open leaves the package unresolved and fails later with `Missing package product 'Luciq'`.
+2. Run the bundled script (installs nothing but the `xcodeproj` gem if missing):
+   ```bash
+   ruby <skill-dir>/scripts/add_spm_package.rb --project <App>.xcodeproj --target <AppTarget> \
+     --url https://github.com/luciqai/luciq-ios-sdk --version <LATEST_TAG> --product Luciq
+   ```
+   SPM product = `Luciq`; Swift import = `import LuciqSDK`. Get `<LATEST_TAG>` from the repo tags (command in the reference).
+3. Add the start call at the app's entry point — for a SwiftUI app with no `AppDelegate`, that is an `init()` on the `@main` `App` struct. See *Entry point* in `references/ios-spm.md`. Verify the exact init signature on the live guide.
+4. Edit `Info.plist`: add `NSMicrophoneUsageDescription` and `NSPhotoLibraryUsageDescription`. If the project has no `Info.plist` file (`GENERATE_INFOPLIST_FILE = YES`), add them as `INFOPLIST_KEY_…` build settings instead — see *Projects with no `Info.plist` file* in the reference.
+5. Tell the user they can reopen Xcode. If Xcode then shows `Missing package product`, the fix is **File → Packages → Resolve Package Versions** — resolution is per DerivedData, so the CLI build passing does not fix an open Xcode window.
 
 **Carthage (alternative — only if SPM is blocked by a project-level constraint)**
 1. Edit (or create) `Cartfile` — verify the binary spec URL on the live guide:
@@ -349,5 +352,7 @@ If you catch yourself thinking any of these, you are about to ship a broken inte
 - "I auto-applied the masking rules without showing the user the matches." False positives are likely. Per-match confirmation is mandatory.
 - "`pod install` or `gradle sync` had warnings but the build went green." Warnings about Luciq specifically are not cosmetic. Read them, surface them.
 - "Two platform markers matched but I picked the obvious one." If the workspace is ambiguous, ask. Cross-platform projects break this assumption routinely.
+- "I'll just hand-edit `project.pbxproj`, it's only a few entries." Use `scripts/add_spm_package.rb`. If it can't run, ask the user to add the package in Xcode — don't improvise object IDs.
+- "Xcode is open but the edit is small." Ask the user to quit Xcode first. An edit under an open Xcode is what produces `Missing package product`.
 
 The pattern: every shortcut here trades "looks done" for "actually works." The skill's job is to actually work.
