@@ -376,6 +376,8 @@ Deriving `<Workspace>` and `<Scheme>` for iOS and RN-iOS:
 - `<Scheme>`: derive by running `xcodebuild -list -project <Name>.xcodeproj` (or `-workspace` if applicable) and picking the app scheme. Usually matches the project name. For RN, the scheme typically matches the app's display name in `app.json`.
 - If multiple workspaces or schemes exist, STOP and ask the user which to build. Do not guess.
 
+**iOS with a symbol-upload build phase from step 8:** also run a Release build — the same command with `-configuration Release LUCIQ_SKIP_UPLOAD=YES` (the flag runs the phase up to the upload and sends nothing). The phase skips Debug builds, so the Debug build above never runs it. A phase that Xcode's script sandbox blocks (`Sandbox: … deny(1) file-read-data`) fails only on Release and archive, which is where the user would otherwise find it. On that error, go back to `luciq-symbolicate` and replace the phase with its `scripts/add_dsym_upload_phase.rb`; do not switch off `ENABLE_USER_SCRIPT_SANDBOXING` without asking.
+
 STOP on build failure. NEVER claim success on a broken build.
 
 ## 10. Hand off
@@ -431,6 +433,7 @@ If you catch yourself thinking any of these, you are about to ship a broken inte
 - "Shake is enough, no need for a button." Keep one visible entry point at least in debug builds — otherwise the first tester reports the SDK as broken.
 - "I'll run the app and crash it to prove the setup works." Don't. Stop at the green build and hand the user the *Test it yourself* checklist.
 - "The docs say to download the upload script from the dashboard, so I'll leave symbols for later." Hand off to `luciq-symbolicate` — it has a scriptable path, no dashboard download needed.
+- "The Debug build is green, so the dSYM upload phase works." The phase skips Debug. Run a Release build before calling setup done — that is where the script sandbox blocks a hand-written phase.
 - "Two platform markers matched but I picked the obvious one." If the workspace is ambiguous, ask. Cross-platform projects break this assumption routinely.
 - "I'll just hand-edit `project.pbxproj`, it's only a few entries." Use `scripts/add_spm_package.rb`. If it can't run, ask the user to add the package in Xcode — don't improvise object IDs.
 - "Xcode is open but the edit is small." Ask the user to quit Xcode first. An edit under an open Xcode is what produces `Missing package product`.

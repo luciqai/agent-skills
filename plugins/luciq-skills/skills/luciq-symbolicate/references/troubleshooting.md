@@ -42,6 +42,21 @@ Permission and plan failures are **terminal**. Report them with the command that
 | `can't find gem luciq-cli (>= 0.a) with executable luciq` | stale binstub after a Ruby/gem change | `gem install luciq-cli` again; check `which luciq` resolves into the active Ruby |
 | Command hangs, then times out | network/proxy, or wrong `LUCIQ_URL` | connect timeout is 30 s and read timeout 300 s (large uploads legitimately take minutes); verify the configured URL |
 
+## Xcode build-phase failures
+
+A Run Script phase that uploads dSYMs and breaks the build. Nearly always Xcode's user-script sandboxing (`ENABLE_USER_SCRIPT_SANDBOXING = YES`, the default for projects created in Xcode 15+). The fix for all of the sandbox rows is the same: replace the phase with `scripts/add_dsym_upload_phase.rb` (see *Xcode build phase* in `ci-recipes.md`).
+
+| Message | Cause | Fix |
+| --- | --- | --- |
+| `Sandbox: zip(…) deny(1) file-read-data …/<App>.app.dSYM/…` | the phase reads files it did not declare as inputs — typically `zip -r` over `$DWARF_DSYM_FOLDER_PATH` | use the bundled script; it declares the exact dSYM files and zips only those |
+| `Sandbox: zip(…) deny(1) file-write-create …/DerivedSources/zi…` | zip writes a temp file next to the output, and that path is not a declared output | stream the zip to stdout (`zip -q - … > "$SCRIPT_OUTPUT_FILE_0"`), as the bundled script does |
+| `zip error: Nothing to do!` (exit 12), then `✗ File not found:` from `luciq upload` | the sandbox hid the dSYM folder's contents from zip, or the phase ran before the dSYM was generated | declare the dSYM files as inputs — that also orders the phase after dSYM generation |
+| `Sandbox: bash(…) deny(1) file-read-data <repo>/bin/luciq` (or `vendor/bundle/…`) | the CLI is installed inside the project folder, which the sandbox fences off | install the CLI with brew or a global `gem install` |
+| `luciq: command not found` in Xcode, but `luciq` works in Terminal | builds started from the Xcode GUI get a minimal `PATH` | the bundled script adds `/opt/homebrew/bin` and `/usr/local/bin`; for other install locations, extend `PATH` in the phase |
+| Debug builds pass, every Release build / archive fails | the phase exits early on Debug, so only Release reaches the failing line | always test the phase with a Release build or an archive |
+
+If the phase can't be replaced, `ENABLE_USER_SCRIPT_SANDBOXING = NO` on the app target also works. Ask before setting it: it turns sandboxing off for every script phase in that target.
+
 ## The failures that produce no error at all
 
 These are the reason symbolication breaks quietly for weeks. The upload returns `✓` and exit `0`, and nothing deobfuscates.
