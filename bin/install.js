@@ -3,6 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const { spawnSync } = require("child_process");
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -19,8 +20,24 @@ function getTargetDirs() {
     : path.join(process.cwd(), ".claude");
   return {
     skills: path.join(base, "skills"),
-    settings: path.join(base, "settings.json"),
+    // Installers before 1.5.0 wrote mcpServers here. Claude Code never reads
+    // MCP servers from settings.json, so that entry was a silent no-op.
+    legacySettings: path.join(base, "settings.json"),
+    // Project-scope MCP servers live in .mcp.json at the project root.
+    mcpJson: path.join(process.cwd(), ".mcp.json"),
   };
+}
+
+function listSkillNames() {
+  return fs
+    .readdirSync(SKILLS_SRC)
+    .filter((name) => fs.existsSync(path.join(SKILLS_SRC, name, "SKILL.md")))
+    .sort();
+}
+
+function printNextSteps(prefix) {
+  console.log("\nSkills installed:");
+  for (const skill of listSkillNames()) console.log("  " + prefix + skill);
 }
 
 function getKiroDirs() {
@@ -56,27 +73,94 @@ function copyDir(src, dest) {
   }
 }
 
-function wireMcp(settingsPath) {
-  const mcpConfig = JSON.parse(fs.readFileSync(MCP_SRC, "utf8"));
-  let settings = {};
-  if (fs.existsSync(settingsPath)) {
-    try {
-      settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
-    } catch {
-      console.warn(
-        "  Warning: could not parse " + settingsPath + " — skipping MCP wiring."
-      );
-      return;
-    }
-  }
+function readJson(file) {
+  if (!fs.existsSync(file)) return {};
+  return JSON.parse(fs.readFileSync(file, "utf8"));
+}
 
-  settings.mcpServers = {
-    ...(settings.mcpServers || {}),
-    ...mcpConfig.mcpServers,
-  };
-  fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+function luciqServer() {
+  return JSON.parse(fs.readFileSync(MCP_SRC, "utf8")).mcpServers.luciq;
+}
+
+function manualAddCommand() {
+  const { type, url } = luciqServer();
+  return "claude mcp add --transport " + type + " --scope user luciq " + url;
+}
+
+function removeLegacyMcpEntry(settingsPath) {
+  let settings;
+  try {
+    settings = readJson(settingsPath);
+  } catch {
+    return;
+  }
+  if (!settings.mcpServers || !settings.mcpServers.luciq) return;
+  delete settings.mcpServers.luciq;
+  if (Object.keys(settings.mcpServers).length === 0) delete settings.mcpServers;
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n");
-  console.log("  MCP server wired -> " + settingsPath);
+  console.log("  Removed stale MCP entry from " + settingsPath);
+}
+
+// Project scope: merge into <project>/.mcp.json, the file Claude Code reads.
+function wireMcpProject(mcpJsonPath) {
+  let config;
+  try {
+    config = readJson(mcpJsonPath);
+  } catch {
+    console.warn(
+      "  Warning: could not parse " + mcpJsonPath + " — skipping MCP wiring.\n" +
+        "  Add it yourself: " + manualAddCommand().replace(" --scope user", " --scope project")
+    );
+    return;
+  }
+  config.mcpServers = { ...(config.mcpServers || {}), luciq: luciqServer() };
+  fs.writeFileSync(mcpJsonPath, JSON.stringify(config, null, 2) + "\n");
+  console.log("  MCP server wired -> " + mcpJsonPath);
+}
+
+// User scope lives in ~/.claude.json, which is large and shared with every
+// other setting — let the claude CLI edit it rather than writing it ourselves.
+function wireMcpUser() {
+  const { type, url } = luciqServer();
+  const res = spawnSync(
+    "claude",
+    ["mcp", "add", "--transport", type, "--scope", "user", "luciq", url],
+    { encoding: "utf8" }
+  );
+  const output = (res.stdout || "") + (res.stderr || "");
+  if (res.error) {
+    console.log("  MCP server not wired: the claude CLI was not found. Run:\n    " + manualAddCommand());
+  } else if (res.status === 0) {
+    console.log("  MCP server wired (user scope, via claude mcp add)");
+  } else if (/already exists/i.test(output)) {
+    console.log("  MCP server already configured (user scope)");
+  } else {
+    console.warn("  Warning: claude mcp add failed:\n    " + output.trim() + "\n  Run it yourself:\n    " + manualAddCommand());
+  }
+}
+
+function unwireMcpProject(mcpJsonPath) {
+  let config;
+  try {
+    config = readJson(mcpJsonPath);
+  } catch {
+    console.warn("  Warning: could not parse " + mcpJsonPath + " — remove the luciq entry manually.");
+    return;
+  }
+  if (!config.mcpServers || !config.mcpServers.luciq) return;
+  delete config.mcpServers.luciq;
+  if (Object.keys(config.mcpServers).length === 0 && Object.keys(config).length === 1) {
+    fs.rmSync(mcpJsonPath);
+  } else {
+    fs.writeFileSync(mcpJsonPath, JSON.stringify(config, null, 2) + "\n");
+  }
+  console.log("  MCP server entry removed from " + mcpJsonPath);
+}
+
+function unwireMcpUser() {
+  const res = spawnSync("claude", ["mcp", "remove", "luciq", "--scope", "user"], { encoding: "utf8" });
+  if (res.status === 0) console.log("  MCP server entry removed (user scope).");
+  else console.log("  To remove the MCP server, run: claude mcp remove luciq --scope user");
 }
 
 function installKiro() {
@@ -96,12 +180,10 @@ function installKiro() {
     console.log("  Installed: " + skill + " (#" + skill + ")");
   }
 
+  printNextSteps("#");
   console.log(
-    "\nDone. Steering files use inclusion: manual — reference them in a\n" +
-      "Kiro session to load one:\n" +
-      "  #luciq-setup    — integrate the Luciq SDK\n" +
-      "  #luciq-debug    — investigate crashes and production signals\n" +
-      "  #luciq-migrate  — migrate from Instabug or upgrade SDK versions\n" +
+    "\nSteering files use inclusion: manual — reference one in a Kiro session\n" +
+      "to load it, e.g. #luciq-setup.\n" +
       "\nThe Luciq MCP server is set up separately — see the MCP setup guide:\n" +
       "  https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/luciq-mcp-server\n"
   );
@@ -109,7 +191,7 @@ function installKiro() {
 
 function install() {
   if (isKiro) return installKiro();
-  const { skills: skillsDest, settings: settingsPath } = getTargetDirs();
+  const { skills: skillsDest, legacySettings, mcpJson } = getTargetDirs();
   const scope = isGlobal ? "global (~/.claude/)" : "local (.claude/)";
 
   console.log("\nInstalling Luciq skills [" + scope + "]...\n");
@@ -123,13 +205,17 @@ function install() {
     console.log("  Installed: " + skill);
   }
 
-  wireMcp(settingsPath);
+  removeLegacyMcpEntry(legacySettings);
+  if (isGlobal) wireMcpUser();
+  else wireMcpProject(mcpJson);
 
+  printNextSteps("/");
   console.log(
-    "\nDone. Skills available:\n" +
-      "  /luciq-setup    — integrate the Luciq SDK\n" +
-      "  /luciq-debug    — investigate crashes and production signals\n" +
-      "  /luciq-migrate  — migrate from Instabug or upgrade SDK versions\n"
+    "\nNext: restart Claude Code (or start a new session). A running session\n" +
+      "does not see newly installed skills or MCP servers.\n" +
+      (isGlobal
+        ? "On first use, sign in to Luciq when your browser opens.\n"
+        : "On first use, approve the luciq MCP server when prompted, then sign in.\n")
   );
 }
 
@@ -156,7 +242,7 @@ function uninstallKiro() {
 
 function uninstall() {
   if (isKiro) return uninstallKiro();
-  const { skills: skillsDest, settings: settingsPath } = getTargetDirs();
+  const { skills: skillsDest, legacySettings, mcpJson } = getTargetDirs();
   const scope = isGlobal ? "global" : "local";
 
   console.log("\nUninstalling Luciq skills [" + scope + "]...\n");
@@ -173,23 +259,9 @@ function uninstall() {
     }
   }
 
-  if (fs.existsSync(settingsPath)) {
-    try {
-      const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
-      if (settings.mcpServers && settings.mcpServers.luciq) {
-        delete settings.mcpServers.luciq;
-        fs.writeFileSync(
-          settingsPath,
-          JSON.stringify(settings, null, 2) + "\n"
-        );
-        console.log("  MCP server entry removed.");
-      }
-    } catch {
-      console.warn(
-        "  Warning: could not update settings.json — remove MCP entry manually."
-      );
-    }
-  }
+  removeLegacyMcpEntry(legacySettings);
+  if (isGlobal) unwireMcpUser();
+  else unwireMcpProject(mcpJson);
 
   console.log("\nDone.\n");
 }
