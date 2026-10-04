@@ -9,7 +9,7 @@ The shapes below were confirmed against live MCP responses, but the MCP evolves 
 1. [Identifiers, modes, platforms](#identifiers-modes-platforms)
 2. [`list_applications`](#list_applications)
 3. [`app_insights` — the headline source](#app_insights--the-headline-source)
-4. [`list_crashes` / `list_app_hangs`](#list_crashes--list_app_hangs)
+4. [`list_crashes`](#list_crashes)
 5. [`crash_patterns` — and the adoption signal](#crash_patterns--and-the-adoption-signal)
 6. [`list_bugs`](#list_bugs)
 7. [`list_reviews`](#list_reviews)
@@ -81,9 +81,9 @@ What the numbers mean:
 
 **The `bugs` section error.** In live testing, `app_insights.bugs` returned `{"error": "Failed to fetch data: "}` on every app probed, while `list_bugs` returned full data. They are different sources. If you need bug volume, pull `list_bugs` and cite it; never present a `list_bugs` count as the `app_insights.bugs` figure, and never fill the errored section with it.
 
-## `list_crashes` / `list_app_hangs`
+## `list_crashes`
 
-`list_crashes(slug, mode, filters?, sort_by?, direction?, limit?, offset?)`. Returns `{"crashes": [...]}` — `list_app_hangs` uses the same `crashes` key — with, per crash group:
+`list_crashes(slug, mode, filters?, sort_by?, direction?, limit?, offset?)`. Returns `{"crashes": [...]}` — app hangs (`filters.type: ["APP_HANG"]`) come back in the same shape — with, per crash group:
 
 `number, exception, crash_cause, crash_type, platform, status_id, current_view, occurrences_counter, affected_users_counter, min_app_version, max_app_version, first_occurred_at, last_occurred_at, severity, app_version, team, signals, exception_name, ...`
 
@@ -101,7 +101,7 @@ What the numbers mean:
 
 `sort_by`: `occurrences_counter` (volume), `affected_users_counter` (impact), `severity`, `first_occurred_at`, `last_occurred_at`, plus version sorts. `direction` `asc`/`desc`. `limit` max 50.
 
-`list_app_hangs` has the same shape and filter surface minus `type` / `subtype`. Hang rows carry `crash_type: FATAL_UI_HANG` and an `exception` like "The app's main thread was unresponsive for more than 3000 milliseconds." The `crash_cause` on a hang often points at the offending source line (e.g. `PaymentViewController.Parsing() (PaymentViewController.swift:52)`) — useful for a PM / EM, never for C-suite.
+App hangs come from `list_crashes` with `filters.type: ["APP_HANG"]`, alone or with other types. Hang rows carry `crash_type: FATAL_UI_HANG` (iOS) or `ANDROID_FATAL_HANG` and an `exception` like "The app's main thread was unresponsive for more than 3000 milliseconds." The `crash_cause` on a hang often points at the offending source line (e.g. `PaymentViewController.Parsing() (PaymentViewController.swift:52)`) — useful for a PM / EM, never for C-suite.
 
 ## `crash_patterns` — and the adoption signal
 
@@ -214,7 +214,7 @@ Four tools — `update_bug`, `apm_list_groups`, `apm_group_view`, `apm_occurrenc
 
 These bite. Confirm the call shape before concluding "no data":
 
-| Concept | `list_crashes` / `list_app_hangs` | `list_bugs` | `list_reviews` | `app_insights` |
+| Concept | `list_crashes` (incl. app hangs) | `list_bugs` | `list_reviews` | `app_insights` |
 | --- | --- | --- | --- | --- |
 | App version filter | `app_versions[]` (plural) | `app_version[]` | `app_version[]` | `filters.app_version[]` |
 | Platform values | `IOS`/`ANDROID`/`DART`/`JAVASCRIPT` (UPPER) | — | `os[]` = `ios`/`android` | — |

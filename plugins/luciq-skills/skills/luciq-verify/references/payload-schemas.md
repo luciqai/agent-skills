@@ -43,7 +43,7 @@ Verified against the live Luciq MCP server API. Tool names below are exact.
 | `crash_details` | Group-level metadata and a sample occurrence. |
 | `crash_patterns` | Distribution by `pattern_key` (default `app_versions`). Primary for SDK-version regression diffing. |
 | `get_occurrence_details` | Per-occurrence payload — crash-channel evidence. |
-| `list_app_hangs` | iOS UI hangs and Android ANRs (iOS has no `ANR` crash type; ANR is Android-only). |
+| `list_crashes` with `filters.type: ["APP_HANG"]` | iOS UI hangs and Android ANRs (iOS has no `ANR` crash type; ANR is Android-only). |
 
 ### Bug path
 
@@ -129,7 +129,7 @@ Different tools use different cases and value names. Match each tool's form exac
 | Where | Form | Values |
 | --- | --- | --- |
 | `list_applications.platform` (request + response) | lowercase | `ios \| android \| react_native \| flutter` |
-| `list_crashes.filters.platform`, `list_app_hangs.filters.platform` | UPPERCASE | `IOS \| ANDROID \| DART \| JAVASCRIPT` |
+| `list_crashes.filters.platform` | UPPERCASE | `IOS \| ANDROID \| DART \| JAVASCRIPT` |
 | `apm_*.filters.platform` | lowercase, **iOS / Android only** | `ios \| android` (no `dart` or `javascript`) |
 
 This means APM is **N/A for Flutter (DART) and React Native (JAVASCRIPT) projects** — do not probe APM for these platforms.
@@ -140,8 +140,9 @@ This means APM is **N/A for Flutter (DART) and React Native (JAVASCRIPT) project
 - Android: `CRASH`, `ANR`, `NON_FATAL`.
 - iOS: `CRASH`, `OOM`, `NON_FATAL`.
 - RN / Flutter: `CRASH`, `ANR`, `OOM`, `NON_FATAL`.
+- Every platform: `APP_HANG` (app hangs).
 
-iOS UI hangs surface via `list_app_hangs`, **not** as a crash type.
+iOS UI hangs surface only with `APP_HANG` in `filters.type` (rows read `crash_type: FATAL_UI_HANG`); without a `type` filter they are left out.
 
 ### Non-fatal subtype enum
 

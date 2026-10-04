@@ -57,7 +57,7 @@ LuciqVerifyHarness {
     forceANR()                       # blocks main thread > ANR threshold (Android / RN /
                                      # Flutter only — iOS has no ANR concept)
     forceUIHang()                    # iOS-only: long synchronous main-thread block; produces
-                                     # a FATAL_UI_HANG via list_app_hangs
+                                     # a FATAL_UI_HANG via list_crashes APP_HANG
     flushNow()                       # synchronously ship pending telemetry
 }
 ```
