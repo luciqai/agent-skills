@@ -60,6 +60,8 @@ brew install luciqai/tap/luciq-cli   # macOS / Linux
 gem install luciq-cli                # Ruby >= 2.7
 ```
 
+**Two tools install a `luciq` command.** This skill drives the Ruby `luciq-cli` (brew / gem above). The Flutter SDK also publishes a Dart `luciq_cli` (`dart pub global activate luciq_cli`) whose `luciq` runs `migrate`, `upload-symbols` and `upload-so-files` with an app token and API key. When its `~/.pub-cache/bin` comes first on `PATH`, every command here fails. It prints a `🦋 Luciq CLI` banner, then `No applicable command found` or `Unknown command`. Run `which -a luciq`, then put the brew/gem path first, or call that binary by its full path. Never mix the two tools' flags.
+
 **One credential for everything.** The CLI token is generated at [dashboard.luciq.ai/company/luciq-cli](https://dashboard.luciq.ai/company/luciq-cli) → *Generate authentication token* — one per user, shown in full only once. You never pass an application token; the server resolves the app from `--slug` + `--mode`.
 
 A CLI token carries the user's **own** dashboard role. It is not a service account, so **a scheduled job built on it breaks when that person rotates their token or leaves.** Say so out loud when wiring a cron job or a pipeline step: it is the failure mode people are most surprised by six months later.
