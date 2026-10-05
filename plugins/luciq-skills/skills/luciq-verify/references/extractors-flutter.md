@@ -47,20 +47,21 @@ Patterns:
 - `Luciq.init( token:`
 - `await Luciq.init(`
 
-Look for `await` keyword on the surrounding line — Flutter init is async; missing `await` is `WARN`.
+`Luciq.init` returns a `Future`, but the SDK's own README and example call it without `await`, inside `runZonedGuarded` in `main()` and before `runApp`. Don't flag a missing `await`; check placement and crash hooks instead (see *Anti-patterns*).
 
 ### Module toggles (`S-MODULE-*`)
 
 | Module | Patterns |
 | --- | --- |
-| Bug Reporting | `BugReporting.setEnabled`, `BugReporting.setState`, `Luciq.setBugReportingEnabled` |
-| Crash Reporting | `CrashReporting.setEnabled`, `CrashReporting.setState`, `Luciq.setCrashReportingEnabled` |
+| Bug Reporting | `BugReporting.setEnabled` |
+| Crash Reporting | `CrashReporting.setEnabled` |
+| NDK | `CrashReporting.setNDKEnabled` |
 | APM | `APM.setEnabled` (subset support — APM is mostly auto-instrumented on Flutter) |
 | Session Replay | `SessionReplay.setEnabled`, `SessionReplay.setNetworkLogsEnabled`, `SessionReplay.setUserStepsEnabled`, `SessionReplay.setLuciqLogsEnabled` |
-| Network Logs | `NetworkLogger.disable`, `NetworkLogger.enable` |
+| Network Logs | No Dart switch. Requests are logged only through an add-on interceptor in `pubspec.yaml`: `luciq_dio_interceptor`, `luciq_http_client` or `luciq_gql_link`. Bodies: `NetworkLogger.setNetworkLogBodyEnabled` |
 | Surveys | `Surveys.setEnabled` |
 | Replies | `Replies.setEnabled` |
-| Feature Requests | `FeatureRequests.setEnabled` |
+| Whole SDK | `Luciq.setEnabled` |
 
 ### Invocation events (`S-INVOKE-*`)
 
@@ -84,27 +85,28 @@ Flutter SDK exposes the full feature-flag API (verified):
 
 | Code | Patterns |
 | --- | --- |
-| `S-FLAG-ADD` | `Luciq.addFeatureFlag`, `Luciq.addFeatureFlags` |
-| `S-FLAG-REMOVE` | `Luciq.removeFeatureFlag`, `Luciq.removeFeatureFlags` |
-| `S-FLAG-CLEAR` | `Luciq.removeAllFeatureFlags`, `Luciq.clearAllFeatureFlags` |
+| `S-FLAG-ADD` | `Luciq.addFeatureFlags` |
+| `S-FLAG-REMOVE` | `Luciq.removeFeatureFlags` |
+| `S-FLAG-CLEAR` | `Luciq.clearAllFeatureFlags` |
 
 ### Custom logging (`S-LOG-*`)
 
 | Code | Patterns |
 | --- | --- |
-| `S-LOG-API` | `Luciq.logVerbose(`, `Luciq.logInfo(`, `Luciq.logWarn(`, `Luciq.logError(`, `Luciq.logDebug(`, `LuciqLog.logVerbose(` etc. |
+| `S-LOG-API` | `LuciqLog.logVerbose(`, `LuciqLog.logDebug(`, `LuciqLog.logInfo(`, `LuciqLog.logWarn(`, `LuciqLog.logError(` |
 | `S-LOG-USEREVENT` | `Luciq.logUserEvent(` |
 
 ### Masking config (`S-MASK-*`)
 
 | Code | Patterns |
 | --- | --- |
-| `S-MASK-SCREEN` | `setReproStepsConfig`, `setSessionsSyncCallback`, `PrivateView` widget usage |
-| `S-MASK-CALLBACK` | `NetworkLogger.setObfuscateLogCallback`, `NetworkLogger.setOmitLogCallback` |
+| `S-MASK-SCREEN` | `Luciq.setAutoMaskScreenshotTypes(`, `LuciqWidget(automasking:`, `LuciqPrivateView(`, `LuciqSliverPrivateView(`, `Luciq.setReproStepsConfig`, `Luciq.setScreenNameMaskingCallback` |
+| `S-MASK-NETWORK` | `NetworkLogger.setNetworkAutoMaskingEnabled`, `NetworkLogger.setNetworkLogBodyEnabled(false)` |
+| `S-MASK-CALLBACK` | `NetworkLogger.obfuscateLog(`, `NetworkLogger.omitLog(` |
 
 ### Route wrapping (informational)
 
-`MaterialApp` typically wraps with `LuciqNavigatorObserver` for screen-loading APM. If the customer uses `MaterialApp.router` (Navigator 2.0), they need the observer wired through `routerDelegate`. Detection:
+`MaterialApp` typically wraps with `LuciqNavigatorObserver` for screen-loading APM. `MaterialApp.router` (Navigator 2.0) ignores `navigatorObservers`, so there the observer goes on the router instead, e.g. `GoRouter(observers: [LuciqNavigatorObserver()])`. Detection:
 
 - `LuciqNavigatorObserver` referenced in `*.dart` → `INFO`
 - Absence with route-based app → `INFO` "screen-loading APM may be partial without LuciqNavigatorObserver"
@@ -113,7 +115,8 @@ Flutter SDK exposes the full feature-flag API (verified):
 
 | Anti-pattern | Detection | Status |
 | --- | --- | --- |
-| `Luciq.init` without `await` | Init call not preceded by `await` on the same / previous line | `WARN` |
+| No Dart crash hooks | `Luciq.init` found, but no `CrashReporting.reportCrash` passed to `runZonedGuarded` (or `PlatformDispatcher.instance.onError`) and no `FlutterError.onError` forwarding. `Luciq.init` installs no error handlers itself | `WARN` — Dart exceptions are not reported |
+| `LuciqPrivateView` with no `LuciqWidget` | `LuciqPrivateView(` / `LuciqSliverPrivateView(` used, but no `LuciqWidget(` wraps the app (or it sets `enablePrivateViews: false`) | `FAIL` — the private views mask nothing, silently |
 | Init in `main()` after `runApp()` | Init must precede `runApp` to capture early errors | `WARN` |
 | Token in source (vs. read from env / `--dart-define`) | Long string literal passed as the `token:` named arg to `Luciq.init` | `WARN` masked in report |
 | Both `luciq_flutter` and `instabug_flutter` declared | Both packages in `pubspec.yaml` dependencies | `WARN` — run `luciq-migrate` to finish the rename if mid-migration; long-term coexistence is unsupported |
