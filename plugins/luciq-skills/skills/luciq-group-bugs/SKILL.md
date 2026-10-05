@@ -142,7 +142,7 @@ Tell the customer up front that **assignee cannot be restored** in either mode �
 
 ## Out of scope
 
-This skill is bugs-only and deliberately does not touch `crash_*`, `apm_*`, `list_app_hangs`, `app_insights`, surveys, or reviews. It does not change a bug's status, priority, tags, or assignee except as the unavoidable side effect of `mark_as_duplicate` (which the customer is told about up front, including that assignee can't be restored). It does not regroup across apps/modes, and it does not move bugs between two existing masters (that's beyond v1 — unmark then re-mark instead).
+This skill is bugs-only and deliberately does not touch `crash_*`, `list_crashes` (crashes and app hangs), `apm_*`, `app_insights`, surveys, or reviews. It does not change a bug's status, priority, tags, or assignee except as the unavoidable side effect of `mark_as_duplicate` (which the customer is told about up front, including that assignee can't be restored). It does not regroup across apps/modes, and it does not move bugs between two existing masters (that's beyond v1 — unmark then re-mark instead).
 
 ## Style
 

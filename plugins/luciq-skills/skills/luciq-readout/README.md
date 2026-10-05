@@ -40,7 +40,7 @@ sequenceDiagram
     MCP->>Cloud: query
     Cloud-->>MCP: monitoring / apm / crashes sections
     MCP-->>Skill: aggregates (or per-section error)
-    Skill->>MCP: list_crashes / crash_patterns / list_app_hangs / list_bugs / list_reviews / surveys
+    Skill->>MCP: list_crashes (incl. APP_HANG) / crash_patterns / list_bugs / list_reviews / surveys
     MCP-->>Skill: sliced detail + NPS / verbatim feedback
     opt EM tier only
         Skill->>MCP: crash_details → list_occurrences_tokens → get_occurrence_details → crash_diagnostics
@@ -128,7 +128,7 @@ flowchart LR
 
 **Hard dependencies:**
 
-1. **Luciq MCP server, authenticated.** The whole readout is grounded in `list_applications`, `app_insights`, `list_crashes`, `crash_patterns`, `list_app_hangs`, `list_bugs`, `list_reviews`, and the per-occurrence detail tools. Without it there's nothing to render. Run `luciq-setup` first, or follow the [MCP install guide](https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/luciq-mcp-server/setup-by-ide).
+1. **Luciq MCP server, authenticated.** The whole readout is grounded in `list_applications`, `app_insights`, `list_crashes` (app hangs via `filters.type: ["APP_HANG"]`), `crash_patterns`, `list_bugs`, `list_reviews`, and the per-occurrence detail tools. Without it there's nothing to render. Run `luciq-setup` first, or follow the [MCP install guide](https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/luciq-mcp-server/setup-by-ide).
 2. **A resolved app slug and mode.** Every tool keys off `(slug, mode)`; the skill calls `list_applications` and confirms with you. Default mode is `production`.
 
 **Sharpens it when provided** (the skill asks if you don't): the **persona**, a **comparison frame** (version-vs-version or period-over-period), and an optional **segment cut**.
@@ -189,7 +189,7 @@ The references are loaded by the skill only when the workflow needs them — pro
 This skill was finalized and tested end-to-end against **live Luciq MCP data** (an iOS demo app in production with multiple shipped versions). The workflow, tool surface, response shapes, and metric meanings were verified against real responses, including:
 
 - `app_insights` at the app level and filtered per version (`3.1.4` vs `3.0.4`) — confirmed the four independent sections (`crashes`, `bugs`, `apm`, `monitoring`), the `value` / `rate` (change) pairing, and that the `bugs` section returns an error while `list_bugs` returns data.
-- `list_crashes` and `list_app_hangs` sorted by occurrences and by affected users — confirmed the `occurrences_counter` / `affected_users_counter` / `current_view` / `team` fields and the `FATAL_UI_HANG` hang type.
+- `list_crashes` (crashes, and app hangs via `filters.type: ["APP_HANG"]`) sorted by occurrences and by affected users — confirmed the `occurrences_counter` / `affected_users_counter` / `current_view` / `team` fields and the `FATAL_UI_HANG` hang type.
 - `crash_patterns` across `app_versions` and `oses` — confirmed the per-bucket `adoption` and `total_sessions_count` fields (the one real adoption signal), which corrected an earlier assumption that adoption was never exposed.
 - The full **EM per-occurrence chain**, run end to end on the top crash group: `crash_details` (the `stack_frames[]` shape — `library` / `description` / `type` / `is_grouping_frame`) → `list_occurrences_tokens` (the ULID page + total) → `get_occurrence_details` (one session's device / memory / screen / state) → `crash_diagnostics` (the ready aggregate: screen-flow patterns, device/OS/version distributions, and the memory/battery/storage/duration histograms).
 - `list_surveys` + `survey_details` — confirmed the NPS headline object (`score`, promoter / passive / detractor splits) and the verbatim "how can we do better" follow-up answers, used for the C-suite / VP / PM voice-of-customer dimension.
