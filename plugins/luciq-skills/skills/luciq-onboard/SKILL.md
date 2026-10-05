@@ -116,8 +116,8 @@ Filter out matches in test/spec/mock paths, validator/regex utilities, and anyth
 | iOS SwiftUI | `TextField`, `SecureField`, `Text`, `Image`, `TextEditor` | `.luciq_privateView()` modifier, or wrap in `LuciqPrivateView { ... }` |
 | iOS UIKit | `UITextField`, `UILabel`, `UITextView`, `UIImageView` | `view.luciq_privateView = true` (UIView category property) |
 | Android Compose | `TextField`, `Text`, `Image` | `Modifier.luciqPrivate()` |
-| Android Views | `EditText`, `TextView`, `ImageView` | `Luciq.addPrivateViews(view)` or `LuciqPrivateView.setPrivateView(view, true)` |
-| React Native | `TextInput`, `Text`, `Image` | wrap in `<LuciqPrivateView>...</LuciqPrivateView>` |
+| Android Views | `EditText`, `TextView`, `ImageView` | `Luciq.addPrivateViews(view)` (varargs; undo with `Luciq.removePrivateViews(view)`) |
+| React Native | `TextInput`, `Text`, `Image` | `Luciq.addPrivateView(ref)` with a ref to the mounted component — the RN SDK has no `<LuciqPrivateView>` component. Broad fallback: `Luciq.enableAutoMasking([AutoMaskingType.textInputs, AutoMaskingType.labels, AutoMaskingType.media])` |
 | Flutter | `TextField`, `Text`, `Image` | wrap the app root in `LuciqWidget(child: ...)` once, then wrap each view in `LuciqPrivateView(child: ...)` — without a `LuciqWidget` ancestor nothing is masked and no warning is shown |
 
 Verify the exact import path, method signature, and any version gating against the live setup docs for the user's platform before quoting them in a diff. The markers above evolved through the Instabug → Luciq rebrand and may differ across SDK versions.
