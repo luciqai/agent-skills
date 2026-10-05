@@ -101,6 +101,14 @@ shell_script = <<~SH
   if [ "${DEBUG_INFORMATION_FORMAT:-}" != "dwarf-with-dsym" ]; then
     echo "warning: DEBUG_INFORMATION_FORMAT is not dwarf-with-dsym for $CONFIGURATION, no dSYM to upload"; exit 0
   fi
+  DSYM="$DWARF_DSYM_FILE_NAME"
+  # Zip only the declared files, streamed: `zip -r` and zip's temp file both fall outside the sandbox.
+  # Runs before the CLI and credential checks, so a smoke build exercises it on any machine.
+  (cd "$DWARF_DSYM_FOLDER_PATH" && zip -q - "$DSYM/Contents/Info.plist" "$DSYM/Contents/Resources/DWARF/$EXECUTABLE_NAME") > "$SCRIPT_OUTPUT_FILE_0"
+  # Smoke builds pass LUCIQ_SKIP_UPLOAD=YES: everything above runs, nothing is sent.
+  if [ "${LUCIQ_SKIP_UPLOAD:-}" = "YES" ]; then
+    echo "note: LUCIQ_SKIP_UPLOAD=YES, dSYM zipped to $SCRIPT_OUTPUT_FILE_0, not uploaded"; exit 0
+  fi
   # Xcode runs scripts with a minimal PATH; add the usual CLI install locations.
   export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
   if ! command -v luciq >/dev/null 2>&1; then
@@ -108,13 +116,6 @@ shell_script = <<~SH
   fi
   if [ -z "${LUCIQ_AUTH_TOKEN:-}" ] && [ ! -f "$HOME/.luciqrc" ]; then
     echo "warning: no Luciq credentials, skipping symbol upload (run: luciq login)"; exit 0
-  fi
-  DSYM="$DWARF_DSYM_FILE_NAME"
-  # Zip only the declared files, streamed: `zip -r` and zip's temp file both fall outside the sandbox.
-  (cd "$DWARF_DSYM_FOLDER_PATH" && zip -q - "$DSYM/Contents/Info.plist" "$DSYM/Contents/Resources/DWARF/$EXECUTABLE_NAME") > "$SCRIPT_OUTPUT_FILE_0"
-  # Smoke builds pass LUCIQ_SKIP_UPLOAD=YES: everything above runs, nothing is sent.
-  if [ "${LUCIQ_SKIP_UPLOAD:-}" = "YES" ]; then
-    echo "note: LUCIQ_SKIP_UPLOAD=YES, dSYM zipped to $SCRIPT_OUTPUT_FILE_0, not uploaded"; exit 0
   fi
   luciq upload ios-dsym "$SCRIPT_OUTPUT_FILE_0" --slug #{opts[:slug]} --mode #{opts[:mode]}
 SH
