@@ -118,7 +118,7 @@ Filter out matches in test/spec/mock paths, validator/regex utilities, and anyth
 | Android Compose | `TextField`, `Text`, `Image` | `Modifier.luciqPrivate()` |
 | Android Views | `EditText`, `TextView`, `ImageView` | `Luciq.addPrivateViews(view)` or `LuciqPrivateView.setPrivateView(view, true)` |
 | React Native | `TextInput`, `Text`, `Image` | wrap in `<LuciqPrivateView>...</LuciqPrivateView>` |
-| Flutter | `TextField`, `Text`, `Image` | wrap in `LuciqPrivateView(child: ...)` |
+| Flutter | `TextField`, `Text`, `Image` | wrap the app root in `LuciqWidget(child: ...)` once, then wrap each view in `LuciqPrivateView(child: ...)` — without a `LuciqWidget` ancestor nothing is masked and no warning is shown |
 
 Verify the exact import path, method signature, and any version gating against the live setup docs for the user's platform before quoting them in a diff. The markers above evolved through the Instabug → Luciq rebrand and may differ across SDK versions.
 
