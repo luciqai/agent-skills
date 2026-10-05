@@ -26,6 +26,8 @@ YOU MUST verify SDK API signatures, package names, and MCP transport URLs agains
 | iOS install + init | https://docs.luciq.ai/ios/setup-luciq-for-ios/integrate-luciq-on-ios/luciq-ai-ios-guide |
 | Android install + init | https://docs.luciq.ai/android/set-up-luciq-for-android/integrate-luciq-on-android/luciq-ai-android-guide |
 | Flutter install + init | https://docs.luciq.ai/flutter/setup-luciq-for-flutter/integrating-luciq |
+| Flutter crash hooks | https://docs.luciq.ai/flutter/setup-luciq-for-flutter/setup-crash-reporting/reporting-crashes |
+| Flutter `LuciqWidget`, repro steps, private views | https://docs.luciq.ai/flutter/setup-luciq-for-flutter/logs-and-profiling/auto-masking-and-repro-steps |
 | React Native install + init | https://docs.luciq.ai/react-native/setup-luciq-for-react-native/integrate-luciq-on-react-native |
 | KMP install + init | https://docs.luciq.ai/kmp/setup-luciq-for-kmp/integrating-luciq |
 | MCP server config | https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/luciq-mcp-server/setup-by-ide |
@@ -231,18 +233,36 @@ Verify exact dependency coordinates, version, and init signature against the liv
    ```
 2. **Fetch the package**: `flutter packages get`
 3. **Raise the iOS deployment target** before `pod install` (or the first iOS build): the `luciq_flutter` podspec sets `s.ios.deployment_target = '15.4'` (19.9.4 — check `~/.pub-cache/hosted/pub.dev/luciq_flutter-*/ios/luciq_flutter.podspec` for the installed version), while a default Flutter project targets iOS 12.0. Set `platform :ios, '15.4'` in `ios/Podfile` and `IPHONEOS_DEPLOYMENT_TARGET = 15.4` on the Runner target. Otherwise `pod install` fails with only CocoaPods' generic "required a higher minimum deployment target" error.
-4. **Import** in the file where you initialize: `import 'package:luciq_flutter/luciq_flutter.dart';`
-5. **Initialize** in `initState()` (verify the exact API signature on the live guide):
+4. **Import** in `lib/main.dart`: `import 'dart:async';` (for `runZonedGuarded` / `Zone`) and `import 'package:luciq_flutter/luciq_flutter.dart';`
+5. **Initialize in `main()`, with crash hooks and `LuciqWidget`** — not in `initState()` as the integration guide shows. Without the hooks, Dart errors are never reported; without `LuciqWidget`, user steps and masking of Flutter widgets (`LuciqPrivateView`, auto-masking) silently do nothing. Pattern from the SDK's own example (`luciq-flutter-sdk` v19.9.4, `packages/luciq_flutter/example/lib/main.dart`); verify on the live *Reporting Crashes* and *Auto-masking & Repro Steps* pages (Canonical sources):
    ```dart
-   Luciq.init(
-     token: 'APP_TOKEN',
-     invocationEvents: [InvocationEvent.shake, InvocationEvent.floatingButton],
-   );
+   void main() {
+     runZonedGuarded(
+       () {
+         WidgetsFlutterBinding.ensureInitialized();
+         Luciq.init(
+           token: 'APP_TOKEN',
+           invocationEvents: [InvocationEvent.shake, InvocationEvent.floatingButton],
+         );
+         FlutterError.onError = (FlutterErrorDetails details) {
+           Zone.current.handleUncaughtError(details.exception, details.stack!);
+         };
+         runApp(LuciqWidget(child: const MyApp())); // MyApp = the existing root widget
+       },
+       CrashReporting.reportCrash,
+     );
+   }
    ```
-6. **iOS permissions** — add to `Info.plist` (required for media attachments):
+   Keep any existing `main()` setup (Firebase, DI) inside the zone callback. If another crash reporter already sets `FlutterError.onError` or uses `runZonedGuarded`, chain to its handler instead of replacing it.
+6. **Screen names for repro steps** — add `LuciqNavigatorObserver()` to `navigatorObservers` on `MaterialApp` / `CupertinoApp`. `MaterialApp.router` has no `navigatorObservers`; register it on the router instead (go_router: `GoRouter(observers: [LuciqNavigatorObserver()])`).
+7. **Network logging (optional — not automatic in Flutter)**: check `pubspec.yaml` for the HTTP client and offer the matching add-on (versions as of `luciq-flutter-sdk` v19.9.4, all require `luciq_flutter` 19.x — verify on pub.dev):
+   - `dio` → `luciq_dio_interceptor` (3.1.1): `dio.interceptors.add(LuciqDioInterceptor());`
+   - `http` → `luciq_http_client` (3.1.0): send requests through `LuciqHttpClient()` instead of `http.Client()` — top-level `http.get()` calls bypass it.
+   - `gql_link` clients (`graphql_flutter`, `ferry`) → `luciq_gql_link` (1.0.0): `Link.from([LuciqGqlLink(endpoint: url), HttpLink(url)])` — it must come before the terminating link.
+8. **iOS permissions** — add to `Info.plist` (required for media attachments):
    - `NSMicrophoneUsageDescription`
    - `NSPhotoLibraryUsageDescription`
-7. **Android permissions**: auto-injected into `AndroidManifest.xml` — no manual edits needed. Exception: if you enable screenshot invocation, the SDK requests storage permission at app launch (it monitors the screenshots directory).
+9. **Android permissions**: auto-injected into `AndroidManifest.xml` — no manual edits needed. Exception: if you enable screenshot invocation, the SDK requests storage permission at app launch (it monitors the screenshots directory).
 
 ### React Native
 
@@ -337,6 +357,8 @@ Goal: identify likely-sensitive UI views and configure SDK-side masking. A naive
 3. Show the filtered match list with `file:line` for each. Get per-match confirmation. Do not apply masking rules in bulk.
 4. Verify the masking API signature for the detected platform on the live guide. The masking API has differed across platforms and changed across SDK versions; do not hardcode it. The Flutter docs pages contradict each other (`AutoMasking` names, how to turn it off); per-platform calls checked against SDK source are in `luciq-masking-rules/references/auto-mask-types.md`.
 5. Apply masking config only for confirmed matches.
+
+**Flutter:** `LuciqPrivateView` (`LuciqSliverPrivateView` inside slivers) and `AutoMasking` mask Flutter widgets only under the `LuciqWidget` from the Flutter recipe. Without it they mask nothing and raise no error — confirm it wraps the root before applying.
 
 **Network logs — rely on the default first.** From SDK 14.2.0 the SDK masks a known set of sensitive header and query keys (auth, token, password, api key, secret variants) on the device, before anything is sent. Confirm the installed version is ≥ 14.2.0 (`Package.resolved`, `Podfile.lock`, `build.gradle`, `pubspec.lock`, `package.json`) and do not write a custom handler for keys the default already covers. The full default list is in `luciq-masking-rules/references/network-masking.md`.
 
@@ -440,6 +462,7 @@ STOP on build failure. NEVER claim success on a broken build.
 Print:
 - File where init was added.
 - Invocation event configured.
+- Flutter: the network-logging add-on installed, or *"none — network requests won't appear in reports"*.
 - Masking rules applied (with file:line for each).
 - User identification call sites.
 - MCP / CLI wired status.
@@ -456,7 +479,8 @@ Setup ends at a green build. **Do not launch the app, trigger crashes, or inspec
 > 1. **Bug reporting:** run the app, tap the Luciq floating button (or shake — in the iOS Simulator: *Device → Shake*, Ctrl+Cmd+Z), and send a report that says "test report".
 > 2. **Crash reporting:**
 >    - **Stop the debugger first.** With Xcode (or Android Studio) attached, the debugger catches the crash and the app just freezes — no report is written. On iOS, launch the app from the simulator's home screen, or uncheck *Edit Scheme → Run → Debug executable*.
->    - Crash the app. If there's no easy way, add a temporary button that calls `fatalError("Luciq test crash")` (Kotlin: `throw RuntimeException("Luciq test crash")`) and remove it afterwards.
+>    - **Flutter: use a release build** (`flutter run --release`). Dart errors are sent only in release mode; debug and profile builds just print them to the console.
+>    - Crash the app. If there's no easy way, add a temporary button that calls `fatalError("Luciq test crash")` (Kotlin: `throw RuntimeException("Luciq test crash")`, Dart: `throw Exception('Luciq test crash')`) and remove it afterwards.
 >    - **Open the app again.** Crash reports are sent on the next launch, not at the moment of the crash.
 > 3. Open the Luciq dashboard for this app. The report and the crash should be there within a minute or two.
 >
@@ -478,6 +502,7 @@ If you catch yourself thinking any of these, you are about to ship a broken inte
 - "I skipped checking the live guide because the docs probably haven't changed." That's how you ship a stale signature. Always verify.
 - "I hardcoded the init signature from this file, it looked right." This file is illustrative, not authoritative. The live guide is the source of truth.
 - "The guide shows this method, so it exists." Check it against the installed SDK first. A guide snippet that isn't valid code is prose — don't fill in its gaps.
+- "Flutter `Luciq.init` is in `initState()` like the guide shows, so it's done." Dart errors reach Luciq only through `runZonedGuarded(…, CrashReporting.reportCrash)` + `FlutterError.onError`, and masking and user steps need `LuciqWidget` at the root.
 - "I'll write a network obfuscation handler to be safe." Not for keys the default auto-masking already covers. Extra handlers are extra code to get wrong.
 - "I committed the app token inline because it's just for local testing." Tokens leak via git history. Use env injection or a gitignored secrets file.
 - "I'll show all the apps from `list_applications` and let them pick." Not past 10 — ask for the name or token and filter.
