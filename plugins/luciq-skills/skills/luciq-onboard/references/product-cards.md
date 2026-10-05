@@ -340,8 +340,9 @@ Verify product names, SDK class names, and dashboard surface labels against http
 - APM not being adopted this session → defer with revisit condition *"when you adopt APM."*
 
 **Apply targets.**
-- `Luciq.startFlow(name)` at the journey entry point (e.g. cart view appearance).
-- `Luciq.endFlow(name)` at the success terminus (e.g. confirmation view appearance), and at known abandonment points if any.
+- The APM module's `startFlow(name)` at the journey entry point (e.g. cart view appearance) — `APM.startFlow(name)` on Android, Flutter and React Native. Flows live on the APM module, not on `Luciq`.
+- The APM module's `endFlow(name)` at the success terminus (e.g. confirmation view appearance), and at known abandonment points if any — `APM.endFlow(name)` on Android, Flutter and React Native.
+- Optionally `APM.setFlowAttribute(name, key, value)` while the flow is running, to record the stage the user reached (e.g. `step` → `payment`).
 - Flow names follow the user's existing screen-naming convention (don't invent new vocabulary — match what their navigation already calls these screens).
 - One flow at a time per name — verify no parallel `startFlow` with the same name is possible in the proposed instrumentation.
 
