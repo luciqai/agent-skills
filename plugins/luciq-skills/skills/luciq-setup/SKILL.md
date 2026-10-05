@@ -47,6 +47,17 @@ The live guides are the source of truth for *what* to do, but a guide snippet ca
 
 If a guide snippet is not valid code in the target language (prose inside a code block, unfilled placeholders), treat it as prose. Do not fill in the gaps and ship the rest verbatim.
 
+### Where the AI guides contradict this skill
+
+The AI guides are agent workflows of their own, and in places they give the opposite instruction (checked on the Android guide). Take API names, coordinates and signatures from the guide; take the workflow from this skill. On a conflict, this skill wins:
+
+| The AI guide says | Do instead |
+| --- | --- |
+| Put the app token in the init call (and, on Android, in `build.gradle`) | Inject it at build time — step 2 |
+| List every app from MCP as a numbered list | Past 10 apps, ask for the name or token — step 2 |
+| A network masking handler is mandatory, `Authorization` and `token` included | Rely on the SDK default; add a handler only for keys it misses — step 5 |
+| Upload mapping files with an app-token script run by a Gradle task over `android.applicationVariants` (removed in AGP 9) | Hand off to `luciq-symbolicate` — step 8 |
+
 ## Workflow checklist
 
 Track every step. STOP on any failed step. Do not continue past a broken state.
@@ -98,6 +109,18 @@ Resolve the token in this order:
 NEVER commit the token inline. Use a build-time injection, an env var, or a gitignored secrets file. Tokens leak via git history, which is irreversible.
 
 - **iOS:** run `scripts/add_token_config.rb` — gitignored `.xcconfig` → `$(LUCIQ_APP_TOKEN)` in a real `Info.plist` → `Bundle.main`. See `references/ios-token-injection.md`. Do NOT use `INFOPLIST_KEY_<CustomKey>`: Xcode silently drops custom keys, the build stays green, and the token is empty at runtime.
+- **Android:** `LUCIQ_APP_TOKEN=…` in `local.properties` (gitignored in the Android Studio template — confirm it), or the env var in CI → a `BuildConfig` field → `Luciq.Builder(this, BuildConfig.LUCIQ_APP_TOKEN)`. Verified on AGP 9.0 with the configuration cache:
+  ```kotlin
+  import java.util.Properties   // top of app/build.gradle.kts
+
+  val luciqAppToken = providers.environmentVariable("LUCIQ_APP_TOKEN").orNull
+      ?: Properties().apply { rootProject.file("local.properties").takeIf { it.exists() }?.reader()?.use { load(it) } }
+          .getProperty("LUCIQ_APP_TOKEN", "")
+  android {
+      buildFeatures { buildConfig = true }
+      defaultConfig { buildConfigField("String", "LUCIQ_APP_TOKEN", "\"$luciqAppToken\"") }
+  }
+  ```
 
 ## 3. Per-platform recipe
 
@@ -171,18 +194,33 @@ Read `references/ios-spm.md` first. **Do not hand-edit `project.pbxproj`** — h
 
 ### Android
 
-Verify exact dependency coordinates, version, and init signature against the live guide before applying — these change across releases.
+Verify exact dependency coordinates, version, and init signature against the live guide before applying — these change across releases. Latest version: `<release>` in https://repo1.maven.org/maven2/ai/luciq/library/luciq/maven-metadata.xml — use it for every `ai.luciq.library` artifact and the plugin. Snippets below are verified against SDK and plugin 19.12.1 on AGP 9.0.
 
 1. **Check compile SDK version**: must be ≥ 29. Raise `compileSdkVersion` in `app/build.gradle(.kts)` if needed.
-2. **Add the dependency** in `app/build.gradle(.kts)` (verify groupId, artifactId, and latest version on the live guide):
-   - Gradle: `implementation 'ai.luciq.library:luciq:<version>'`
-   - Maven projects: use the same groupId/artifactId coordinates from the live guide.
-3. **Verify dependency resolution** after user confirmation: `./gradlew :app:dependencies` — this triggers Gradle to fetch the new dependency without needing Android Studio. Fix any resolution errors before continuing.
-4. **Initialize in the Application subclass** `onCreate` using the Builder pattern (verify exact API on the live guide):
-   - Kotlin: `Luciq.Builder(this, "APP_TOKEN").build()`
-   - Java: `new Luciq.Builder(this, "APP_TOKEN").build();`
-5. **Permissions**: the SDK automatically injects `WAKE_LOCK` and `INTERNET` into `AndroidManifest.xml` — no manual edits needed. Optional permissions for image/video attachments and network monitoring are listed in the live guide.
-6. **Android 15+ (API 35)**: if `targetSdkVersion` is 35 or higher, the live guide requires Luciq ≥ 13.4.0 for 16 KB page-size support. Verify the minimum compatible version on the live guide and pin accordingly.
+2. **Add the dependencies** in `app/build.gradle(.kts)`:
+   - `implementation("ai.luciq.library:luciq:<version>")` — it already brings `luciq-apm` and `luciq-apm-okhttp-interceptor`.
+   - `implementation("ai.luciq.library:luciq-with-okhttp-interceptor:<version>")` — the AI guide omits it. The plugin (step 3) rewires every `OkHttpClient` the app builds, directly or through Retrofit, Coil, Apollo…, to a class in this artifact. Without it the debug build is green and the release build fails in R8: `Missing class ai.luciq.library.okhttp.Transform`.
+   - Maven projects: same groupId/artifactId coordinates.
+3. **Apply the Gradle plugin and turn on network capture** — `networkInterception` defaults to off, and without it no request is captured automatically:
+   ```kotlin
+   // root build.gradle.kts (Groovy: buildscript { dependencies { classpath "ai.luciq.library:luciq-plugin:<version>" } })
+   plugins { id("ai.luciq.library") version "<version>" apply false }
+
+   // app/build.gradle.kts, after id("com.android.application")
+   plugins { id("luciq") }
+   luciq { networkInterception { enabled = true } }
+   ```
+   Two AI-guide lines fail script compilation in a `.kts` file: `okHttp { config -> config.enabled = … }` (nested blocks take a receiver: `okHttp { enabled = true }`) and `apm { captureHttpBodyEnabled = … }` (no such property).
+4. **Verify dependency resolution** after user confirmation: `./gradlew :app:dependencies` — this triggers Gradle to fetch the new dependency without needing Android Studio. Fix any resolution errors before continuing.
+5. **Initialize in the Application subclass** as the first statement after `super.onCreate()`. No `Application` subclass yet: create one and set `android:name` on `<application>` in the manifest. Token from step 2:
+   - Kotlin: `Luciq.Builder(this, BuildConfig.LUCIQ_APP_TOKEN).setInvocationEvents(LuciqInvocationEvent.SHAKE, LuciqInvocationEvent.FLOATING_BUTTON).build()`
+   - Java: `new Luciq.Builder(this, BuildConfig.LUCIQ_APP_TOKEN).setInvocationEvents(LuciqInvocationEvent.SHAKE, LuciqInvocationEvent.FLOATING_BUTTON).build();`
+6. **Permissions**: the SDK automatically injects `WAKE_LOCK` and `INTERNET` into `AndroidManifest.xml` — no manual edits needed. Optional permissions for image/video attachments and network monitoring are listed in the live guide.
+7. **Android 15+ (API 35)**: if `targetSdkVersion` is 35 or higher, the live guide requires Luciq ≥ 13.4.0 for 16 KB page-size support. Verify the minimum compatible version on the live guide and pin accordingly.
+8. **Jetpack Compose** (`androidx.compose` in the dependencies): add `ai.luciq.library:luciq-compose:<version>` (or `luciq-compose-apm`, which also measures Compose screen loading). It provides `LuciqScreen` and the `Modifier.luciqPrivate()` that step 5 masks with. On Navigation 2, `luciq { setCaptureComposeNavigationDestinations(true) }` names screens with no code change. This is the "Step 1D (Compose detection)" the AI guide points to but never shows.
+9. **NDK** (`externalNativeBuild`, `src/main/cpp`, or `.so` files in `jniLibs`): add `ai.luciq.library:luciq-ndk-crash:<version>` and call `CrashReporting.setNDKCrashesState(Feature.State.ENABLED)` after init — native crash capture is off by default. Native symbols are `luciq-symbolicate`'s `android-ndk` upload (step 8).
+10. **AGP 9 only:** `processDebugMainManifest` fails with `Namespace 'androidx.vectordrawable' is used in multiple modules` when the app has no newer appcompat (Android Studio's Compose template has none): `luciq-core` pulls `material:1.0.0` → `appcompat:1.0.0`, and AGP 9 turns the duplicate namespace into an error. Fix: `implementation("androidx.vectordrawable:vectordrawable-animated:1.2.0")`.
+11. **With `isMinifyEnabled = true`, also run `./gradlew :app:assembleRelease`** next to the step 9 debug build. R8 is the only step that catches a missing Luciq artifact.
 
 ### Flutter
 
@@ -236,11 +274,11 @@ Verify dependency coordinates, version, and init signatures against the live gui
    ```kotlin
    sourceSets {
        commonMain.dependencies {
-           api("ai.luciq-library:luciq-kmp:<version>")
+           api("ai.luciq.library:luciq-kmp:<version>")
        }
    }
    ```
-   iOS also requires a separate native LuciqKMP dependency — check the live guide for the exact artifact.
+   The group is `ai.luciq.library` — the KMP guide's code block has `ai.luciq-library`, which does not exist on Maven Central. iOS also requires a separate native LuciqKMP dependency — check the live guide for the exact artifact.
 
 2. **Create a shared config object** in `commonMain` (verify the exact class names and fields on the live guide):
    ```kotlin
@@ -314,7 +352,23 @@ NetworkLogger.setRequestObfuscationHandler { request in
 }
 ```
 
-Response bodies use `NetworkLogger.setResponseObfuscationHandler`. For other platforms, find the equivalent on the live guide and check the name as described in *Check symbols against the SDK*. Anything deeper — omitting whole endpoints, compliance presets — belongs to `luciq-masking-rules`; mention it in the hand-off rather than doing it here.
+Response bodies use `NetworkLogger.setResponseObfuscationHandler`.
+
+Android, verified against SDK 19.12.1. The headers are nullable `MutableMap`s and the body field is `response`, not `responseBody`, so the AI Android guide's snippet does not compile:
+
+```kotlin
+val masked = setOf("cookie", "x-api-key")
+Luciq.setNetworkLogListener { log ->
+    log.requestHeaders?.let { headers ->
+        for (key in headers.keys.toList()) if (key.lowercase() in masked) headers[key] = "*****"
+    }
+    log  // return null to drop the log entirely
+}
+```
+
+Android auto-mask types: `Luciq.setAutoMaskScreenshotsTypes(...)` replaces the default set, which is `MaskingType.WEB_VIEWS` alone. The AI guide's default `TEXT_INPUTS, LABELS, MEDIA` therefore unmasks WebViews — keep `MaskingType.WEB_VIEWS` in any call.
+
+For other platforms, find the equivalent on the live guide and check the name as described in *Check symbols against the SDK*. Anything deeper — omitting whole endpoints, compliance presets — belongs to `luciq-masking-rules`; mention it in the hand-off rather than doing it here.
 
 **App Store privacy (iOS, and the iOS side of Flutter / React Native / KMP).** Every feature turned on above changes what the app must declare on its App Store privacy card, and Apple rejects mismatches. Read `references/ios-privacy.md`, then:
 
