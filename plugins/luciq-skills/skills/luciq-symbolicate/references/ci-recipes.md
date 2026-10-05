@@ -102,22 +102,28 @@ end
 ## Gradle
 
 ```kotlin
-// app/build.gradle.kts
-tasks.register<Exec>("uploadLuciqMapping") {
-    val variant = "release"
+// app/build.gradle.kts — the CLI reads LUCIQ_AUTH_TOKEN from the environment
+val uploadLuciqMapping = tasks.register<Exec>("uploadLuciqMapping") {
     commandLine(
         "luciq", "upload", "android-mapping",
-        "app/build/outputs/mapping/$variant/mapping.txt",
+        layout.buildDirectory.file("outputs/mapping/release/mapping.txt").get().asFile,
         "--slug", "my-app", "--mode", "production",
-        "--version-name", android.defaultConfig.versionName,
-        "--version-code", android.defaultConfig.versionCode.toString()
+        "--version-name", android.defaultConfig.versionName!!,
+        "--version-code", android.defaultConfig.versionCode!!.toString()
     )
 }
 
-tasks.named("assembleRelease") { finalizedBy("uploadLuciqMapping") }
+// AGP registers variant tasks after this script runs, so tasks.named("assembleRelease") fails here
+tasks.configureEach {
+    if (name == "assembleRelease" || name == "bundleRelease") finalizedBy(uploadLuciqMapping)
+}
 ```
 
+Verified on AGP 9.0 / Gradle 9.4, configuration cache on. An `Exec` task runs in the module directory, so the path is `build/…`, not `app/build/…`. `versionName` is a `String?` and won't compile as a `commandLine` argument without `!!`. `bundleRelease` is the Play Store build, so hook it as well as `assembleRelease`.
+
 Pulling the version straight from `defaultConfig` is the point — it can't drift from the build the way a hand-maintained CI variable can. If flavors override the version, read it from the variant instead.
+
+Don't port the AI Android guide's `uploadMappingFiles` task: it loops over `android.applicationVariants`, which AGP 9 removed, and it hardcodes the app token in `build.gradle`.
 
 ## Bitrise
 
