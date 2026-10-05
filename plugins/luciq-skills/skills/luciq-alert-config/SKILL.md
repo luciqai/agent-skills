@@ -1,6 +1,6 @@
 ---
 name: luciq-alert-config
-description: Use when the user wants to create, set up, configure, change, enable, disable, delete, or inspect a specific Luciq alert (rule). Triggers include "alert me when…", "notify me when…", "create/set up an alert for…", "add an alert", "change the threshold on…", "turn off/disable this alert", "delete that alert", "show me my alerts", or naming a metric and a condition to watch (crash-free sessions, ANR, network failure rate, apdex, p95, launch time, crash spikes). Authors a valid alert payload by reading the per-app init catalog first, asking for any missing detail instead of guessing, and surfacing tool rejections honestly.
+description: Use when the user wants to create, set up, configure, change, enable, disable, delete, or inspect a specific Luciq alert (rule). Triggers include "alert me when…", "notify me when…", "create/set up an alert for…", "add an alert", "change the threshold on…", "turn off/disable this alert", "delete that alert", "show me my alerts", or naming a metric and a condition to watch (crash-free sessions, ANR, network failure rate, apdex, p95, launch time, crash spikes). Authors a valid alert payload by reading the per-app init catalog first, asking for any missing detail instead of guessing, and surfacing tool rejections honestly — including changes the MCP can't make, which it routes to the dashboard.
 ---
 
 # Luciq Alert Configuration
@@ -30,8 +30,8 @@ Tools this skill uses:
 | Tool | Action | Purpose |
 | --- | --- | --- |
 | `read_alerts` | `init` | The per-app catalog: valid rule types, triggers, conditions, actions, operators, time-window keys, and lookup tables (developers/teams/tracking tools/tags). The source of truth for what's possible. |
-| `read_alerts` | `list` / `details` | Find or inspect an existing alert (for update / enable / disable / delete). |
-| `write_alerts` | `create` / `update` / `delete` | Apply the change. State-changing — confirm intent first. |
+| `read_alerts` | `list` / `details` | Find or inspect an existing alert (for update / delete), and its `status` (whether it's enabled). |
+| `write_alerts` | `create` / `update` / `delete` | Apply the change. State-changing — confirm intent first. No enable/disable (observed Sep 2026). |
 
 ## Workflow
 
@@ -44,6 +44,12 @@ Tools this skill uses:
 - **Inspect** ("show my alerts", "what does alert X do")
 
 For inspect, call `read_alerts(list/details)` and answer. For the rest, continue.
+
+**Enable / disable:** as of Sep 2026 the MCP can't pause or re-enable a rule — `write_alerts`
+only creates, updates, and deletes. Re-check `init` and the `write_alerts` schema: if either
+exposes an enabled/status field, use it. Otherwise say so plainly and point the user to the
+rule on the dashboard's **Alerts & Rules** page to toggle it. Don't delete a rule as a
+stand-in for pausing it unless the user asks for deletion.
 
 ### Step 2. Gather the spec — never create on an unstated value
 
@@ -108,6 +114,11 @@ Encode to the wire format the tool expects — getting this wrong silently malfo
   **literal numbers** (e.g. `99`, `10`).
 - **p95 / p50 thresholds are in seconds** (`0.5` = half a second), not milliseconds.
 - **Crashes use `app_version_v2`**, never the deprecated `app_version`.
+- **A crash-occurred rule with no conditions also fires on handled non-fatals** (observed
+  Sep 2026). When creating one, say so and offer a Crash Type condition from init that
+  excludes non-fatals. As of Sep 2026 Crash Type had no "Fatal" value and no multi-select —
+  if init still offers no way to exclude non-fatals, tell the user rather than imply the
+  rule is fatal-only.
 - **Lookup values** (tracking-tool id for `forward`, developer ids for `send_email`, team
   id for `set_team`) come from init's lookup tables — never invented. `send_email` to
   everyone is `{ "developer_ids": ["all"] }`.
@@ -126,11 +137,19 @@ ambiguous. If the tool returns an error (e.g. a 422: out of range, limit reached
 found), **surface that failure plainly** — say what failed and why. Never report success
 for a call that errored. On success, confirm the alert's effective behavior back to the user.
 
+**Predefined (default) rules refuse edits.** Luciq creates a set of rules for each new app
+environment (e.g. crash-free sessions/users below 99%, a crash affecting 1% of sessions).
+As of Sep 2026 `write_alerts update` rejects *any* change to them — threshold or
+recipients included — with "Trigger can not be changed"; the dashboard behaves the same.
+On that error, say it's a predefined rule that can't be edited, offer to create a custom
+rule with the threshold/recipients the user wants, and tell them to turn the predefined
+one off on the **Alerts & Rules** page so both don't fire.
+
 ## Style
 
 - Translate, don't interrogate: ask only for the piece that's genuinely missing, one question.
 - Mirror the user's numbers exactly (97% stays 97%, not "about 95%").
-- Confirm state-changing actions (create/delete/disable) before firing when intent is fuzzy.
+- Confirm state-changing actions (create/update/delete) before firing when intent is fuzzy.
 - Never claim an alert was created until the tool returns success.
 
 ## Red Flags — STOP
@@ -145,3 +164,10 @@ for a call that errored. On success, confirm the alert's effective behavior back
 - "It returned a 422 but I'll tell the user it's set up." Never. Report the failure.
 - "Apdex 90% → send 90." Stop — apdex is 0–1; send `0.9`.
 - "Crashes filter on app_version." Stop — use `app_version_v2`.
+- "Pause this alert — I'll send a status change." Stop — `write_alerts` has no
+  enable/disable unless init now shows one. Route the toggle to the dashboard; never
+  delete as a substitute.
+- "'Trigger can not be changed' — I'll retry with a tweaked payload." Stop — it's a
+  predefined rule. Offer a custom replacement; the user turns the original off.
+- "Alert on any crash, no conditions." It also fires on handled non-fatals. Say so and
+  offer a Crash Type condition.
