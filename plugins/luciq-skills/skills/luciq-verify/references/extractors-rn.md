@@ -53,15 +53,16 @@ Init typically lives in `App.tsx` / `App.js` or `index.js`. Note the entry point
 
 | Module | Patterns |
 | --- | --- |
-| Bug Reporting | `BugReporting.setEnabled`, `BugReporting.setOptions`, `Luciq.setBugReportingEnabled` |
-| Crash Reporting | `CrashReporting.setEnabled`, `CrashReporting.sendJSCrash`, `CrashReporting.reportError` |
+| Bug Reporting | `BugReporting.setEnabled`, `BugReporting.setOptions` |
+| Crash Reporting | `CrashReporting.setEnabled`, `CrashReporting.reportError` |
 | APM | `APM.setEnabled` (subset support — RN APM is auto-instrumented for screen loading + flows) |
-| Session Replay | `SessionReplay.setNetworkLogsEnabled`, `SessionReplay.setUserStepsEnabled`, `SessionReplay.setLuciqLogsEnabled` |
+| Session Replay | `SessionReplay.setEnabled`, `SessionReplay.setNetworkLogsEnabled`, `SessionReplay.setUserStepsEnabled`, `SessionReplay.setLuciqLogsEnabled` |
 | Network Logger | `NetworkLogger.setEnabled`, `NetworkLogger.setRequestFilterExpression` |
 | NDK | `CrashReporting.setNDKCrashesEnabled` |
 | Surveys | `Surveys.setEnabled` |
 | Replies | `Replies.setEnabled` |
 | Feature Requests | `FeatureRequests.setEnabled` |
+| Whole SDK | `Luciq.setEnabled` |
 
 ### Invocation events (`S-INVOKE-*`)
 
@@ -74,7 +75,7 @@ Patterns:
 | Code | Patterns |
 | --- | --- |
 | `S-IDENTITY-USER` | `Luciq.identifyUser`, `Luciq.setUserData` |
-| `S-IDENTITY-LOGOUT` | `Luciq.logOut`, `Luciq.logoutUser` |
+| `S-IDENTITY-LOGOUT` | `Luciq.logOut` |
 | `S-IDENTITY-ATTR` | `Luciq.setUserAttribute`, `Luciq.removeUserAttribute`, `Luciq.getUserAttribute` |
 | `S-IDENTITY-CDATA` | `Luciq.setUserData(` |
 
@@ -86,7 +87,7 @@ RN SDK exposes the full feature-flag API (verified):
 | --- | --- |
 | `S-FLAG-ADD` | `Luciq.addFeatureFlag`, `Luciq.addFeatureFlags` |
 | `S-FLAG-REMOVE` | `Luciq.removeFeatureFlag`, `Luciq.removeFeatureFlags` |
-| `S-FLAG-CLEAR` | `Luciq.removeAllFeatureFlags`, `Luciq.clearAllFeatureFlags` |
+| `S-FLAG-CLEAR` | `Luciq.removeAllFeatureFlags` |
 
 ### Custom logging (`S-LOG-*`)
 
@@ -99,13 +100,15 @@ RN SDK exposes the full feature-flag API (verified):
 
 | Code | Patterns |
 | --- | --- |
-| `S-MASK-NETWORK` | `NetworkLogger.setRequestFilterExpression`, `NetworkLogger.setObfuscateLogCallback` |
-| `S-MASK-SCREEN` | `SessionReplay.setSyncCallback` (return value controls capture) |
-| `S-MASK-CALLBACK` | `NetworkLogger.setObfuscateLogCallback`, `setOmitLogCallback` |
+| `S-MASK-NETWORK` | `NetworkLogger.setRequestFilterExpression` (omits matching requests), `NetworkLogger.setNetworkDataObfuscationHandler`, `NetworkLogger.setNetworkLogBodyEnabled(false)` |
+| `S-MASK-SCREEN` | `Luciq.enableAutoMasking([...])`, `Luciq.addPrivateView(`, `SessionReplay.setSyncCallback` (return value controls capture) |
+| `S-MASK-CALLBACK` | `NetworkLogger.setNetworkDataObfuscationHandler` |
+
+If the init object sets `networkInterceptionMode: NetworkInterceptionMode.native`, network logging is configured in native code and the JS `NetworkLogger` handlers above don't apply. Take the network masking findings from the iOS / Android extractors instead.
 
 ### Module toggle state detection
 
-Look for `Luciq.init({ ... initEnabled: false, ... })` and similar named args in the init object — those are the canonical way to disable a module from the get-go on RN.
+The RN init object has no module flags. `LuciqConfig` takes only `token`, `invocationEvents`, `debugLogsLevel`, `codePushVersion`, `ignoreAndroidSecureFlag`, `appVariant`, `networkInterceptionMode` and `overAirVersion`. A module is switched off from the start by calling its `setEnabled(false)` from the table above right after `Luciq.init(...)`, or the whole SDK with `Luciq.setEnabled(false)`. Treat that call as the module's state when it runs outside any `__DEV__` guard. Never report a module as disabled because of an init-object key.
 
 ## Native side cross-references
 
