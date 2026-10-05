@@ -9,14 +9,14 @@ Verify exact constant names, method signatures, and platform defaults against th
 | Constant | What it masks |
 |---|---|
 | `MASK_NOTHING` | Disables all automatic masking. Choose only when every sensitive view is individually marked and the team accepts that gap. |
-| `TEXT_INPUTS` | Every text input field — `EditText` / Compose `TextField`, iOS `UITextField` / `UITextView`. Most common default. |
+| `TEXT_INPUTS` | Every text input field — `EditText` / Compose `TextField`, iOS `UITextField` / `UITextView`. |
 | `LABELS` | Every text label / static text — `TextView` / Compose `Text`, iOS `UILabel`, SwiftUI `Text`. Adds coverage for read-only PII (name, email shown back to the user). |
 | `MEDIA` | Every image / media view — `ImageView` / Compose `Image`, iOS `UIImageView`, SwiftUI `Image`. Choose when user content includes uploaded images / documents / IDs. |
-| `WEB_VIEWS` | Every `WebView`. Keep on when any embedded web content can render user data. |
+| `WEB_VIEWS` | Every `WebView`. The default on iOS and Android from SDK 19.2.0. Keep on when any embedded web content can render user data. |
 
 ## Per-platform API
 
-### Android / cross-platform
+### Android
 
 ```kotlin
 Luciq.setAutoMaskScreenshotsTypes(
@@ -28,19 +28,36 @@ Luciq.setAutoMaskScreenshotsTypes(
 
 When overriding, **include every type that should remain masked** — the call is a full replacement, not additive. Forgetting `WEB_VIEWS` when it was previously on creates a silent leak.
 
-### iOS (Session Replay)
+### iOS
 
 ```swift
-SessionReplay.autoMaskScreenshotOptions = [.textInputs, .labels]
+Luciq.setAutoMaskScreenshots([.textInputs, .labels, .webViews])
 ```
+
+Options: `.textInputs`, `.labels`, `.media`, `.webViews`, `.maskNothing`. ObjC: `[Luciq setAutoMaskScreenshots:LCQAutoMaskScreenshotOptionTextInputs | LCQAutoMaskScreenshotOptionLabels]`.
 
 ### React Native
 
-Follow the live RN setup guide — option-set name and call site differ between Instabug-legacy and Luciq RN packages.
+```javascript
+import Luciq, { AutoMaskingType } from '@luciq/react-native';
+
+Luciq.enableAutoMasking([AutoMaskingType.textInputs, AutoMaskingType.labels]);
+```
+
+Types: `labels`, `textInputs`, `media`, `none` (`@luciq/react-native` 19.10.1 has no WebViews value).
 
 ### Flutter
 
-Follow the live Flutter setup guide — same caveat.
+```dart
+LuciqWidget(
+  automasking: const [AutoMasking.textInputs, AutoMasking.labels, AutoMasking.webViews],
+  child: MyApp(),
+)
+// or at runtime:
+Luciq.setAutoMaskScreenshotTypes([AutoMasking.textInputs, AutoMasking.labels, AutoMasking.webViews]);
+```
+
+Types: `labels`, `textInputs`, `media`, `webViews`, `none`. Flutter widgets are masked only when the app is wrapped in `LuciqWidget` (it registers the masking bridge). To turn auto-masking off, pass `[AutoMasking.none]` — the SDK doc comment says so; don't rely on `[]`.
 
 ## Recommended pairings by archetype
 
@@ -48,7 +65,7 @@ The skill proposes one of these in Phase 3 / 4, then cites the archetype as the 
 
 | Archetype | Minimum | Recommended | Maximum |
 |---|---|---|---|
-| **Hobby / utility** | `TEXT_INPUTS` (platform default) | `TEXT_INPUTS` | — |
+| **Hobby / utility** | `TEXT_INPUTS` | `TEXT_INPUTS` | — |
 | **B2B / productivity** | `TEXT_INPUTS` | `TEXT_INPUTS + LABELS` | + `WEB_VIEWS` if embedded web |
 | **Consumer social / media** | `TEXT_INPUTS` | `TEXT_INPUTS + LABELS` | + `MEDIA` if user uploads |
 | **E-commerce** | `TEXT_INPUTS + LABELS` | `TEXT_INPUTS + LABELS + WEB_VIEWS` | + `MEDIA` for receipts / IDs |
@@ -61,12 +78,14 @@ Auto-mask is the blanket layer; per-view markers are the precise layer. The mark
 
 | Platform | Mark private | Unmark | Clear all |
 |---|---|---|---|
-| iOS UIKit | `view.ibgPrivate = true` | `view.ibgPrivate = false` | — |
-| iOS SwiftUI | `view.luciqPrivate()` | — (recompose without modifier) | — |
+| iOS UIKit | `view.luciq_privateView = true` | `view.luciq_privateView = false` | — |
+| iOS SwiftUI | `.luciq_privateView()`, or wrap in `LuciqPrivateView { … }` | — (recompose without modifier) | — |
 | Android Views | `Luciq.addPrivateViews(v1, v2)` | `Luciq.removePrivateViews(v)` | `Luciq.removeAllPrivateViews()` |
 | Android Compose | `Modifier.luciqPrivate(isPrivate = true)` | `Modifier.luciqPrivate(isPrivate = false)` | — |
-| React Native | `Luciq.addPrivateViews([ref1, ref2])` | (re-add without the ref) | — |
-| Flutter | `SessionReplay.addPrivateViews([key1, key2])` | (re-add without the key) | — |
+| React Native | `Luciq.addPrivateView(ref)` (one ref per call) | `Luciq.removePrivateView(ref)` | — |
+| Flutter | wrap in `LuciqPrivateView(child: …)`; slivers: `LuciqSliverPrivateView(sliver: …)` | — (rebuild without the wrapper) | — |
+
+When detecting existing iOS markers, match `luciq_privateView` case-insensitively: the React Native bridge's Objective-C, built against iOS SDK 19.9.3, writes `view.Luciq_privateView`.
 
 The marker works on any view reference — including views inflated at runtime from server JSON — with no compile-time annotation, manifest entry, or XML attribute required. Marking a `ViewGroup` or Compose parent automatically masks every descendant.
 

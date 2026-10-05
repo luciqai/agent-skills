@@ -105,7 +105,7 @@ Supported event values: `shake`, `screenshot`, `floatingButton`, `twoFingersSwip
 | Code | Check | Evidence |
 | --- | --- | --- |
 | `S-MASK-NETWORK` | Network auto-masking state | `setNetworkAutoMaskingState`, observed enum value |
-| `S-MASK-SCREEN` | Screenshot/replay masking mode | `MaskingType.MEDIA`, `MaskingType.LABELS`, `setReplaceCapturedSensitiveData` |
+| `S-MASK-SCREEN` | Screenshot/replay masking mode | iOS `Luciq.setAutoMaskScreenshots(`; Android `setAutoMaskScreenshotsTypes(` with `MaskingType.*`; Flutter `Luciq.setAutoMaskScreenshotTypes(` / `LuciqWidget(automasking:`; RN `Luciq.enableAutoMasking(` |
 | `S-MASK-HEADERS` | Sensitive headers list configured | Configuration of `Authorization`, `Cookie`, `X-API-Key`, `Set-Cookie` redaction in source |
 | `S-MASK-CALLBACK` | Custom request/response masking callback present | iOS `setRequestObfuscationHandler` / `setResponseObfuscationHandler`; Flutter `obfuscateLog`; RN `setNetworkDataObfuscationHandler` — or equivalent |
 
@@ -143,8 +143,8 @@ iOS-only. Marks SwiftUI / UIKit views that should not be captured by Session Rep
 
 | Code | Check | Evidence |
 | --- | --- | --- |
-| `S-PRIVACY-SWIFTUI` | `.luciqPrivate()` view modifier usage | matched in `*.swift` |
-| `S-PRIVACY-UIKIT` | UIKit equivalent privacy marker present | matched in `*.swift` / `*.m` |
+| `S-PRIVACY-SWIFTUI` | `.luciq_privateView()` modifier or `LuciqPrivateView { }` wrapper usage | matched in `*.swift` |
+| `S-PRIVACY-UIKIT` | `luciq_privateView = true` on a UIView (match case-insensitively) | matched in `*.swift` / `*.m` |
 
 ## Platform applicability matrix
 

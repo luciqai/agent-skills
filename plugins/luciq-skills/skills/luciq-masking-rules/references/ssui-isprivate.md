@@ -12,12 +12,12 @@ If no SSUI is detected, skip this section entirely — don't propose the pattern
 
 1. **Extend the SSUI schema with an `isPrivate` boolean** on every node type that can render PII. Server controls per-node sensitivity at deploy time without an app release.
 2. **At render time, after a node is inflated**, mark the resulting view private if `node.isPrivate` is true. Platform-specific:
-   - **iOS UIKit**: `view.ibgPrivate = true`
-   - **iOS SwiftUI**: `view.luciqPrivate()` modifier
+   - **iOS UIKit**: `view.luciq_privateView = true`
+   - **iOS SwiftUI**: `.luciq_privateView()` modifier
    - **Android Views**: `Luciq.addPrivateViews(view)` (pair with `Luciq.removePrivateViews(view)` when the node leaves the screen, or `Luciq.removeAllPrivateViews()` on teardown)
    - **Android Compose**: `Modifier.luciqPrivate(isPrivate = node.isPrivate)`
-   - **React Native**: `Luciq.addPrivateViews([viewRef])` keyed off `node.isPrivate`
-   - **Flutter**: `SessionReplay.addPrivateViews([widgetKey])` keyed off `node.isPrivate`
+   - **React Native**: `Luciq.addPrivateView(viewRef)` keyed off `node.isPrivate`
+   - **Flutter**: wrap the inflated widget in `LuciqPrivateView(child: …)` when `node.isPrivate`
 3. **Add a global safety net at SDK init** — appropriate auto-mask types per `auto-mask-types.md`. A forgotten flag on a single node still can't leak when the safety net catches the type.
 4. **Verify in a dev build** that masked regions render as solid blocks in repro-step screenshots and Session Replay frames.
 5. **Gate the SSUI render path behind a feature flag** (ideally per app version) so a bad server payload can be turned off without an app release.
@@ -55,7 +55,7 @@ Text(
 // iOS SwiftUI — at render time after inflate
 let view = node.render()
 return node.isPrivate
-    ? AnyView(view.luciqPrivate())
+    ? AnyView(view.luciq_privateView())
     : AnyView(view)
 ```
 
@@ -64,19 +64,16 @@ return node.isPrivate
 const ref = useRef(null);
 useEffect(() => {
     if (node.isPrivate && ref.current) {
-        Luciq.addPrivateViews([ref.current]);
+        Luciq.addPrivateView(ref.current);
     }
 }, [node.isPrivate]);
 return <RenderedNode ref={ref} {...props} />;
 ```
 
 ```dart
-// Flutter — after inflate, mark by widget key
-final key = GlobalKey();
-if (node.isPrivate) {
-    SessionReplay.addPrivateViews([key]);
-}
-return RenderedNode(key: key, ...);
+// Flutter — after inflate, wrap private nodes (needs LuciqWidget at the app root)
+final child = RenderedNode(...);
+return node.isPrivate ? LuciqPrivateView(child: child) : child;
 ```
 
 ## Audit checklist (used in Phase 4)
@@ -85,7 +82,7 @@ For each SSUI inflate site Track E found, the audit walks:
 
 1. **Schema review** — does the SSUI node schema already have an `isPrivate` field? If yes, proceed; if no, surface as a "Close now (requires server change): extend SSUI schema."
 2. **Inflate-site instrumentation** — propose the per-platform marker call as a diff at the inflate site. Show before applying.
-3. **Safety net** — verify the SDK init has appropriate `setAutoMaskScreenshotsTypes` per archetype. If missing, propose as a separate Phase 4 item (see `auto-mask-types.md`).
+3. **Safety net** — verify the SDK init sets auto-mask types appropriate to the archetype (per-platform call in `auto-mask-types.md`). If missing, propose as a separate Phase 4 item (see `auto-mask-types.md`).
 4. **Dev-build verification** — added to Phase 5 verification steps when SSUI was instrumented this session.
 5. **Render-path feature flag** — verify in passing; if absent, surface as a "monitor" item, not a "close now" — feature flags for rollout safety are an architectural choice, not strictly a PII issue.
 

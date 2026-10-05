@@ -163,7 +163,7 @@ Categories per platform (full per-platform spec in each extractor reference):
 - **Masking / privacy config** — network auto-masking, screenshot auto-masking modes, sensitive header configuration
 - **dSYM / mapping upload setup** — iOS dSYM upload script presence; Android mapping upload Gradle plugin presence
 - **Build system detection** — SPM / CocoaPods / Carthage on iOS; Gradle Groovy / Gradle KTS on Android; npm on RN; pub on Flutter
-- **Privacy view modifiers** — iOS only (SwiftUI `.luciqPrivate()`, UIKit equivalents)
+- **Privacy view modifiers** — iOS only (SwiftUI `.luciq_privateView()`, UIKit `view.luciq_privateView = true`)
 
 ### 2c. Privacy constraints during extraction
 
