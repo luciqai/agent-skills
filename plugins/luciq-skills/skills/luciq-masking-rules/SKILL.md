@@ -104,12 +104,12 @@ Detect what the SDK init does for automatic screenshot masking. See `references/
 
 | Platform | Grep / read |
 |---|---|
-| iOS | `SessionReplay.autoMaskScreenshotOptions`, `Luciq.setAutoMaskScreenshotsTypes`, `IBGSessionReplay.autoMaskScreenshotOptions` |
-| Android | `Luciq.setAutoMaskScreenshotsTypes(`, `Instabug.setAutoMaskScreenshotsTypes(` |
-| Flutter | `SessionReplay.setAutoMaskingTypes(`, `Luciq.setAutoMaskScreenshotsTypes(` |
-| React Native | `Instabug.setAutoMaskScreenshotsTypes(`, `Luciq.setAutoMaskScreenshotsTypes(` |
+| iOS | `Luciq.setAutoMaskScreenshots(` (ObjC `setAutoMaskScreenshots:`), legacy `Instabug.setAutoMaskScreenshots(` |
+| Android | `Luciq.setAutoMaskScreenshotsTypes(` (runtime or on `Luciq.Builder`), legacy `Instabug.setAutoMaskScreenshotsTypes(` |
+| Flutter | `Luciq.setAutoMaskScreenshotTypes(`, `LuciqWidget(automasking:`, legacy `InstabugWidget(automasking:` |
+| React Native | `Luciq.enableAutoMasking(`, legacy `Instabug.enableAutoMasking(` |
 
-Output: `auto_mask: { configured: bool, file_line, types: [TEXT_INPUTS | LABELS | MEDIA | WEB_VIEWS | MASK_NOTHING] }` or `{ configured: false }`. **A missing call is not the same as `MASK_NOTHING`** — record the distinction. The platform default (typically `TEXT_INPUTS`) applies when not configured; quote it from the live setup guide before recapping.
+Output: `auto_mask: { configured: bool, file_line, types: [TEXT_INPUTS | LABELS | MEDIA | WEB_VIEWS | MASK_NOTHING] }` or `{ configured: false }`. **A missing call is not the same as `MASK_NOTHING`** — record the distinction. The platform default applies when not configured (on iOS and Android from SDK 19.2.0, WebViews only); quote it from the live setup guide before recapping.
 
 ### Track D — Network masking configuration
 
@@ -183,7 +183,7 @@ Never use "you're missing X" framing. Always positive bucketing.
 Every item in "Close now" must name its control, the cited gap, and the proposed apply target:
 
 > Close now:
-> – **Mark the 4 unmarked PHI views** — `PatientProfileView.swift:31-58` — propose `.luciqPrivate()` modifier per view, batch-confirm after first 2.
+> – **Mark the 4 unmarked PHI views** — `PatientProfileView.swift:31-58` — propose `.luciq_privateView()` modifier per view, batch-confirm after first 2.
 > – **Consent gating for Session Replay** — wrap `SessionReplay.enabled = true` in your existing consent check at `OnboardingFlow.swift:74` (CLAUDE.md:8).
 > – **Add `x-patient-id` to the network mask list** — server-side config; I'll prep a support ticket request line for the handoff.
 
@@ -199,7 +199,7 @@ For each "Close now" item (and any "Optional" the user picked up), run the three
 
 One line: name the control, the cited gap, the proposed change. Three responses: **Yes / No / Tell me more**.
 
-> **Per-view markers on PatientProfileView** — 4 `Text` views bind to `patient.firstName`, `patient.lastName`, `patient.dob`, `patient.mrn`. Propose `.luciqPrivate()` on each. Apply?
+> **Per-view markers on PatientProfileView** — 4 `Text` views bind to `patient.firstName`, `patient.lastName`, `patient.dob`, `patient.mrn`. Propose `.luciq_privateView()` on each. Apply?
 
 For per-view markers, follow the confirmation policy in `luciq-onboard` SKILL.md Track B: confirm the first 3–5 individually, then batch-confirm the rest. Drop back to per-match if the user inspects a row.
 
@@ -219,7 +219,7 @@ For server-side controls (network mask key additions, `usersPageEnabled`), prepa
 After applying, three short blocks:
 
 > Done.
-> - Marked 4 PHI views on `PatientProfileView.swift:31-58` with `.luciqPrivate()`.
+> - Marked 4 PHI views on `PatientProfileView.swift:31-58` with `.luciq_privateView()`.
 > - Wrapped `SessionReplay.enabled = true` in `userHasConsented` check at `OnboardingFlow.swift:74`.
 >
 > What's left for you:

@@ -38,7 +38,7 @@ Verify product names, SDK class names, and dashboard surface labels against http
   - **Proactive Bug Reporting** — propose when a post-action moment exists in code (post-purchase, post-onboarding-complete). Single API call at that site.
 - **Per-view privacy markers** on individual PII-bound views. Consume the `sensitive_views` list from the profile (built in Phase 1 Track B) and propose the platform-appropriate marker for each entry — see the platform marker table in `SKILL.md` Phase 1 Track B for the canonical syntax per platform.
   Follow the confirmation policy in SKILL.md Track B: confirm the first 3–5 views individually so the user sees the pattern, then batch-confirm the rest with a single question. Drop back to per-match if the user inspects a specific row. Reject-once-and-continue on false positives within both modes.
-- Coarse screen-level fallback: if `sensitive_views` is empty or shallow (e.g. heavily generated UI), default the money path and auth screens to use the wrapper variant (`LuciqPrivateView { ... }` on iOS, `LuciqPrivateView(child: ...)` on Flutter / RN) at the screen root so the screen is masked even before per-view enumeration catches up.
+- Coarse screen-level fallback: if `sensitive_views` is empty or shallow (e.g. heavily generated UI), default the money path and auth screens to use the wrapper variant (`LuciqPrivateView { ... }` on iOS, `LuciqPrivateView(child: ...)` on Flutter; React Native has no wrapper, so `Luciq.addPrivateView(ref)` on the root view) at the screen root so the screen is masked even before per-view enumeration catches up.
 
 **Style match.**
 - If Sentry / Bugsnag / etc. has `attachScreenshot: false` → recommend Luciq screenshot capture off as default.

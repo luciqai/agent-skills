@@ -158,7 +158,7 @@ Programmatic invocation:
 | Code | Patterns |
 | --- | --- |
 | `S-MASK-NETWORK` | `Luciq.setNetworkAutoMaskingState`, `Luciq.setNetworkAutoMaskingType` |
-| `S-MASK-SCREEN` | `MaskingType.MEDIA`, `MaskingType.LABELS`, `MaskingType.MEDIA_AND_LABELS`, `MaskingType.NONE`, `setScreenshotMaskingEnabled` |
+| `S-MASK-SCREEN` | `setAutoMaskScreenshotsTypes(` (runtime `Luciq.` or on `Luciq.Builder`); `MaskingType.TEXT_INPUTS`, `MaskingType.LABELS`, `MaskingType.MEDIA`, `MaskingType.WEB_VIEWS`, `MaskingType.MASK_NOTHING` |
 | `S-MASK-CALLBACK` | `setNetworkLogListener`, `setNetworkLogSyncCallback` |
 
 ### Network interceptor presence (`S-MODULE-NLG` / `S-MASK-CALLBACK`)

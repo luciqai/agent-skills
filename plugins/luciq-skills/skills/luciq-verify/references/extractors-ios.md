@@ -128,7 +128,7 @@ Emits:
 | Code | Patterns |
 | --- | --- |
 | `S-MASK-NETWORK` | `Luciq.setNetworkAutoMaskingState` (note the enum value passed) |
-| `S-MASK-SCREEN` | `setReplaceCapturedSensitiveData`, `setScreenshotMaskingEnabled` |
+| `S-MASK-SCREEN` | `Luciq.setAutoMaskScreenshots(` (ObjC `[Luciq setAutoMaskScreenshots:`; note the options passed) |
 | `S-MASK-CALLBACK` | `setRequestObfuscationHandler`, `setResponseObfuscationHandler` (Swift `NetworkLogger.…`, ObjC `[LCQNetworkLogger …]`); omit via `setNetworkLoggingRequestFilterPredicate` |
 
 ## Xcode project + Info.plist
@@ -172,9 +172,9 @@ If the script is present but no build phase invokes it: `WARN` "dSYM upload scri
 
 iOS-only check. Session Replay captures the view hierarchy unless views are explicitly marked private.
 
-Grep `*.swift`:
-- `.luciqPrivate(` (SwiftUI view modifier) → `S-PRIVACY-SWIFTUI PASS`
-- `setLuciqPrivate` (UIKit equivalent) → `S-PRIVACY-UIKIT PASS`
+Grep `*.swift` (and `*.m` for UIKit), case-insensitively — the React Native bridge's ObjC writes `Luciq_privateView`:
+- `.luciq_privateView(` (SwiftUI view modifier) or `LuciqPrivateView {` (wrapper) → `S-PRIVACY-SWIFTUI PASS`
+- `luciq_privateView =` (UIKit property) → `S-PRIVACY-UIKIT PASS`
 
 Absence is `INFO` (most apps don't need these unless they show sensitive content not covered by automatic masking).
 

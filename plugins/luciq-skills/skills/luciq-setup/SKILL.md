@@ -296,7 +296,7 @@ Goal: identify likely-sensitive UI views and configure SDK-side masking. A naive
 1. Grep the platform's UI source files only (`*.swift`, `*.kt`, `*.dart`, `*.tsx`, `*.jsx`) for these identifier-shaped strings: `password`, `email`, `cardNumber`, `ssn`, `cvv`, `pin`, `dob`, `iban`.
 2. Filter out matches in `*test*`, `*spec*`, `*mock*`, `*fixture*` paths, validator/regex utilities, and anything under `node_modules`, `Pods/`, or `build/`.
 3. Show the filtered match list with `file:line` for each. Get per-match confirmation. Do not apply masking rules in bulk.
-4. Verify the masking API signature for the detected platform on the live guide. The masking API has differed across platforms and changed across SDK versions; do not hardcode it.
+4. Verify the masking API signature for the detected platform on the live guide. The masking API has differed across platforms and changed across SDK versions; do not hardcode it. The Flutter docs pages contradict each other (`AutoMasking` names, how to turn it off); per-platform calls checked against SDK source are in `luciq-masking-rules/references/auto-mask-types.md`.
 5. Apply masking config only for confirmed matches.
 
 **Network logs — rely on the default first.** From SDK 14.2.0 the SDK masks a known set of sensitive header and query keys (auth, token, password, api key, secret variants) on the device, before anything is sent. Confirm the installed version is ≥ 14.2.0 (`Package.resolved`, `Podfile.lock`, `build.gradle`, `pubspec.lock`, `package.json`) and do not write a custom handler for keys the default already covers. The full default list is in `luciq-masking-rules/references/network-masking.md`.
