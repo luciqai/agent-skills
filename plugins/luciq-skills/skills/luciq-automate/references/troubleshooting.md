@@ -23,6 +23,7 @@ So **the exit code is the only reliable signal**. `cmd 2>/dev/null` still shows 
 | `✗ Request failed (429): {"message":"Rate limit exceeded"}` | over 100 requests / 60 s **from this IP** | back off and retry; stagger scheduled jobs; stop parallelizing pagination |
 | `✗ Request failed (404): {"error":"Unknown tool: …"}` | CLI newer than the server, or a stale/patched binary | reinstall/upgrade the CLI; on self-hosted, the cluster may predate the command |
 | `can't find gem luciq-cli (>= 0.a) with executable luciq` | stale binstub after a Ruby/gem change | `gem install luciq-cli` again; check `which luciq` resolves into the active Ruby |
+| `🦋 Luciq CLI` banner, then `No applicable command found` / `Unknown command` | the Dart `luciq_cli` (Flutter migration and symbols tool, `dart pub global activate luciq_cli`) is first on `PATH` and shadows the Ruby CLI | `which -a luciq`; put the brew/gem `luciq` first in `PATH` or call it by full path. `dart pub global deactivate luciq_cli` if the project no longer needs it |
 
 Permission and plan failures are **terminal**. Report them with the command that produced them; retrying, changing filters, or switching to MCP will not route around them — the MCP tools enforce the same checks.
 

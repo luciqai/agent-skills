@@ -22,6 +22,7 @@ So **the exit code is the only reliable signal**. `cmd 2>/dev/null` still shows 
 | `✗ Request failed (403): You do not have permission to use the CLI` | account lacks `account_management.cli.view` | ask an admin to grant it — **final**, no retry will help |
 | `✗ Upload failed: Request failed (403): {"error":"Missing permission: settings.mapping_files.modify"}` | token may use the CLI, but not upload symbols | ask an admin for the Mapping Files *modify* permission. A working `luciq whoami` never implies this one |
 | `✗ Request failed (429): {"message":"Rate limit exceeded"}` | over 100 requests / 60 s **from this IP** | back off and retry; stagger matrix builds; a multi-ABI NDK upload draws on the same allowance as everything else on that runner |
+| `🦋 Luciq CLI` banner, then `No applicable command found` / `Unknown command` | the Dart `luciq_cli` (Flutter migration and symbols tool, `dart pub global activate luciq_cli`) is first on `PATH` and shadows the Ruby CLI | `which -a luciq`; put the brew/gem `luciq` first in `PATH` or call it by full path. `dart pub global deactivate luciq_cli` if the project no longer needs it |
 
 Permission and plan failures are **terminal**. Report them with the command that produced them; retrying or switching to the MCP will not route around them, and for uploads there is no MCP tool to switch to.
 

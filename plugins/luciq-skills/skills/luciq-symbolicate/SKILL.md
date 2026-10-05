@@ -44,6 +44,8 @@ brew install luciqai/tap/luciq-cli   # macOS / Linux
 gem install luciq-cli                # Ruby >= 2.7
 ```
 
+**Two tools install a `luciq` command.** This skill drives the Ruby `luciq-cli` (brew / gem above). The Flutter SDK also publishes a Dart `luciq_cli` (`dart pub global activate luciq_cli`) whose `luciq` runs `migrate`, `upload-symbols` and `upload-so-files` with an app token and API key. When its `~/.pub-cache/bin` comes first on `PATH`, every command here fails. It prints a `🦋 Luciq CLI` banner, then `No applicable command found` or `Unknown command`. Run `which -a luciq`, then put the brew/gem path first, or call that binary by its full path. Never mix the two tools' flags.
+
 **One credential for everything.** The CLI token is generated at [dashboard.luciq.ai/company/luciq-cli](https://dashboard.luciq.ai/company/luciq-cli) → *Generate authentication token* — one per user, shown in full only once — and it authenticates every command, uploads included. You never pass an application token; the server resolves the app from `--slug` + `--mode`.
 
 Two consequences that shape every CI recipe: a CLI token carries the user's **own** dashboard role (it is not a service account, so a pipeline built on it breaks when that person rotates their token or leaves), and **uploads need `settings.mapping_files.modify`** on top of app access — a token that queries fine can still be refused for uploads.
