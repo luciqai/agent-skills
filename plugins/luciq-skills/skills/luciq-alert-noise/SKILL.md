@@ -71,10 +71,11 @@ Map the cause to the right remediation:
 | Diagnosis | Signal in the data | Remediation |
 | --- | --- | --- |
 | Threshold trivially low | e.g. `occurrences_count > 1`, `crash_free_session < 99.9`, p95 just above normal | **raise_threshold** to a meaningful level |
-| Scope too broad | no `conditions`, fires on every crash/request/version | **narrow_conditions** (add app_version, key_metric, endpoint, etc.) |
+| Scope too broad | no `conditions`, fires on every crash/request/version (a no-condition crash rule also fires on handled non-fatals) | **narrow_conditions** (add app_version, key_metric, endpoint, Crash Type, etc.) |
 | Detection is right, paging is too frequent | threshold sound, firings are real, but notified on every match | **add/lengthen throttle** (set `frequency` on the action) |
+| Notifies the whole team | `send_email` with `developer_ids: ["all"]` — most predefined rules ship this way | **narrow recipients** to the owning developers / team |
 | Exact duplicate of another rule | same `type` + `trigger` + `conditions` as a sibling | **merge** (keep one, delete the other) |
-| Fully redundant / obsolete | superseded by a broader rule, or watches a retired metric | **disable** or **delete** |
+| Fully redundant / obsolete | superseded by a broader rule, or watches a retired metric | **disable** (dashboard only — see Step 6) or **delete** |
 
 ### Step 4. Protect safety-critical alerts
 
@@ -96,9 +97,13 @@ Output a per-rule table the user can approve: rule title, why it's noisy (cite `
 For each rule the user approves:
 
 1. Call `read_alerts(action: "init", slug, mode)` to get valid fields/IDs, and `read_alerts(action: "details", ulid)` to mirror the rule's current payload.
-2. Build the updated payload — change only the field the remediation targets (threshold value, an added condition, a `frequency` on the action, or `status`). Keep everything else identical.
+2. Build the updated payload — change only the field the remediation targets (threshold value, an added condition, a `frequency` on the action, or the recipients). Keep everything else identical.
 3. Call `write_alerts(action: "update", ...)` (or `delete` for a confirmed merge/redundant rule).
 4. Confirm each change back to the user with the new effective behavior.
+
+Two limits observed on the live MCP (Sep 2026) — re-check `init` and the `write_alerts` schema; if they now expose the capability, use it:
+- **No disable.** `write_alerts` only creates, updates, and deletes. For an approved disable, tell the user to toggle the rule off on the dashboard's **Alerts & Rules** page. Don't delete instead unless they approved deletion.
+- **Predefined rules refuse edits.** Rules Luciq created with the app environment reject any update — threshold or recipients included — with "Trigger can not be changed" (the dashboard too). On that error, say so, offer a custom rule with the tuned threshold/recipients, and have the user turn the predefined one off on the dashboard.
 
 Respect the payload rules the `write_alerts` tool documents — most importantly: Overall-app/Release-rollout apdex thresholds are 0–1 decimals (send `0.9`, not `90`); all other percentages are literal; operators are stringified integers; and you may only use types/triggers/conditions that `init` exposes for this app.
 
@@ -135,3 +140,4 @@ Every remediation you apply goes through `write_alerts`. Produce a valid payload
 - "I'll update the rule without calling init." Don't — you'll send IDs/triggers the app may not support and the write will fail or silently corrupt the rule.
 - "The user said clean up, so I'll batch-disable everything loud." Get per-rule approval. Bulk-disabling is how coverage quietly disappears.
 - "conditions_met_count is 3 but the title sounds spammy, I'll flag it." 3 is below the signal. Leave it.
+- "I'll set `status` to disabled through write_alerts." It can't (Sep 2026). The user toggles it on the dashboard.

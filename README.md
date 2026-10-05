@@ -202,7 +202,7 @@ Create and manage an individual Luciq alert (rule). Translates a natural-languag
 **Try saying:**
 - `"Alert me when ANR rate goes above 1%"`
 - `"Change the threshold on my crash-spike alert"`
-- `"Disable that alert"` / `"Show me my alerts"`
+- `"Delete that alert"` / `"Show me my alerts"`
 
 > **Requires** the Luciq MCP server authenticated.
 
