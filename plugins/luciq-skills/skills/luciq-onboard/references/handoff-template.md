@@ -311,8 +311,9 @@ the dashboard. The *Do this next* step at the top closes that loop.
 
 ## "Ready when you are" — implementation notes
 
-- **APM Flows** — instrument `APM.startFlow` / `endFlow` at the
-  `Cart → Checkout → OrderConfirmation` lifecycle sites.
+- **APM Flows** — instrument `APM.startFlow` when `Cart` appears and
+  `endFlow` only when `OrderConfirmation` appears. Drop-offs on the way
+  are recorded automatically.
 - **In-App Surveys** — no store / CI / distribution config detected —
   reads as a portfolio build. Turn on once DAU is real.
 - **App Ratings & Reviews** — publish on the App Store first.
