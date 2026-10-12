@@ -92,7 +92,7 @@ What the numbers mean:
 | `number` | The crash group's integer ID. Feeds `crash_patterns` and `crash_details`. |
 | `occurrences_counter` | Total occurrences of this group in scope — **volume**. |
 | `affected_users_counter` | Distinct users hit — **blast radius**. Lead with this for impact. |
-| `crash_type` | `CRASH`, `NON_FATAL`, `OOM` (iOS), `ANR` (Android). |
+| `crash_type` | `CRASH`, `NON_FATAL`, `OOM` (iOS), `ANR` (Android). Force restarts read `USER_TERMINATION` (iOS) or `ANDROID_USER_TERMINATION`, and appear only when `filters.type` includes `FORCE_RESTART`. |
 | `current_view` | Screen where it occurred (e.g. `Pay.PaymentViewController`). Powers the `current_views` filter. |
 | `team` | JSON `{name, id}` of the owning team — the EM / VP "who owns this." |
 | `status_id` | `1` open, `2` closed, `3` in progress. |
@@ -101,7 +101,7 @@ What the numbers mean:
 
 `sort_by`: `occurrences_counter` (volume), `affected_users_counter` (impact), `severity`, `first_occurred_at`, `last_occurred_at`, plus version sorts. `direction` `asc`/`desc`. `limit` max 50.
 
-`list_app_hangs` has the same shape and filter surface minus `type` / `subtype`. Hang rows carry `crash_type: FATAL_UI_HANG` and an `exception` like "The app's main thread was unresponsive for more than 3000 milliseconds." The `crash_cause` on a hang often points at the offending source line (e.g. `PaymentViewController.Parsing() (PaymentViewController.swift:52)`) — useful for a PM / EM, never for C-suite.
+`list_app_hangs` has the same shape and filter surface minus `type` / `subtype`. Hang rows carry `crash_type: FATAL_UI_HANG` (iOS) or `ANDROID_FATAL_HANG` (Android) and an `exception` like "The app's main thread was unresponsive for more than 3000 milliseconds." The `crash_cause` on a hang often points at the offending source line (e.g. `PaymentViewController.Parsing() (PaymentViewController.swift:52)`) — useful for a PM / EM, never for C-suite.
 
 ## `crash_patterns` — and the adoption signal
 

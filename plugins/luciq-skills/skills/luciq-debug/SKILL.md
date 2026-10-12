@@ -24,8 +24,9 @@ The MCP exposes (verbatim names):
 | Tool | Purpose |
 | --- | --- |
 | `list_applications` | List apps and their tokens for the authenticated user. |
-| `list_crashes` | List crash groups with filters (version, OS, date range). |
+| `list_crashes` | List crash groups with filters (version, OS, date range). Force restarts appear only with `filters.type: ["FORCE_RESTART"]`. |
 | `crash_details` | Full details for a crash group: top frames, occurrence sample, distributions. |
+| `crash_diagnostics` | Full debugging payload for a crash group. For a force restart it adds `force_restart_cause_analysis`, which says why users force restart the app. |
 | `crash_patterns` | Distribution by `pattern_key` (e.g. `oses`, `app_versions`, `devices`). |
 | `list_occurrences_tokens` | Occurrence ULIDs for a crash group, paginated. |
 | `get_occurrence_details` | Per-occurrence detail: session profiler, logs URLs, device state. |
@@ -66,6 +67,7 @@ Determine the kind of signal being debugged. If the user has not specified, ask.
 | Crash group | Crash number, fingerprint, or pasted stack trace | `crash_details` (or `list_crashes` to find it first) |
 | Specific occurrence of a crash | Crash number plus ULID | `get_occurrence_details` |
 | App hang or ANR | Hang number, or "recent UI hangs" | `list_app_hangs` |
+| Force restart (the user killed the running app) | Force restart number, or "why are users force quitting" | `list_crashes` with `filters.type: ["FORCE_RESTART"]`, then `crash_diagnostics` |
 | User-reported bug | Bug number | `bug_details` |
 | Regression between versions | Two version numbers | `list_crashes` filtered by version, then `crash_patterns` with `pattern_key: app_versions` |
 | Review or rating signal | Date range and version | `list_reviews` filtered by `rating` and `app_version` |
@@ -79,6 +81,7 @@ Sequence the available Luciq MCP tools deliberately for the entry point:
 
 - Crashes: `list_crashes`, `crash_details`, `crash_patterns`, then `list_occurrences_tokens` and `get_occurrence_details` for one or more sessions.
 - Hangs: `list_app_hangs` filtered to the recent window.
+- Force restarts: `list_crashes` with `filters.type: ["FORCE_RESTART"]`, then `crash_diagnostics` and read its `force_restart_cause_analysis` section. A force restart has no stacktrace, so skip Step 3.
 - Bug reports: `list_bugs` then `bug_details`. The response includes URLs to compressed logs (network, console, session profiler) when available.
 - Regressions: filter `list_crashes` by the two versions, diff the result, then call `crash_patterns` with `pattern_key: app_versions` for the highest-impact new groups.
 - Review signals: `list_reviews` filtered to low ratings, then correlate with crash and hang activity in the same window.
