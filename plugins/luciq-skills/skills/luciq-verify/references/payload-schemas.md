@@ -49,7 +49,7 @@ Verified against the live Luciq MCP server API. Tool names below are exact.
 
 | Tool | Purpose |
 | --- | --- |
-| `list_bugs` | Find bug records, filterable by `app_version`, `priority_id`, `status_id`. |
+| `list_bugs` | Find bug records, filterable by `current_views`, `app_version`, `reported_at`, `priority_id`, `status_id`. |
 | `bug_details` | Per-bug payload with split log archives. |
 
 ### APM path

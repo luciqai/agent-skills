@@ -10,13 +10,13 @@ This file defines: the recipes (logic → filter set + key), the normalization r
 | --- | --- | --- | --- |
 | "same title" | — | `normalize_title(title)` | no |
 | "same category" | — | `sorted(categories)` | no |
-| "same screen" | — | `current_view` | **yes** (`state.fields.current_view`) |
-| "same screen + same failed requests" | — | `current_view` + `failed_requests_sig` | **yes** (current_view + network-log archive) |
+| "same screen" | `current_views: ["X"]` (optional, narrows) | `current_view` | **yes** (`state.fields.current_view`) |
+| "same screen + same failed requests" | `current_views: ["X"]` (optional, narrows) | `current_view` + `failed_requests_sig` | **yes** (current_view + network-log archive) |
 | "same failed request only" | — | `failed_requests_sig` | **yes** (network-log archive) |
 | "share a tag set" | `tag: [[...]]` (optional, narrows) | `sorted(tags)` | **yes** (`tags` not in `list_bugs` response) |
 | "same issue on a version" | `app_version: ["X"]` (optional, narrows) | `app_version` + `normalize_title(title)` | **yes** (`app_version` not in `list_bugs` response) |
 | "same user-attribute value" | — | `user_attribute[<name>]` | **yes** (`state.fields.user_attributes`) |
-| "same screen + same user steps" | — | `current_view` + `user_steps_sig` | **yes** (current_view + user-steps archive) |
+| "same screen + same user steps" | `current_views: ["X"]` (optional, narrows) | `current_view` + `user_steps_sig` | **yes** (current_view + user-steps archive) |
 
 The customer can **combine** any of these — each chosen dimension contributes one component. Combinations join their parts with a stable separator (` | `) in a fixed field order, so `view + failed` always renders the same way regardless of input order.
 
@@ -52,7 +52,7 @@ Everything a richer key needs comes from `bug_details`:
 | title | `list_bugs` | use `normalize_title` |
 | categories | `list_bugs` | already a set |
 | type / duplicate_type / email / status_id / priority_id / number / reported_at / last_activity | `list_bugs` | the remaining fields on the row |
-| `current_view` | **`bug_details`** → `state.fields.current_view` | not in `list_bugs` (not even a filter) |
+| `current_view` | **`bug_details`** → `state.fields.current_view` | `current_views` is a `list_bugs` *filter* only; the value isn't returned |
 | tags | **`bug_details`** → top-level `tags` | `tag` is a `list_bugs` *filter* only; the value isn't returned |
 | app version | **`bug_details`** → `state.fields.app_version` | `app_version` is a `list_bugs` *filter* only; the value isn't returned |
 | user attributes | **`bug_details`** → `state.fields.user_attributes` | consent keys (`IBG_USER_CONSENT_*`) are stripped; absent → bug is skipped |
