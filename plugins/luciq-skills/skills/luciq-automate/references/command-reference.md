@@ -195,7 +195,7 @@ Sections (crashes / bugs / apm / monitoring) can fail independently: one section
 
 ## `luciq issues`
 
-`list` — issues across crashes, APM, AI-detected issues, and bugs, ranked by Apdex impact. `--limit` (1–50), `--sort-by apdex_impact|occurrences_counter`, `--sort-direction`, `--top-issues`, `--pagination '<json object of per-source cursor tokens>'`.
+`list` — issues across crashes, APM, AI-detected issues, and bugs, ranked by Apdex impact. `--limit` (1–50), `--sort-by apdex_impact|issue_count`, `--sort-direction`, `--top-issues`, `--pagination '<json object of per-source cursor tokens>'`.
 
 `--filters`:
 
