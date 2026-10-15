@@ -206,11 +206,13 @@ app_version      ["1.2.3"]
 teams            ["<team-id>"]
 platform         ["IOS","ANDROID","DART","JAVASCRIPT"]
 apm_types        ["networks","traces","launches","screen_loadings","frame_drops"]
-crashes_types    ["CRASH","ANR","OOM","NON_FATAL"]
+crashes_types    ["CRASH","ANR","OOM","NON_FATAL","APP_HANG","FORCE_RESTART"]
 ai_issues_types  ["visual_issue","broken_functionality"]
 bugs_types       ["<type>"]
 apdex_severity   ["high","medium","low","no_impact"]
 ```
+
+`APP_HANG` and `FORCE_RESTART` cover iOS and Android, and only on plans that include them. Matching issues come back with the platform's `issue_type`: `FATAL_UI_HANG` / `ANDROID_FATAL_HANG` for app hangs, `USER_TERMINATION` / `ANDROID_USER_TERMINATION` for force restarts.
 
 Returns `{"issues": [...], "issues_count": N}` plus a separate `*_pagination_token` per source (`apm_`, `crashes_`, `visual_issues_`, `broken_functionality_`, `bugs_`) — feed those back through `--pagination` to page.
 
