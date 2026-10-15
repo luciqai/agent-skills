@@ -210,7 +210,7 @@ Some rules do not apply on every platform. The audit emits `N/A` (not SKIP, not 
 
 | Platform | `ANR` rules | `OOM` rules | APM channel | `current_view` semantics |
 | --- | --- | --- | --- | --- |
-| iOS (`IOS`) | N/A (no `ANR` type; iOS UI hangs via `list_app_hangs`) | Applicable | Eligible — probe to confirm | Top-most `UIViewController` class name |
+| iOS (`IOS`) | N/A (no `ANR` type; iOS UI hangs via `list_crashes` `APP_HANG`) | Applicable | Eligible — probe to confirm | Top-most `UIViewController` class name |
 | Android (`ANDROID`) | Applicable | Applicable (treated as `CRASH` until exposed otherwise) | Eligible — probe to confirm | Top-most `Activity` / `Fragment` |
 | Flutter (`DART`) | Applicable | Applicable | **N/A permanently** — do not probe | Route name or widget |
 | React Native (`JAVASCRIPT`) | Applicable | Applicable | **N/A permanently** — do not probe | Screen name or navigator route |

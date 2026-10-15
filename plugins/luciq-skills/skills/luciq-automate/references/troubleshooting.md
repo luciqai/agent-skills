@@ -69,7 +69,7 @@ Every command runs as the token owner's dashboard role. `account_management.cli.
 | Command | Permission | Plan feature |
 | --- | --- | --- |
 | `apps list` | — | — |
-| `crashes list`, `crashes hangs` | `crashes.list.view` | `crash_reporting` / `app_hangs` |
+| `crashes list` | `crashes.list.view` | `crash_reporting`; `app_hangs` for `--type APP_HANG` |
 | `crashes show`, `patterns`, `diagnostics` | `crashes.details.view` | `crash_reporting` |
 | `crashes occurrence-tokens`, `occurrence` | `crashes.occurrences.view` | `crash_reporting` |
 | `bugs list`, `bugs show` | `bugs.list.view` | — |

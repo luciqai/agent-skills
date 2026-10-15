@@ -30,7 +30,7 @@ The MCP exposes (verbatim names):
 | `crash_patterns` | Distribution by `pattern_key` (e.g. `oses`, `app_versions`, `devices`). |
 | `list_occurrences_tokens` | Occurrence ULIDs for a crash group, paginated. |
 | `get_occurrence_details` | Per-occurrence detail: session profiler, logs URLs, device state. |
-| `list_app_hangs` | Hang and ANR groups. iOS surface as `FATAL_UI_HANG`, Android as `ANDROID_FATAL_HANG`. |
+| `list_crashes` with `filters.type: ["APP_HANG"]` | App hang groups. iOS surface as `FATAL_UI_HANG`, Android as `ANDROID_FATAL_HANG`. ANRs are the separate `ANR` type; list them in their own call, because a plan without app hangs rejects any call that includes `APP_HANG`, ANRs included. |
 | `list_bugs` | User-reported bugs. |
 | `bug_details` | Full bug detail including compressed log archive URLs. |
 | `list_reviews` | App Store / Play Store reviews filtered by `rating` and `app_version`. |
@@ -66,7 +66,7 @@ Determine the kind of signal being debugged. If the user has not specified, ask.
 | --- | --- | --- |
 | Crash group | Crash number, fingerprint, or pasted stack trace | `crash_details` (or `list_crashes` to find it first) |
 | Specific occurrence of a crash | Crash number plus ULID | `get_occurrence_details` |
-| App hang or ANR | Hang number, or "recent UI hangs" | `list_app_hangs` |
+| App hang or ANR | Hang number, or "recent UI hangs" | `list_crashes` with `filters.type: ["ANR"]`, and separately with `["APP_HANG"]` (then the crash tools on its number). If the hang call returns a plan error, report it and keep the ANR results |
 | Force restart (the user killed the running app) | Force restart number, or "why are users force quitting" | `list_crashes` with `filters.type: ["FORCE_RESTART"]`, then `crash_diagnostics` |
 | User-reported bug | Bug number | `bug_details` |
 | Regression between versions | Two version numbers | `list_crashes` filtered by version, then `crash_patterns` with `pattern_key: app_versions` |
@@ -80,7 +80,7 @@ Determine the kind of signal being debugged. If the user has not specified, ask.
 Sequence the available Luciq MCP tools deliberately for the entry point:
 
 - Crashes: `list_crashes`, `crash_details`, `crash_patterns`, then `list_occurrences_tokens` and `get_occurrence_details` for one or more sessions.
-- Hangs: `list_app_hangs` filtered to the recent window.
+- Hangs: `list_crashes` with `filters.type: ["APP_HANG"]`, filtered to the recent window. A hang's `number` works with `crash_details`, `crash_patterns`, `list_occurrences_tokens` and `get_occurrence_details` like any crash.
 - Force restarts: `list_crashes` with `filters.type: ["FORCE_RESTART"]`, then `crash_diagnostics` and read its `force_restart_cause_analysis` section. A force restart has no stacktrace, so skip Step 3.
 - Bug reports: `list_bugs` then `bug_details`. The response includes URLs to compressed logs (network, console, session profiler) when available.
 - Regressions: filter `list_crashes` by the two versions, diff the result, then call `crash_patterns` with `pattern_key: app_versions` for the highest-impact new groups.
@@ -164,12 +164,12 @@ When the top frame involves `async`, `await`, an actor, or a `Sendable` violatio
 - Look at the session profiler from `get_occurrence_details` for hop-to-`@MainActor` patterns near the crash time.
 - Do not recommend slapping `@MainActor` on a class to silence the error. Treat that as a smell, not a fix.
 
-### Android ANRs (`ANDROID_FATAL_HANG`)
+### Android hangs and ANRs (`ANDROID_FATAL_HANG`, `ANR`)
 
-When `list_app_hangs` returns an Android hang:
+When `list_crashes` returns an Android hang or ANR:
 
 - The `crash_cause` field tells you where the main thread was blocked, but not always what blocked it. Pull a few `get_occurrence_details` to see recent main-thread activity and pending I/O.
-- Check `pattern_key: app_versions` to see whether the ANR is a regression or a long-tail issue.
+- Check `pattern_key: app_versions` to see whether it is a regression or a long-tail issue.
 - Common offenders: synchronous network calls on the main thread, large `SharedPreferences.commit()` writes, blocking `Lock` acquisitions, work scheduled on the wrong dispatcher.
 
 ### iOS UI hangs (`FATAL_UI_HANG`)

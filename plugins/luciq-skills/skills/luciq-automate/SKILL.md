@@ -118,7 +118,7 @@ On a 208-crash account the first form is roughly 39,000 characters and the secon
 
 | Command | Output |
 | --- | --- |
-| `crashes list` / `crashes hangs` | `{"crashes": [...]}` |
+| `crashes list` | `{"crashes": [...]}` |
 | `bugs list` | `{"bugs": [...]}` |
 | `reviews list` / `surveys list` | `{"reviews": [...]}` / `{"surveys": [...]}` |
 | `apps list` | `{"applications": [...]}` — **includes each app's token; treat as secret** |

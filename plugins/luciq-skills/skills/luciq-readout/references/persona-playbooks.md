@@ -93,7 +93,7 @@ In-app NPS: +8 (40% promoters / 28% passive / 32% detractors) — a sizable detr
 **Leads on:** crash-free / hang health for the owned flow (filter `current_views` to the flow's screens), the flow's performance (screen-load p95 and flow drop-off from `app_insights.apm`), top issues by users affected on those screens, review themes and NPS verbatim feedback in users' own words, and new-in-version issues on the flow.
 
 **Tool calls:**
-1. `list_crashes(slug, mode, filters.current_views=[<flow screens>], sort_by=affected_users_counter)` and `list_app_hangs(...)` with the same `current_views` filter — the flow's worst offenders.
+1. `list_crashes(slug, mode, filters.current_views=[<flow screens>], sort_by=affected_users_counter)` and `list_crashes(..., filters.type=["APP_HANG"])` with the same `current_views` filter — the flow's worst offenders.
 2. `app_insights(slug, mode)` for the `apm.screen_loadings` p95 and `apm.flows` drop-off — the flow's performance signal.
 3. `list_reviews(slug, mode, filters.rating=[1,2,3])` for the negative-to-mixed themes; quote bodies verbatim.
 4. `survey_details(slug, mode, id=<nps survey>, filters.nps=...)` for detractor / passive verbatim feedback ("how can we do better"); quote verbatim.
@@ -117,7 +117,7 @@ What users are saying (verbatim):
   • "the features are cumbersome to use ... navigating through the app [is] a chore." — 2 star review, FR
   • "Reduce screen hangs" — NPS detractor (score 2); "You should add a product tour" — NPS detractor (score 0). [survey_details]
 The "reduce screen hangs" verbatim and the payment-screen hang point at the same thing — report both signals; don't assert one caused the other.
-[sources: list_app_hangs + list_crashes filtered by current_views; app_insights apm; list_reviews; survey_details; list_bugs]
+[sources: list_crashes (crashes and APP_HANG) filtered by current_views; app_insights apm; list_reviews; survey_details; list_bugs]
 ```
 
 ---
