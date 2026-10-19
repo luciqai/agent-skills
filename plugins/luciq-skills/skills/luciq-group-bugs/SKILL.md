@@ -138,7 +138,7 @@ Summarize what merged (groups, masters, member counts) and list any failures. Th
 - **Detach only** — `update_bug(action: "unmark_as_duplicate")` per member. Restores each bug to standalone but leaves the parent's status/priority on it (unmark does not roll those back).
 - **Detach + restore status/priority** — after unmarking each member, re-apply its snapshotted values via `update_bug(status_id:, priority_id:)`.
 
-Tell the customer up front that **assignee cannot be restored** in either mode — `update_bug` has no assignee parameter, so a merge's assignee change is irreversible through this skill. Only offer undo for merges this skill made this session; never unmark pre-existing groups.
+Tell the customer up front that **assignee cannot be restored** in either mode — `list_bugs` rows carry no assignee, so the skill has no pre-merge value to put back. `update_bug` does take an `assignee` (a teammate's email), so the customer can reassign a bug afterwards if they know who it was. Only offer undo for merges this skill made this session; never unmark pre-existing groups.
 
 ## Out of scope
 

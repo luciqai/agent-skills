@@ -57,8 +57,9 @@ The same applies to a first page passed off as the whole set. If a scope needs m
 
 | Message | Cause | Fix |
 | --- | --- | --- |
-| `✗ Provide at least one change (…)` | `bugs update` with no change flags | add `--status`, `--priority`, `--tags`, `--clear-tags`, `--duplicate-of`, or `--action` |
-| `✗ Duplicate marking cannot be combined with --status/--priority` | mixed a duplicate action with field edits | run them as two separate commands, or drop one |
+| `✗ Provide at least one change (…)` | `bugs update` with no change flags | add `--status`, `--priority`, `--assignee`, `--unassign`, `--team`, `--clear-team`, `--tags`, `--clear-tags`, `--comment`, `--duplicate-of`, or `--action` |
+| `✗ Duplicate marking cannot be combined with --status/--priority/--assignee/--unassign` | mixed a duplicate action with field edits | run them as two separate commands, or drop one |
+| `✗ Request failed (422): …No teammate with the email … in this company.` or `…No team named … in this company.` | `bugs update --assignee` / `--team` matched no one in the company. Nothing was written | check the email, or take the team name or id from `bugs show` |
 
 `apm funnel-update --events` **replaces** the funnel's entire step set rather than merging it. There is no `--dry-run` and no undo for most writes.
 
@@ -73,7 +74,7 @@ Every command runs as the token owner's dashboard role. `account_management.cli.
 | `crashes show`, `patterns`, `diagnostics` | `crashes.details.view` | `crash_reporting` |
 | `crashes occurrence-tokens`, `occurrence` | `crashes.occurrences.view` | `crash_reporting` |
 | `bugs list`, `bugs show` | `bugs.list.view` | — |
-| `bugs update` | `bugs.list.modify` (+ `bugs.tags.modify` when touching tags) | — |
+| `bugs update` | `bugs.list.modify` (+ `bugs.tags.modify` when touching tags, + `bugs.activity_comments.modify` with `--comment`) | — |
 | `apm groups` | `<metric>.list.view` (`funnels` → `funnels.list.view`) | `apm` |
 | `apm group` | `<metric>.details.view` (`funnels` → `funnels.list.view`) | `apm` |
 | `apm occurrence` | `<metric>.occurrence_details.view` | `apm` |

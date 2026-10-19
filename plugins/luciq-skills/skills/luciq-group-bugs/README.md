@@ -28,7 +28,7 @@ This is a **write** skill — `update_bug`'s `mark_as_duplicate` is destructive:
 - the duplicate's **status, priority, and assignee are overwritten** by the master's (and unmarking doesn't roll them back), and
 - there's no bulk undo on the server.
 
-So the skill never writes from a rule alone. It always **proposes → proves → confirms → writes**: you see the full plan, with the exact key behind every group, before a single merge happens. A merge you didn't approve never happens. To make undo meaningful, it snapshots each duplicate's status/priority *before* merging, so the "detach + restore" undo can put those back — though **assignee can't be restored** through the MCP and the skill says so up front.
+So the skill never writes from a rule alone. It always **proposes → proves → confirms → writes**: you see the full plan, with the exact key behind every group, before a single merge happens. A merge you didn't approve never happens. To make undo meaningful, it snapshots each duplicate's status/priority *before* merging, so the "detach + restore" undo can put those back — though the skill **can't restore the assignee** (the bug list doesn't carry it, so there is nothing to snapshot) and says so up front.
 
 It's also **deterministic by design**. If your logic can't be reduced to concrete fields (e.g. "group by vibe" / "same user journey"), it stops and asks you to restate it concretely — it will not semantically guess its way into an irreversible merge.
 
