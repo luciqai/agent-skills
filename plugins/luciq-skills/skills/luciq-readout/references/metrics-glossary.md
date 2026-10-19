@@ -139,11 +139,15 @@ What the numbers mean:
 
 ## `list_bugs`
 
-`list_bugs(slug, mode, filters?, sort_by?, direction?, limit?, offset?)`. User-reported bug reports (distinct from crashes). Rows: `priority_id, status_id, categories, email, number, reported_at, last_activity, title, type, duplicated_bugs_count`.
+`list_bugs(slug, mode, filters?, sort_by?, direction?, limit?, offset?)`. User-reported bug reports (distinct from crashes). Rows: `priority_id, status_id, categories, email, number, reported_at, last_activity, title, type, duplicated_bugs_count, duplicate_type`.
 
+- The response is `{"bugs": [...]}` only, with no total count. `limit` is 50 at most. To count bug volume, page with `offset` until a page returns fewer than `limit` rows.
+- Without `filters.reported_at`, `list_bugs` covers only the last 7 days. Pass `reported_at: {from, to}` in epoch milliseconds for any other window.
 - `priority_id`: `-1` N/A, `1` Trivial, `2` Minor, `3` Major, `4` Blocker.
 - `status_id`: `1` New, `2` Closed, `3` In Progress.
-- `title` is the user's report title (e.g. "Cannot complete premium checkout payment") — a strong PM signal. `categories` carries the bucket (Bug / Question / Improvement / Frustrating experience).
+- `title` is the user's report title (e.g. "Cannot complete premium checkout payment") — a strong PM signal. It can be `null`.
+- `type` is the report-type label: `Bug`, `Improvement`, `Question`, `Frustrating experience` or `AI Issue`. `categories` is the category path as a nested `{name, subs}` object.
+- To filter by report type, pass the stored value to `filters.type`, not the label: `"Report a Problem"` (Bug), `"Suggest an Improvement"` (Improvement), `"Ask a Question"` (Question), `"Frustrating experience"`, `"AI Issue"`. `filters.type: ["Bug"]` matches no bug (observed Oct 2026). `filters.category` takes the same stored names.
 - `duplicated_bugs_count` — how many duplicates merged in; a rough frequency proxy.
 
 ## `list_reviews`
@@ -217,8 +221,8 @@ These bite. Confirm the call shape before concluding "no data":
 | Concept | `list_crashes` / `list_app_hangs` | `list_bugs` | `list_reviews` | `app_insights` |
 | --- | --- | --- | --- | --- |
 | App version filter | `app_versions[]` (plural) | `app_version[]` | `app_version[]` | `filters.app_version[]` |
-| Platform values | `IOS`/`ANDROID`/`DART`/`JAVASCRIPT` (UPPER) | — | `os[]` = `ios`/`android` | — |
-| Date range | `filters.date_ms{gte,lte}` | (limited) | `filters.date_ms{gte,lte}` | `filters.date_ms{gte,lte}` |
+| Platform values | `IOS`/`ANDROID`/`DART`/`JAVASCRIPT` (UPPER) | `platform[]` = `ios`/`android` (cross-platform apps only) | `os[]` = `ios`/`android` | — |
+| Date range | `filters.date_ms{gte,lte}` | `filters.reported_at{from,to}` (epoch ms; omitted = last 7 days) | `filters.date_ms{gte,lte}` | `filters.date_ms{gte,lte}` |
 
 `crash_patterns` uses `experiments` as a `pattern_key`; do not confuse it with a filter. Empty results from a wrong-case platform value look identical to "the app is healthy" — they are not. Re-run with the correct shape before stating any conclusion.
 
