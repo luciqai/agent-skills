@@ -37,10 +37,11 @@ SKIPPED (not grouped) — 3
 
 WRITE SUMMARY
   2 groups · 3 merges total
-  ⚠ Merging moves each duplicate's occurrences into its master and OVERWRITES the
-    duplicate's status, priority & assignee with the master's. This skill snapshots
-    status/priority first so it can restore them on undo; assignee CANNOT be restored.
-    No bulk undo on the server.
+  ⚠ Merging moves each duplicate's occurrences into its master, OVERWRITES the
+    duplicate's status, priority & assignee with the master's, and tags it
+    Luciq_Duplicate_report (the master gets Luciq_Master_report). This skill snapshots
+    status, priority, assignee & tags first so undo can restore them; the moved
+    occurrences stay with the master. No bulk undo on the server.
 
 Approve this plan to apply, reassign any master first, or tell me to adjust the logic.
 ```
@@ -50,7 +51,7 @@ Approve this plan to apply, reassign any master first, or tell me to adjust the 
 - **Verbatim key, always.** Never summarize the key as "similar" — show the actual composite string, so the customer can see exactly why bugs grouped.
 - **Master is explicit.** State which bug is the master and why (oldest, or reassigned). The customer can reassign before approving.
 - **Skips are itemized.** Every non-grouped candidate appears with a reason. A bug silently absent from both the groups and the skip list is a reporting bug.
-- **Destructive reminder is in the write summary**, not buried — the customer approves knowing status/priority get overwritten.
+- **Destructive reminder is in the write summary**, not buried — the customer approves knowing status, priority & assignee get overwritten and the system tags get added.
 - **No write language before approval.** The plan describes what *would* happen; it never implies anything has been applied.
 
 ## Post-apply report
@@ -64,9 +65,10 @@ GROUP 2: #4090 → master #4077          ✅
 Failures: none
 
 Undo (3 bugs merged this session) — choose:
-  a) Detach only — unmark; leaves the master's status/priority on each bug
-  b) Detach + restore — unmark, then re-apply each bug's pre-merge status/priority
-  (assignee can't be restored either way)
+  a) Detach only — unmark; leaves the master's status, priority & assignee and the
+     Luciq_Duplicate_report tag on each bug
+  b) Detach + restore — unmark, then re-apply each bug's pre-merge status, priority
+     & assignee and remove the Luciq_Duplicate_report tag it did not have before
 ```
 
 If any `update_bug` failed, list each failed member and the error; the rest still applied. Offer undo-last only for merges made this session (from the ledger), never for pre-existing groups.
