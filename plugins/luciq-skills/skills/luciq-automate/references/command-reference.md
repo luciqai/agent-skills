@@ -100,14 +100,19 @@ luciq crashes patterns --slug my-app --mode production --number 42 --pattern-key
 | Flag | Effect |
 | --- | --- |
 | `--status new\|closed\|in_progress` | new status |
-| `--priority na\|trivial\|minor\|major\|blocker` | new priority |
+| `--priority na\|trivial\|minor\|major\|blocker\|<number>` | new priority; a number sets a custom priority of the application |
+| `--assignee <email>` | assign a teammate, by email |
+| `--unassign` | remove the assignee. Cannot be combined with `--assignee` |
+| `--team <name-or-id>` | assign a team, by name or id |
+| `--clear-team` | remove the team. Cannot be combined with `--team` |
 | `--tags a b c` | tags to apply — **appends** to the existing set by default |
 | `--tag-action append\|replace\|remove` | how `--tags` is applied: `append` (default, keeps existing), `replace` (sets `--tags` as the full list), `remove` (deletes just those). Cannot be combined with `--clear-tags` |
 | `--clear-tags` | remove all tags |
-| `--duplicate-of N` | mark this bug a duplicate of master `N` (implies `--action mark_as_duplicate`) |
-| `--action mark_as_duplicate\|unmark_as_duplicate` | duplicate action on its own |
+| `--comment "<text>"` | add a plain-text comment to the activity feed, as the token owner. Followers are notified. Max 16000 characters |
+| `--duplicate-of N` | mark this bug a duplicate of master `N` (implies `--action mark_as_duplicate`). The server also tags this bug `Luciq_Duplicate_report` and the master `Luciq_Master_report` |
+| `--action mark_as_duplicate\|unmark_as_duplicate` | duplicate action on its own. Unmarking keeps the tags and the status, priority, and assignee taken from the master |
 
-Rules the CLI enforces: at least one change, duplicate marking cannot be combined with `--status` / `--priority`, and `--clear-tags` cannot be combined with `--tag-action`. Touching tags needs `bugs.tags.modify` on top of `bugs.list.modify`.
+Rules the CLI enforces: at least one change, duplicate marking cannot be combined with `--status` / `--priority` / `--assignee` / `--unassign` (a duplicate takes those from its master), each of `--assignee` / `--unassign`, `--team` / `--clear-team`, `--clear-tags` / `--tag-action` is a pair that cannot be combined, and a blank `--assignee`, `--team`, or `--comment` is refused (use `--unassign` or `--clear-team` to clear a field). The server checks every change before it writes any, so a rejected update changes nothing. On a bug that is a duplicate, the server rejects `--status`, `--priority`, `--assignee`, and `--unassign`, and accepts `--tags`, `--team`, and `--comment`, as the dashboard does. Touching tags needs `bugs.tags.modify` and `--comment` needs `bugs.activity_comments.modify`, on top of `bugs.list.modify`.
 
 `list` returns `{"bugs": [...]}`, one thin object per bug — `title`, `categories`, `type`, `duplicate_type`, `email`, `status_id`, `priority_id`, `number`, `reported_at`, `last_activity`, `duplicated_bugs_count`. `title` can be `null`. Anything else (tags, screen, app version, logs, team) comes from `show`.
 
@@ -130,6 +135,8 @@ reported_at  {"from": <ms>, "to": <ms>}
 ```bash
 luciq bugs update --slug my-app --mode production --number 7 --status closed --priority major
 luciq bugs update --slug my-app --mode production --number 7 --duplicate-of 3
+luciq bugs update --slug my-app --mode production --number 7 --assignee dev@example.com --team Core
+luciq bugs update --slug my-app --mode production --number 7 --status closed --comment "Fixed in 6.1.3"
 ```
 
 ## `luciq apm`

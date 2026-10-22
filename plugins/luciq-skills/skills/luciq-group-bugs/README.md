@@ -25,10 +25,10 @@ It mirrors how Luciq's automatic grouping works (a normalized fingerprint of fai
 This is a **write** skill — `update_bug`'s `mark_as_duplicate` is destructive:
 
 - the duplicate's occurrences move into the master's group, and
-- the duplicate's **status, priority, and assignee are overwritten** by the master's (and unmarking doesn't roll them back), and
+- the duplicate's **status, priority, and assignee are overwritten** by the master's, and the server tags it `Luciq_Duplicate_report` (unmarking rolls none of this back), and
 - there's no bulk undo on the server.
 
-So the skill never writes from a rule alone. It always **proposes → proves → confirms → writes**: you see the full plan, with the exact key behind every group, before a single merge happens. A merge you didn't approve never happens. To make undo meaningful, it snapshots each duplicate's status/priority *before* merging, so the "detach + restore" undo can put those back — though **assignee can't be restored** through the MCP and the skill says so up front.
+So the skill never writes from a rule alone. It always **proposes → proves → confirms → writes**: you see the full plan, with the exact key behind every group, before a single merge happens. A merge you didn't approve never happens. To make undo meaningful, it snapshots each duplicate's status, priority, assignee, and tags *before* merging (the assignee and tags come from `bug_details`), so the "detach + restore" undo can put them back and remove the system tag.
 
 It's also **deterministic by design**. If your logic can't be reduced to concrete fields (e.g. "group by vibe" / "same user journey"), it stops and asks you to restate it concretely — it will not semantically guess its way into an irreversible merge.
 
