@@ -178,6 +178,9 @@ will reflect the view controller present at SDK-start time rather than the true 
 group carries only `preMain` and `appInit` while the total is large, verify where the SDK is
 initialized before drawing conclusions about the missing stages.
 
+Luciq should start at the beginning of `application(_:didFinishLaunchingWithOptions:)`, before other app
+initialization or SDKs. For SwiftUI, that is the AppDelegate connected with `@UIApplicationDelegateAdaptor`.
+
 **Missing screen name.** Screen names longer than 60 characters are omitted rather than truncated, so
 `first_screen` may be absent. This is common in SwiftUI apps, where the resolved name is a long generic
 hosting-controller type.

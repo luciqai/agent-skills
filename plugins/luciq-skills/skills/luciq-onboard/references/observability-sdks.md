@@ -358,6 +358,8 @@ After per-SDK detection completes, run these checks. The output feeds Phase 2's 
 
 High and medium severity conflicts go in Phase 2's recap, framed as "independent of Luciq, this is something you might want to look at." Low severity goes into the handoff doc only.
 
+For iOS apps with Luciq, also check startup order. Required Luciq pre-start configuration and `Luciq.start` belong together as the first initialization block in `application(_:didFinishLaunchingWithOptions:)`, before other app initialization or SDKs, including Firebase. SwiftUI uses an AppDelegate connected with `@UIApplicationDelegateAdaptor`. Starting another SDK first can interfere with Luciq's automatic network capture.
+
 ---
 
 ## Detection workflow (deterministic, one pass per SDK)

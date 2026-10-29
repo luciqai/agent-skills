@@ -15,7 +15,9 @@ Product ≠ module. `import Luciq` does not compile. Use `Luciq` only in the pro
 
 ## `.xcodeproj` projects: use the script, not hand edits
 
-Hand-editing `project.pbxproj` means inventing 24-hex object IDs and touching four sections by hand; every agent does it slightly differently and some get it wrong. The bundled script does exactly what Xcode's *Add Package Dependencies…* does, and is idempotent:
+Hand-editing `project.pbxproj` means inventing 24-hex object IDs and touching four sections by hand; every agent does it slightly differently and some get it wrong. The bundled script does exactly what Xcode's *Add Package Dependencies…* does, and is idempotent.
+
+Inspect existing Luciq package and product entries, framework links, and imports first. Reuse or update them in place, preserving identifiers and app-specific settings; use the script for missing pieces rather than adding a second integration. If `Package.swift` exists, reuse or update its declarations too.
 
 ```bash
 gem list -i xcodeproj >/dev/null || gem install xcodeproj   # >= 1.27.0 for Xcode 16+ projects
@@ -56,21 +58,36 @@ If resolution fails with "no versions match", the `--version` is higher than any
 
 ## Entry point — where the start call goes
 
-Pick the first that exists:
+Start Luciq at the very beginning of `application(_:didFinishLaunchingWithOptions:)`, before any other app initialization or SDK, including Firebase. Keep required pre-start Luciq configuration immediately before `Luciq.start` as the first initialization block; starting other SDKs first can interfere with automatic network capture. Configure network masking after the start call inside that callback.
 
-1. **UIKit / `AppDelegate`** — `application(_:didFinishLaunchingWithOptions:)`.
-2. **SwiftUI with `@UIApplicationDelegateAdaptor`** — the adaptor's `AppDelegate`, same method.
-3. **SwiftUI `@main struct …: App` only** (the default for new projects) — add an `init()` to the `App` struct and start the SDK there. Don't add an `AppDelegate` just for this.
+1. **UIKit / `AppDelegate`** — reuse the existing launch callback.
+2. **SwiftUI with `@UIApplicationDelegateAdaptor`** — reuse that adaptor and its delegate's launch callback.
+3. **SwiftUI `@main struct …: App` only** — add the missing app delegate and connect it with `@UIApplicationDelegateAdaptor`. Do not start Luciq in the `App` struct's `init()`.
+
+Merge the example into the existing entry point and delegate; add only missing pieces, keeping a single delegate and adaptor. Move any existing Luciq start call and pre-start configuration to the beginning of the launch callback, keeping exactly one start per launch path. Preserve views, delegate superclass and conformances, other launch work, and return behavior.
 
 ```swift
 import SwiftUI
+import UIKit
 import LuciqSDK
+
+class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        let token = Bundle.main.object(forInfoDictionaryKey: "LuciqAppToken") as? String ?? ""
+        if token.isEmpty || token.hasPrefix("$(") {
+            assertionFailure("Luciq token missing — fill in Config/Luciq.xcconfig")
+        } else {
+            Luciq.start(withToken: token, invocationEvents: [.shake, .floatingButton])
+        }
+        return true
+    }
+}
 
 @main
 struct MyApp: App {
-    init() {
-        Luciq.start(withToken: <token>, invocationEvents: [.shake, .floatingButton])
-    }
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+
     var body: some Scene { WindowGroup { ContentView() } }
 }
 ```

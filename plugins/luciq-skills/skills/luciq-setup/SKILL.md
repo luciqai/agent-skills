@@ -132,12 +132,18 @@ YOU MUST verify the exact init signature, package name, and Gradle plugin name f
 
 Verify the recommended install method against the live guide before proceeding — the primary method has changed across SDK versions.
 
+Inspect the existing iOS integration first. Reuse or update Luciq dependency entries, product links, imports, token configuration, masking handlers, and dSYM upload automation; add only missing pieces and preserve app-specific configuration.
+
+**Initialization order:** start Luciq at the very beginning of `application(_:didFinishLaunchingWithOptions:)`, before any other app initialization or SDK, including Firebase. Place required pre-start Luciq configuration immediately before `Luciq.start`, keeping both as the first initialization block. Configure network masking after the start call in that callback. Starting other SDKs first can interfere with automatic network capture.
+
+Reuse the app's entry point, app delegate, launch callback, and, for SwiftUI, its existing `@main App` and `@UIApplicationDelegateAdaptor`; add only missing pieces, keeping a single delegate and adaptor. Move any existing startup call and pre-start configuration to that callback rather than starting Luciq in the `App` struct's `init()`. Keep exactly one start call per launch path and preserve views, delegate superclass and conformances, other launch work, and return behavior. See *Entry point* in `references/ios-spm.md`.
+
 **Swift Package Manager (recommended for all new and existing projects)**
 
 First check whether a `Package.swift` exists at the project root.
 
 *Project has `Package.swift`:*
-1. Edit `Package.swift` — add to `dependencies` and to the appropriate target's `dependencies`. Verify the repo URL and version on the live guide:
+1. Inspect `Package.swift` — reuse or update existing Luciq entries in `dependencies` and the appropriate target's `dependencies`, adding only missing ones. Verify the repo URL and version on the live guide:
    ```swift
    // dependencies array:
    .package(url: "<REPO_URL_FROM_LIVE_GUIDE>", from: "<VERSION>"),
@@ -146,7 +152,7 @@ First check whether a `Package.swift` exists at the project root.
    ```
 2. Run `swift package resolve` to fetch.
 3. Check the resolved `Package.swift` in DerivedData checkouts to confirm the product name and module name — **they are different**: the SPM product may be `Luciq` while the Swift import is `import LuciqSDK`. Use the module name (from the `.xcframework` contents) for `import`, not the product name.
-4. Add the start call at the app's entry point (`AppDelegate`, or an `init()` on the `@main` `App` struct for SwiftUI — see *Entry point* in `references/ios-spm.md`). Verify the exact init signature on the live guide.
+4. Move the existing start call, or add it if missing, to the beginning of the app delegate's launch callback using the initialization order above. For SwiftUI, connect the delegate with `@UIApplicationDelegateAdaptor`. Verify the exact init signature on the live guide.
 5. Edit `Info.plist`: add `NSMicrophoneUsageDescription` and `NSPhotoLibraryUsageDescription`.
 
 *Project is `.xcodeproj`-only (no `Package.swift`):*
@@ -158,21 +164,21 @@ Read `references/ios-spm.md` first. **Do not hand-edit `project.pbxproj`** — h
      --url https://github.com/luciqai/luciq-ios-sdk --version <LATEST_TAG> --product Luciq
    ```
    SPM product = `Luciq`; Swift import = `import LuciqSDK`. Get `<LATEST_TAG>` from the repo tags (command in the reference).
-3. Add the start call at the app's entry point — for a SwiftUI app with no `AppDelegate`, that is an `init()` on the `@main` `App` struct. See *Entry point* in `references/ios-spm.md`. Verify the exact init signature on the live guide.
+3. Move the existing start call, or add it if missing, to the beginning of the app delegate's launch callback using the initialization order above. For SwiftUI, reuse the delegate and adaptor, adding them only if absent. Verify the exact init signature on the live guide.
 4. Edit `Info.plist`: add `NSMicrophoneUsageDescription` and `NSPhotoLibraryUsageDescription`. If the project has no `Info.plist` file (`GENERATE_INFOPLIST_FILE = YES`), add them as `INFOPLIST_KEY_…` build settings instead — see *Projects with no `Info.plist` file* in the reference.
 5. Tell the user they can reopen Xcode. If Xcode then shows `Missing package product`, the fix is **File → Packages → Resolve Package Versions** — resolution is per DerivedData, so the CLI build passing does not fix an open Xcode window.
 
 **Carthage (alternative — only if SPM is blocked by a project-level constraint)**
-1. Edit (or create) `Cartfile` — verify the binary spec URL on the live guide:
+1. Reuse or update the Luciq entry in `Cartfile`; create it only if missing. Verify the binary spec URL on the live guide:
    ```
    binary "<SPEC_URL_FROM_LIVE_GUIDE>"
    ```
 2. Run `carthage update --use-xcframeworks` after user confirmation.
-3. Embed the built `.xcframework` programmatically using the `xcodeproj` Ruby gem:
+3. Reuse the existing framework reference, product link, and embedding configuration. For missing pieces, embed the built `.xcframework` programmatically using the `xcodeproj` Ruby gem:
    ```bash
    gem install xcodeproj   # skip if already installed
    ```
-   Then run a Ruby script (adapt `TARGET_NAME` and the `.xcframework` filename to the actual project — check `Carthage/Build/` after step 2):
+   Adapt the following Ruby example to add only missing references, links, copy phases, and input paths; preserve existing embedding settings. Adapt `TARGET_NAME` and the `.xcframework` filename to the actual project — check `Carthage/Build/` after step 2:
    ```ruby
    require 'xcodeproj'
    project = Xcodeproj::Project.open(Dir.glob('*.xcodeproj').first)
@@ -185,12 +191,12 @@ Read `references/ios-spm.md` first. **Do not hand-edit `project.pbxproj`** — h
    project.save
    ```
    Show the diff of `project.pbxproj` before saving.
-4. Edit `AppDelegate.swift` (or `.m`): import the module and call the start API. Verify the exact init signature on the live guide.
+4. Reuse the module import and existing start call, adding only what is missing. Apply the initialization order above in `AppDelegate.swift` (or `.m`); SwiftUI uses the same launch callback through `@UIApplicationDelegateAdaptor`. Verify the exact init signature on the live guide.
 5. Edit `Info.plist`: add `NSMicrophoneUsageDescription` and `NSPhotoLibraryUsageDescription`.
 
 **CocoaPods (deprecated — avoid for new integrations)**
 > ⚠️ The CocoaPods registry becomes read-only on December 2, 2026. Prefer SPM or Carthage. Only use this path if the project already uses CocoaPods and migration is out of scope for this task.
-1. Edit `Podfile`: add the Luciq pod to the main target — verify the pod name on the live guide.
+1. Edit `Podfile`: reuse or update the Luciq pod in the main target, adding it only if missing — verify the pod name on the live guide.
 2. Run `pod install` and `pod update Luciq` after user confirmation.
 3. Follow steps 4–5 above.
 
@@ -376,6 +382,8 @@ NetworkLogger.setRequestObfuscationHandler { request in
 
 Response bodies use `NetworkLogger.setResponseObfuscationHandler`.
 
+For native iOS, reuse or update existing masking helpers and handlers, preserving the app's privacy rules. Configure them after the single `Luciq.start` in the existing app delegate's `application(_:didFinishLaunchingWithOptions:)`, including SwiftUI apps connected through `@UIApplicationDelegateAdaptor`.
+
 Android, verified against SDK 19.12.1. The headers are nullable `MutableMap`s and the body field is `response`, not `responseBody`, so the AI Android guide's snippet does not compile:
 
 ```kotlin
@@ -428,6 +436,8 @@ After running, prompt the user to restart their agent (Claude Code, Cursor, Code
 Without symbol files (iOS dSYMs, Android ProGuard/R8 mappings, React Native source maps, Flutter split-debug-info) the first crashes arrive as raw addresses. Crash reporting works; the traces just can't be read.
 
 Do not install the CLI or write an upload step from this skill. `luciq-symbolicate` owns it: it installs and authenticates the `luciq` CLI, knows the upload subcommand per platform, and wires it into an Xcode build phase, Gradle, Fastlane or CI with the credential read from a secret.
+
+For native iOS, first inspect existing build phases, Fastlane, and CI automation. Reuse or update the upload mechanism for each archive path, preserving its configuration; add an upload step only where none exists.
 
 Ask once: *"Crash traces need symbol files uploaded to be readable. Set that up now? (It's a separate step — about 5 minutes.)"*
 

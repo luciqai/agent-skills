@@ -107,6 +107,8 @@ Step 5 above is a **hard gate on this step**: a committed pipeline step that has
 
 Platform-specific pipeline snippets (GitHub Actions, Fastlane, Gradle, Bitrise, CircleCI, an Xcode build phase, cron) are in `references/ci-recipes.md`.
 
+For native iOS, inspect existing Fastlane, CI, and build-phase dSYM uploads first. Reuse or update the mechanism for each archive path, preserving lane names, secrets, phase configuration, and other build steps; add an upload only where none exists. Do not add a build phase when that archive path already has upload automation.
+
 **Xcode build phase: use `scripts/add_dsym_upload_phase.rb`, never a hand-written phase.** With `ENABLE_USER_SCRIPT_SANDBOXING = YES` (the default since Xcode 15) a phase that zips the dSYM folder is blocked by the sandbox and fails every Release build and archive, while Debug builds stay green. The script declares the exact inputs and output the sandbox needs. After adding it, prove it with a **Release** build passing `LUCIQ_SKIP_UPLOAD=YES` (runs everything the sandbox can block, sends nothing) — a Debug build skips the phase and proves nothing.
 
 **Rate limit applies to uploads too.** The gateway allows 100 requests per 60 seconds keyed by source IP, and that budget covers *every* command. A matrix build pushing symbols for several platforms and ABIs at once draws on the same allowance as a shared CI runner's other traffic. Treat `429` as back-off-and-retry, not as failure.

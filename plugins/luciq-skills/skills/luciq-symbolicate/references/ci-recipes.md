@@ -34,6 +34,8 @@ Pipeline snippets for symbol uploads and scheduled queries. Adapt paths and vari
 
 ## GitHub Actions — iOS
 
+Reuse or update the existing dSYM upload step, preserving its app-specific paths, credentials, and conditions. Add the example below only if that archive path has no upload automation.
+
 ```yaml
 - name: Upload dSYMs to Luciq
   env:
@@ -86,6 +88,8 @@ Pipeline snippets for symbol uploads and scheduled queries. Adapt paths and vari
 Only reuse that `pubspec.yaml` parse if the version really is a literal `x.y.z+n` there — many projects inject it at build time instead.
 
 ## Fastlane
+
+For native iOS, merge changes into the existing upload action and lane, preserving lane names, secrets, paths, and other build steps. Add an upload only if that archive path has none in Fastlane, CI, or a build phase.
 
 ```ruby
 lane :upload_luciq_symbols do
@@ -158,6 +162,8 @@ Store the token in a context or project env var.
 ## Xcode build phase (local / non-CI archives)
 
 Only worth adding when engineers archive from their machines — each of them then uploads under their own CLI token.
+
+Inspect existing build-phase, Fastlane, and CI dSYM uploads for the archive path first. Reuse or update a working mechanism and its app-specific configuration; do not add another phase or target reference when an upload already covers that path. Use the script below only for a missing phase, or to replace a hand-written phase that fails under the sandbox. It updates a phase named `Upload dSYMs to Luciq` in place, and warns when another phase already runs `luciq upload`, because that uploads twice.
 
 **Add it with the bundled script. Do not hand-write the phase.** Projects created in Xcode 15+ have `ENABLE_USER_SCRIPT_SANDBOXING = YES`: a Run Script phase may then read only its declared input files and write only its declared outputs. The obvious phase — `cd "$DWARF_DSYM_FOLDER_PATH" && zip -r …` — is blocked (`Sandbox: zip(…) deny(1) file-read-data`), and every Release build and archive fails. Debug builds skip the phase and stay green, so a Debug smoke build never shows the problem.
 

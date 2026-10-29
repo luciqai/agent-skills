@@ -24,6 +24,7 @@ Per-file scan recipe for iOS projects in Phase 2 (static audit). The agent uses 
 | `**/Info.plist` | Permission usage descriptions; Luciq does not require any but the presence is informational |
 | `**/project.pbxproj` | Build phases (dSYM upload script invocation); `DEBUG_INFORMATION_FORMAT` for Release config |
 | `luciq_dsym_upload.sh`, `upload_symbols.sh`, `upload_dsym.sh`, `instabug.sh` | Symbol upload scripts |
+| `Fastfile`, CI workflow files | Existing dSYM upload automation for each archive path |
 
 Read all of the above. Skip directories: `.git/`, `Pods/Headers/`, `DerivedData/`, `build/`, `*.xcframework/`, `.build/`. Bytes-only files (images, fonts, compiled binaries) are never read.
 
@@ -66,6 +67,8 @@ Patterns:
 - `[Luciq startWithToken:` (ObjC)
 
 The line containing the match is the evidence. Multiple init sites is informational unless they pass different tokens (then `WARN`).
+
+For startup order, read the launch callback in order — `application(_:didFinishLaunchingWithOptions:)`, or for SwiftUI the delegate behind `@UIApplicationDelegateAdaptor` — and follow any helper it calls. Report what you find through the anti-patterns below. If the order cannot be resolved from source, report nothing rather than guess.
 
 ### Module toggles (`S-MODULE-*`)
 
@@ -164,9 +167,9 @@ Check for the presence of one of these scripts in the repo (anywhere):
 - `upload_dsym.sh`
 - `instabug.sh` (legacy)
 
-If found → `S-SYMBOL-IOS-UPLOAD PASS`. Cross-reference with `project.pbxproj` to confirm a build phase invokes it → `S-SYMBOL-IOS-PHASE PASS`.
+Also inspect existing Fastlane and CI upload automation. For each archive path, emit `S-SYMBOL-IOS-UPLOAD PASS` when a script or another configured upload mechanism covers it; cite the existing automation. Cross-reference a build-phase upload with `project.pbxproj` → `S-SYMBOL-IOS-PHASE PASS` when invoked there. When Fastlane or CI covers that path instead, emit `S-SYMBOL-IOS-PHASE N/A`; do not recommend a duplicate phase.
 
-If the script is present but no build phase invokes it: `WARN` "dSYM upload script present but not wired into the build."
+If a script is present but no build phase, Fastlane lane, or CI workflow invokes it for an archive path: `WARN` "dSYM upload script present but not wired into the archive pipeline." Recommend reusing or updating the existing upload automation, adding only missing coverage and preserving app-specific configuration.
 
 ## Privacy view modifiers
 
@@ -184,7 +187,8 @@ Surface as `WARN` (or `FAIL` if egregious):
 
 | Anti-pattern | Detection | Status |
 | --- | --- | --- |
-| `Luciq.start(...)` called more than once | Multiple matches of init pattern across source files | `WARN` |
+| `Luciq.start(...)` called more than once on one launch path | Trace init matches through the launch callback and helpers; mutually exclusive paths may each start once | `WARN` |
+| Another SDK or app initialization runs before `Luciq.start(...)` in the launch callback | Read the callback in order (SwiftUI: the delegate behind `@UIApplicationDelegateAdaptor`); Luciq settings directly before the start call are fine | `WARN` — cite the earlier call's file:line; starting another SDK first can interfere with Luciq's automatic network capture; remediation moves the existing Luciq start and its pre-start settings to the top of the callback |
 | `Luciq.start(...)` inside a `#if DEBUG` only | Init in debug-gated block; release builds won't initialize | `FAIL` (unless explicitly debug-only project) |
 | Token detected directly in source (vs. read from env / config) | String literal of length ≥ 32 that looks like a Luciq token argument | `WARN` "credential detected in source — confirm scope" — report masked (first 4 chars + length) |
 | Legacy `Instabug` import alongside `Luciq` | `import Instabug` plus `import LuciqSDK` in the same target | `WARN` — run `luciq-migrate` to finish the rename if mid-migration; long-term coexistence is unsupported |
