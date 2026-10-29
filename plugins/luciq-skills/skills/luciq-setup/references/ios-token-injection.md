@@ -37,7 +37,7 @@ If the script can't run, STOP and give the user these steps to do in Xcode; don'
 
 ## Read it at the entry point
 
-Reuse the file-scope import and place the token lookup and startup statements below at the beginning of the existing app delegate's `application(_:didFinishLaunchingWithOptions:)`, before other app initialization or SDKs, including Firebase. Keep any required pre-start Luciq configuration immediately before `Luciq.start`, then configure network masking after it inside the `else` block. For SwiftUI, reuse the existing `@UIApplicationDelegateAdaptor` and delegate, adding only missing pieces. If another SDK starts in `App.init()`, which runs before the delegate's launch callback, place these statements at the start of `App.init()` instead.
+Reuse the file-scope import and place the token lookup and startup statements below at the beginning of the existing app delegate's `application(_:didFinishLaunchingWithOptions:)`, before other app initialization or SDKs, including Firebase. Keep any required pre-start Luciq configuration immediately before `Luciq.start`, then configure network masking after it inside the `else` block. For SwiftUI, reuse the existing `@UIApplicationDelegateAdaptor` and delegate, or add them if missing.
 
 Move an existing startup call and its pre-start configuration here rather than duplicating it. Keep exactly one start on each path the app can take at launch, preserving views, delegate superclass and conformances, other launch work, and the callback's return behavior.
 

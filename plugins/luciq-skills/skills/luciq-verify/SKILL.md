@@ -155,7 +155,7 @@ Each reference doc enumerates a category of static checks (`S-*` codes — disti
 Categories per platform (full per-platform spec in each extractor reference):
 
 - **SDK install + version detection** — pinned version, install method, mismatched debug vs. release
-- **Native iOS startup order** — whether Luciq starts before every other SDK start in the app's launch sequence (UIKit: the launch callback; SwiftUI: `App.init()` first, then the delegate behind `@UIApplicationDelegateAdaptor`), and starts once on each path the app can take at launch
+- **Native iOS startup order** — whether Luciq starts before every other SDK start in the app's launch sequence (UIKit: the launch callback; SwiftUI: the delegate behind `@UIApplicationDelegateAdaptor`), and starts once on each path the app can take at launch
 - **Module activation** — Bug Reporting, Crash Reporting, APM, Session Replay, NDK, Surveys, Replies, Feature Requests, OOM monitor, ANR monitor, network auto-masking
 - **Invocation events** — shake / screenshot / floating-button / two-finger swipe / programmatic
 - **User identification + attribute hooks** — `setUserData`, `setCustomData`, `addUserAttribute`, `trackUserSteps`

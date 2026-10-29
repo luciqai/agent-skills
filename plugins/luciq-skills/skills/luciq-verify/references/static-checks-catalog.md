@@ -41,7 +41,7 @@ Findings cite **file path + 1-indexed line range** as evidence. Matched text is 
 | `S-INSTALL-003` | SDK init call site found (`Luciq.start*`, `Luciq.Builder().build()`, `Luciq.init(` on Flutter / React Native, etc.) | File path + line of init call |
 | `S-INSTALL-004` | No legacy Instabug references coexist with Luciq (relevant during migration) | Files containing `import Instabug` or equivalent |
 
-For native iOS, startup order and duplicate starts are reported as anti-patterns (`WARN`) in `extractors-ios.md`. `S-INSTALL-003` stays a presence check.
+For native iOS, startup order, duplicate starts and SwiftUI placement are reported as anti-patterns (`WARN`) in `extractors-ios.md`. `S-INSTALL-003` stays a presence check.
 
 ## Module activation (`S-MODULE-*`)
 

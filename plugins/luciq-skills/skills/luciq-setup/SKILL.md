@@ -136,9 +136,9 @@ Inspect the existing iOS integration first. Reuse or update Luciq dependency ent
 
 **Initialization order:** start Luciq at the very beginning of `application(_:didFinishLaunchingWithOptions:)`, before any other app initialization or SDK, including Firebase. Place required pre-start Luciq configuration immediately before `Luciq.start`, keeping both as the first initialization block. Configure network masking after the start call in that callback. Starting other SDKs first can interfere with automatic network capture.
 
-Reuse the app's entry point, app delegate, launch callback, and, for SwiftUI, its existing `@main App` and `@UIApplicationDelegateAdaptor`; add only missing pieces, keeping a single delegate and adaptor. Move any existing startup call and pre-start configuration to the beginning of that callback, except in the SwiftUI case below. Keep exactly one start call on each path the app can take at launch (separate `#if` branches may each have one). Preserve views, delegate superclass and conformances, other launch work, and return behavior. See *Entry point* in `references/ios-spm.md`.
+Reuse the app's entry point, app delegate, launch callback, and, for SwiftUI, its existing `@main App` and `@UIApplicationDelegateAdaptor`; add only missing pieces, keeping a single delegate and adaptor. Move any existing startup call and pre-start configuration to the beginning of that callback. Keep exactly one start call on each path the app can take at launch (separate `#if` branches may each have one). Preserve views, delegate superclass and conformances, other launch work, and return behavior. See *Entry point* in `references/ios-spm.md`.
 
-**SwiftUI order:** SwiftUI runs `App.init()` before the delegate's launch callback (observed Oct 2026, iOS 27.2), so Luciq must start before every other SDK across both. If another SDK starts in `App.init()`, Luciq must start before it there. Make Luciq the first statement of `App.init()`, moving an existing Luciq start if needed, and do not add a delegate only for Luciq. Otherwise start Luciq in the launch callback of the delegate connected with `@UIApplicationDelegateAdaptor`. Tell the user which case you found.
+**SwiftUI:** always start Luciq from an app delegate connected with `@UIApplicationDelegateAdaptor`. Reuse the app's delegate and adaptor. If the app has none, create the delegate class and add the adaptor property to the `@main` struct, as in *Entry point* in `references/ios-spm.md`. Move any existing Luciq start into the delegate's launch callback. Start every other SDK after Luciq in that callback: if another SDK already starts earlier in the launch, move its start into the callback after Luciq, or tell the user if other code needs it earlier.
 
 **Swift Package Manager (recommended for all new and existing projects)**
 
@@ -154,7 +154,7 @@ First check whether a `Package.swift` exists at the project root.
    ```
 2. Run `swift package resolve` to fetch.
 3. Check the resolved `Package.swift` in DerivedData checkouts to confirm the product name and module name — **they are different**: the SPM product may be `Luciq` while the Swift import is `import LuciqSDK`. Use the module name (from the `.xcframework` contents) for `import`, not the product name.
-4. Move the existing start call, or add it if missing, to the beginning of the app delegate's launch callback using the initialization order above. For SwiftUI, follow the SwiftUI order above. Verify the exact init signature on the live guide.
+4. Move the existing start call, or add it if missing, to the beginning of the app delegate's launch callback using the initialization order above. For SwiftUI, follow the SwiftUI note above. Verify the exact init signature on the live guide.
 5. Edit `Info.plist`: add `NSMicrophoneUsageDescription` and `NSPhotoLibraryUsageDescription`.
 
 *Project is `.xcodeproj`-only (no `Package.swift`):*
@@ -166,7 +166,7 @@ Read `references/ios-spm.md` first. **Do not hand-edit `project.pbxproj`** — h
      --url https://github.com/luciqai/luciq-ios-sdk --version <LATEST_TAG> --product Luciq
    ```
    SPM product = `Luciq`; Swift import = `import LuciqSDK`. Get `<LATEST_TAG>` from the repo tags (command in the reference).
-3. Move the existing start call, or add it if missing, to the beginning of the app delegate's launch callback using the initialization order above. For SwiftUI, follow the SwiftUI order above. Verify the exact init signature on the live guide.
+3. Move the existing start call, or add it if missing, to the beginning of the app delegate's launch callback using the initialization order above. For SwiftUI, follow the SwiftUI note above. Verify the exact init signature on the live guide.
 4. Edit `Info.plist`: add `NSMicrophoneUsageDescription` and `NSPhotoLibraryUsageDescription`. If the project has no `Info.plist` file (`GENERATE_INFOPLIST_FILE = YES`), add them as `INFOPLIST_KEY_…` build settings instead — see *Projects with no `Info.plist` file* in the reference.
 5. Tell the user they can reopen Xcode. If Xcode then shows `Missing package product`, the fix is **File → Packages → Resolve Package Versions** — resolution is per DerivedData, so the CLI build passing does not fix an open Xcode window.
 
@@ -193,7 +193,7 @@ Read `references/ios-spm.md` first. **Do not hand-edit `project.pbxproj`** — h
    project.save
    ```
    Show the diff of `project.pbxproj` before saving.
-4. Reuse the module import and existing start call, adding only what is missing. Apply the initialization order above in `AppDelegate.swift` (or `.m`); for SwiftUI, follow the SwiftUI order above. Verify the exact init signature on the live guide.
+4. Reuse the module import and existing start call, adding only what is missing. Apply the initialization order above in `AppDelegate.swift` (or `.m`); for SwiftUI, follow the SwiftUI note above. Verify the exact init signature on the live guide.
 5. Edit `Info.plist`: add `NSMicrophoneUsageDescription` and `NSPhotoLibraryUsageDescription`.
 
 **CocoaPods (deprecated — avoid for new integrations)**
@@ -384,7 +384,7 @@ NetworkLogger.setRequestObfuscationHandler { request in
 
 Response bodies use `NetworkLogger.setResponseObfuscationHandler`.
 
-For native iOS, reuse or update existing masking helpers and handlers, preserving the app's privacy rules. Configure them after the single `Luciq.start`, in the same function: the app delegate's `application(_:didFinishLaunchingWithOptions:)`, or `App.init()` in the SwiftUI case above.
+For native iOS, reuse or update existing masking helpers and handlers, preserving the app's privacy rules. Configure them after the single `Luciq.start`, in the same function: the app delegate's `application(_:didFinishLaunchingWithOptions:)`.
 
 Android, verified against SDK 19.12.1. The headers are nullable `MutableMap`s and the body field is `response`, not `responseBody`, so the AI Android guide's snippet does not compile:
 

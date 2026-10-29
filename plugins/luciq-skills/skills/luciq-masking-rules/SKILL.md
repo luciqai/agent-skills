@@ -115,7 +115,7 @@ Output: `auto_mask: { configured: bool, file_line, types: [TEXT_INPUTS | LABELS 
 
 Detect network masking state and any custom obfuscate/omit hooks.
 
-On iOS, check that network masking is configured after `Luciq.start`, in the same function. Required Luciq pre-start configuration and startup must be the first initialization block of `application(_:didFinishLaunchingWithOptions:)`, before other app initialization or SDKs, including Firebase. SwiftUI uses an AppDelegate connected with `@UIApplicationDelegateAdaptor`, unless another SDK starts in `App.init()`, which runs first. Then Luciq and its masking belong first in `App.init()`.
+On iOS, check that network masking is configured after `Luciq.start`, in the same function. Required Luciq pre-start configuration and startup must be the first initialization block of `application(_:didFinishLaunchingWithOptions:)`, before other app initialization or SDKs, including Firebase. SwiftUI uses an AppDelegate connected with `@UIApplicationDelegateAdaptor`.
 
 | Signal | Locations to grep |
 |---|---|
@@ -214,7 +214,7 @@ Derive the exact diff from the profile, not from defaults. Show before applying.
 - Use the **competitor's masking style** (if any was detected in `luciq-onboard`) to keep posture consistent across SDKs.
 - If a required file edit conflicts with uncommitted user changes, STOP and surface — don't overwrite work.
 
-For iOS edits, reuse the existing entry point, delegate, adaptor, launch callback, imports, and masking helpers or handlers. Move an existing Luciq start and its pre-start configuration to the beginning of that callback when needed (in SwiftUI, if another SDK starts in `App.init()`, keep them first in `App.init()` instead), keeping one start on each path the app can take at launch and masking after it. Add only missing pieces; preserve app-specific privacy rules, views, delegate superclass and conformances, other launch work, and the return value.
+For iOS edits, reuse the existing entry point, delegate, adaptor, launch callback, imports, and masking helpers or handlers. Move an existing Luciq start and its pre-start configuration to the beginning of that callback when needed, keeping one start on each path the app can take at launch and masking after it. Add only missing pieces; preserve app-specific privacy rules, views, delegate superclass and conformances, other launch work, and the return value.
 
 For server-side controls (network mask key additions, `usersPageEnabled`), prepare a one-line support-ticket request the user can copy — these can't be code-applied.
 

@@ -64,8 +64,6 @@ Start Luciq at the very beginning of `application(_:didFinishLaunchingWithOption
 2. **SwiftUI with `@UIApplicationDelegateAdaptor`** — reuse that adaptor and its delegate's launch callback.
 3. **SwiftUI `@main struct …: App` only** — add the missing app delegate and connect it with `@UIApplicationDelegateAdaptor`.
 
-SwiftUI runs `App.init()` before the delegate's launch callback (observed Oct 2026, iOS 27.2). In cases 2 and 3, first read `App.init()` for another SDK start. If there is one, Luciq must start before it there: make Luciq the first statement of `App.init()`, moving an existing Luciq start if needed, and add no delegate for it. The example below is for the delegate case.
-
 Merge the example into the existing entry point and delegate; add only missing pieces, keeping a single delegate and adaptor. Move any existing Luciq start call and pre-start configuration to the beginning of the launch callback, keeping exactly one start on each path the app can take at launch (separate `#if` branches may each have one). Preserve views, delegate superclass and conformances, other launch work, and return behavior.
 
 ```swift

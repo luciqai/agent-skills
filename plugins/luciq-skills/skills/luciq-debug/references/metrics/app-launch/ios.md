@@ -179,8 +179,7 @@ group carries only `preMain` and `appInit` while the total is large, verify wher
 initialized before drawing conclusions about the missing stages.
 
 Luciq should start at the beginning of `application(_:didFinishLaunchingWithOptions:)`, before other app
-initialization or SDKs. For SwiftUI, that is the AppDelegate connected with `@UIApplicationDelegateAdaptor`,
-unless another SDK starts in `App.init()`, which runs first. Then Luciq belongs first in `App.init()`.
+initialization or SDKs. For SwiftUI, that is the AppDelegate connected with `@UIApplicationDelegateAdaptor`.
 
 **Missing screen name.** Screen names longer than 60 characters are omitted rather than truncated, so
 `first_screen` may be absent. This is common in SwiftUI apps, where the resolved name is a long generic
