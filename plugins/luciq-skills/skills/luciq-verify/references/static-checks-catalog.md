@@ -117,8 +117,8 @@ iOS uses dSYMs; Android uses ProGuard/R8 mapping files. Both required for produc
 
 | Code | Platform | Check | Evidence |
 | --- | --- | --- | --- |
-| `S-SYMBOL-IOS-UPLOAD` | iOS | Existing dSYM upload automation covers each archive path | Upload script, Fastlane lane, or CI workflow and its archive coverage |
-| `S-SYMBOL-IOS-PHASE` | iOS | Run-script build phase invokes the upload script when that path uses a build-phase upload | `project.pbxproj` phase reference; `N/A` when existing Fastlane or CI automation uploads for that path |
+| `S-SYMBOL-IOS-UPLOAD` | iOS | Existing dSYM upload automation covers each way the app is archived (Xcode, Fastlane, or a CI job) | Upload script, Fastlane lane, or CI workflow, and which way of archiving it covers |
+| `S-SYMBOL-IOS-PHASE` | iOS | Run-script build phase invokes the upload script when that way of archiving uses a build-phase upload | `project.pbxproj` phase reference; `N/A` when existing Fastlane or CI automation uploads for that way of archiving |
 | `S-SYMBOL-IOS-DWARF` | iOS | Debug Information Format includes DWARF with dSYM | `project.pbxproj` `DEBUG_INFORMATION_FORMAT = dwarf-with-dsym` for Release |
 | `S-SYMBOL-AND-PLUGIN` | Android | Luciq mapping upload Gradle plugin applied | `apply plugin: 'luciq.upload'` or KTS equivalent in `build.gradle` |
 | `S-SYMBOL-AND-TOKEN` | Android | Mapping upload token configured | `luciqUpload { applicationToken = "…" }` block |

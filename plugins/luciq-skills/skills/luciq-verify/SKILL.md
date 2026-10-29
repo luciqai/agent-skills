@@ -143,7 +143,7 @@ Reuse the platform detection from Phase 1a. Based on the detected platform, poin
 
 | Platform | Reference | Files scanned |
 | --- | --- | --- |
-| iOS | `references/extractors-ios.md` | `Package.resolved`, `Podfile` (+ `.lock`), `Cartfile` (+ `.resolved`), `*.swift`, `*.m`, `Info.plist`, `project.pbxproj`, dSYM upload shell scripts, `Fastfile`, CI workflow files |
+| iOS | `references/extractors-ios.md` | `Package.resolved`, `Podfile` (+ `.lock`), `Cartfile` (+ `.resolved`), `*.swift`, `*.m`, `Info.plist`, `project.pbxproj`, dSYM upload shell scripts, `Fastfile`, CI config (`.github/workflows/*.yml`, `.circleci/config.yml`, `bitrise.yml`, `.gitlab-ci.yml`, `Jenkinsfile`) |
 | Android | `references/extractors-android.md` | `build.gradle`(`.kts`), `settings.gradle`(`.kts`), `AndroidManifest.xml`, `*.kt`, `*.java` |
 | Flutter | `references/extractors-flutter.md` | `pubspec.yaml`, `*.dart` |
 | React Native | `references/extractors-rn.md` — plus `extractors-ios.md` on `ios/` and `extractors-android.md` on `android/` when those subfolders exist (RN projects are hybrid; native-side Pod / Gradle integration is part of the audit) | `package.json`, `*.{js,jsx,ts,tsx}`, and the native files when applicable |
@@ -155,14 +155,14 @@ Each reference doc enumerates a category of static checks (`S-*` codes — disti
 Categories per platform (full per-platform spec in each extractor reference):
 
 - **SDK install + version detection** — pinned version, install method, mismatched debug vs. release
-- **Native iOS startup order** — whether Luciq starts first in the app's launch callback, before other SDKs such as Firebase (SwiftUI: the delegate behind `@UIApplicationDelegateAdaptor`), and starts once per launch path
+- **Native iOS startup order** — whether Luciq starts before every other SDK start in the app's launch sequence (UIKit: the launch callback; SwiftUI: `App.init()` first, then the delegate behind `@UIApplicationDelegateAdaptor`), and starts once on each path the app can take at launch
 - **Module activation** — Bug Reporting, Crash Reporting, APM, Session Replay, NDK, Surveys, Replies, Feature Requests, OOM monitor, ANR monitor, network auto-masking
 - **Invocation events** — shake / screenshot / floating-button / two-finger swipe / programmatic
 - **User identification + attribute hooks** — `setUserData`, `setCustomData`, `addUserAttribute`, `trackUserSteps`
 - **Feature flag API usage** — `addFeatureFlag`, `removeFeatureFlag`, `checkFeatures`
 - **Custom logging + user-event logging** — `Luciq.log*`, `LCQLog.log*`, `logUserEvent`
 - **Masking / privacy config** — network auto-masking, screenshot auto-masking modes, sensitive header configuration
-- **dSYM / mapping upload setup** — iOS dSYM upload automation coverage per archive path, reusing existing build phases, Fastlane, or CI; Android mapping upload Gradle plugin presence
+- **dSYM / mapping upload setup** — iOS dSYM upload automation coverage for each way the app is archived, reusing existing build phases, Fastlane, or CI; Android mapping upload Gradle plugin presence
 - **Build system detection** — SPM / CocoaPods / Carthage on iOS; Gradle Groovy / Gradle KTS on Android; npm on RN; pub on Flutter
 - **Privacy view modifiers** — iOS only (SwiftUI `.luciq_privateView()`, UIKit `view.luciq_privateView = true`)
 

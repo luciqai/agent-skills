@@ -80,7 +80,7 @@ Verify product names, SDK class names, and dashboard surface labels against http
 **Apply targets.**
 - Generally nothing beyond the SDK init from `luciq-setup` — crash reporting is on by default for Luciq.
 - If symbolicated stack traces matter, propose adding the Luciq CLI to CI for dSYM / ProGuard mapping upload. When `ci_system` is detected (Track E1), propose a specific diff to the primary workflow file / Fastlane lane / Bitrise step — not a generic "see the CLI docs" pointer. When `ci_system` is `none`, fall back to the doc pointer in *What's left for you*.
-- On iOS, inspect existing dSYM upload automation before proposing an addition. Reuse or update the existing build phase, Fastlane lane, or CI step for each archive path, preserving app-specific configuration; add an upload step only where none exists.
+- On iOS, inspect existing dSYM upload automation before proposing an addition. Reuse or update the existing build phase, Fastlane lane, or CI step for each way the app is archived (Xcode, Fastlane, or a CI job), preserving app-specific configuration; add an upload step only where none exists.
 - If `ci_system.env_matrix` shows multiple build configs (debug / staging / release), propose env-gated app tokens at the SDK init site instead of a hardcoded string.
 
 **Style match.**

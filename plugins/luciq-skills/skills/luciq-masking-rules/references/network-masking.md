@@ -56,7 +56,7 @@ The names differ by platform, and the multi-platform docs page puts them side by
 
 iOS Objective-C: `[LCQNetworkLogger setRequestObfuscationHandler:…]`. There is no `NetworkLogger.setNetworkDataObfuscationHandler` on iOS — that is the React Native name.
 
-On iOS, configure network masking after `Luciq.start` inside `application(_:didFinishLaunchingWithOptions:)`. Keep any required pre-start configuration immediately before the start call as the method's first initialization block, before other app initialization or SDKs, including Firebase. SwiftUI uses an AppDelegate connected with `@UIApplicationDelegateAdaptor`; do not start Luciq in the `App` struct's `init()`. Reuse the existing delegate, adaptor, callback, startup call, imports, and masking handlers, preserving privacy rules and launch behavior; add only missing pieces.
+On iOS, configure network masking after `Luciq.start`, in the same function. Keep any required pre-start configuration immediately before the start call as the first initialization block of `application(_:didFinishLaunchingWithOptions:)`, before other app initialization or SDKs, including Firebase. SwiftUI uses an AppDelegate connected with `@UIApplicationDelegateAdaptor`, unless another SDK starts in `App.init()`, which runs first. Then Luciq and its masking belong first in `App.init()`. Reuse the existing delegate, adaptor, callback, startup call, imports, and masking handlers, preserving privacy rules and launch behavior; add only missing pieces.
 
 ### When to propose each
 

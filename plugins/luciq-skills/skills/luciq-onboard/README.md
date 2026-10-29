@@ -221,7 +221,7 @@ Three severity tiers:
 
 Conflicts are **highlighted, never blocking**. A user who came to onboard shouldn't get stuck in housekeeping. The user can acknowledge a conflict and proceed; it's captured in the handoff for accountability.
 
-The iOS scan also checks that Luciq starts before other app initialization or SDKs, including Firebase. Required pre-start configuration and `Luciq.start` stay together at the beginning of `application(_:didFinishLaunchingWithOptions:)`; SwiftUI uses an AppDelegate connected with `@UIApplicationDelegateAdaptor`. Network masking is configured after the start call in that callback. Apply reuses existing entry points, delegates, adaptors, dependencies, product links, imports, masking, and dSYM automation, adding only missing pieces and preserving app-specific configuration and launch behavior.
+The iOS scan also checks that Luciq starts before other app initialization or SDKs, including Firebase. Required pre-start configuration and `Luciq.start` stay together at the beginning of `application(_:didFinishLaunchingWithOptions:)`; SwiftUI uses an AppDelegate connected with `@UIApplicationDelegateAdaptor`, unless another SDK starts in `App.init()`, which runs first. Then Luciq starts first in `App.init()`. Network masking is configured after the start call, in the same function. Apply reuses existing entry points, delegates, adaptors, dependencies, product links, imports, masking, and dSYM automation, adding only missing pieces and preserving app-specific configuration and launch behavior.
 
 ### End-of-walk activation — one Aha, not N
 
