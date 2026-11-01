@@ -41,8 +41,6 @@ Findings cite **file path + 1-indexed line range** as evidence. Matched text is 
 | `S-INSTALL-003` | SDK init call site found (`Luciq.start*`, `Luciq.Builder().build()`, `Luciq.init(` on Flutter / React Native, etc.) | File path + line of init call |
 | `S-INSTALL-004` | No legacy Instabug references coexist with Luciq (relevant during migration) | Files containing `import Instabug` or equivalent |
 
-For native iOS, startup order, duplicate starts and SwiftUI placement are reported as anti-patterns (`WARN`) in `extractors-ios.md`. `S-INSTALL-003` stays a presence check.
-
 ## Module activation (`S-MODULE-*`)
 
 Per-module toggles. Most modules default ON when the SDK is installed; defaults are platform-specific (see each row's `Default` column below and verify against the live integration guide if uncertain — defaults can change between SDK versions).
@@ -117,8 +115,8 @@ iOS uses dSYMs; Android uses ProGuard/R8 mapping files. Both required for produc
 
 | Code | Platform | Check | Evidence |
 | --- | --- | --- | --- |
-| `S-SYMBOL-IOS-UPLOAD` | iOS | Existing dSYM upload automation covers each way the app is archived (Xcode, Fastlane, or a CI job) | Upload script, Fastlane lane, or CI workflow, and which way of archiving it covers |
-| `S-SYMBOL-IOS-PHASE` | iOS | Run-script build phase invokes the upload script when that way of archiving uses a build-phase upload | `project.pbxproj` phase reference; `N/A` when existing Fastlane or CI automation uploads for that way of archiving |
+| `S-SYMBOL-IOS-UPLOAD` | iOS | dSYM upload shell script present | Detected file: `luciq_dsym_upload.sh` / `upload_symbols.sh` / `upload_dsym.sh` (or legacy `instabug.sh`) |
+| `S-SYMBOL-IOS-PHASE` | iOS | Run-script build phase invokes the upload script | `project.pbxproj` shell-script phase referencing the upload script |
 | `S-SYMBOL-IOS-DWARF` | iOS | Debug Information Format includes DWARF with dSYM | `project.pbxproj` `DEBUG_INFORMATION_FORMAT = dwarf-with-dsym` for Release |
 | `S-SYMBOL-AND-PLUGIN` | Android | Luciq mapping upload Gradle plugin applied | `apply plugin: 'luciq.upload'` or KTS equivalent in `build.gradle` |
 | `S-SYMBOL-AND-TOKEN` | Android | Mapping upload token configured | `luciqUpload { applicationToken = "…" }` block |

@@ -175,8 +175,6 @@ For each confirmed-active SDK, extract:
 
 From the extracted config, infer a **style** (one line): "privacy-conservative, low sample, strict env gating" / "permissive, full PII capture, debug+release". Luciq's defaults in Phase 4 should match this style.
 
-On iOS, also inspect startup order: Luciq's required pre-start configuration and `Luciq.start` must be the first initialization block in `application(_:didFinishLaunchingWithOptions:)`, before other app initialization or SDKs, including Firebase. For SwiftUI, Luciq starts from an AppDelegate connected with `@UIApplicationDelegateAdaptor`; if the app has none, recommend adding one. Starting another SDK first can interfere with automatic network capture.
-
 ### Track D — Workspace precedent (MCP)
 
 If the Luciq MCP is authenticated, call `list_applications` to enumerate the user's other Luciq apps. For each, optionally call `apm_list_groups` and read masking/replay config patterns to infer the team's "house style" across apps. A precedent quote like *"your other 3 apps run replay at 5%"* is one of the strongest trust-building moves available.
@@ -355,8 +353,6 @@ Derive the *exact* changes from the profile, not from defaults. Show a diff befo
 If a required file edit conflicts with uncommitted user changes, STOP and surface — don't overwrite work.
 
 Delegate the actual API calls to the patterns in `luciq-setup` when they exist (don't reinvent installation primitives).
-
-For iOS changes, reuse the existing entry point, delegate, adaptor, and launch callback; add only missing pieces. Move an existing Luciq start and its pre-start configuration together to the beginning of that callback, keeping one start on each path the app can take at launch, then configure network masking after `Luciq.start` in the same function. In SwiftUI, add the app delegate and `@UIApplicationDelegateAdaptor` when the app has none. Preserve views, delegate superclass and conformances, other launch work, and the return value. Reuse or update Luciq dependencies, product links, imports, masking rules, and dSYM upload automation, preserving app-specific configuration.
 
 ### C. Summarize
 

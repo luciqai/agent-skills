@@ -24,7 +24,6 @@ Per-file scan recipe for iOS projects in Phase 2 (static audit). The agent uses 
 | `**/Info.plist` | Permission usage descriptions; Luciq does not require any but the presence is informational |
 | `**/project.pbxproj` | Build phases (dSYM upload script invocation); `DEBUG_INFORMATION_FORMAT` for Release config |
 | `luciq_dsym_upload.sh`, `upload_symbols.sh`, `upload_dsym.sh`, `instabug.sh` | Symbol upload scripts |
-| `Fastfile`, `.github/workflows/*.yml`, `.circleci/config.yml`, `bitrise.yml`, `.gitlab-ci.yml`, `Jenkinsfile` | Existing dSYM upload automation for each way the app is archived (Xcode, Fastlane, or a CI job) |
 
 Read all of the above. Skip directories: `.git/`, `Pods/Headers/`, `DerivedData/`, `build/`, `*.xcframework/`, `.build/`. Bytes-only files (images, fonts, compiled binaries) are never read.
 
@@ -67,8 +66,6 @@ Patterns:
 - `[Luciq startWithToken:` (ObjC)
 
 The line containing the match is the evidence. Multiple init sites is informational unless they pass different tokens (then `WARN`).
-
-For startup order, read the launch sequence in order and follow any helper it calls. UIKit: `application(_:didFinishLaunchingWithOptions:)`. SwiftUI: the delegate behind `@UIApplicationDelegateAdaptor`, which runs after the `App` struct's own initialization (observed Oct 2026, iOS 27.2). Report what you find through the anti-patterns below. If the order cannot be resolved from source, report nothing rather than guess.
 
 ### Module toggles (`S-MODULE-*`)
 
@@ -167,9 +164,9 @@ Check for the presence of one of these scripts in the repo (anywhere):
 - `upload_dsym.sh`
 - `instabug.sh` (legacy)
 
-Also inspect existing Fastlane and CI upload automation. For each way the app is archived (Xcode, Fastlane, or a CI job), emit `S-SYMBOL-IOS-UPLOAD PASS` when a script or another configured upload mechanism covers it; cite the existing automation. Cross-reference a build-phase upload with `project.pbxproj` → `S-SYMBOL-IOS-PHASE PASS` when invoked there. When Fastlane or CI covers that way of archiving instead, emit `S-SYMBOL-IOS-PHASE N/A`; do not recommend a duplicate phase.
+If found → `S-SYMBOL-IOS-UPLOAD PASS`. Cross-reference with `project.pbxproj` to confirm a build phase invokes it → `S-SYMBOL-IOS-PHASE PASS`.
 
-If a script is present but no build phase, Fastlane lane, or CI workflow invokes it for a way the app is archived: `WARN` "dSYM upload script present but not wired into the archive pipeline." Recommend reusing or updating the existing upload automation, adding only missing coverage and preserving app-specific configuration.
+If the script is present but no build phase invokes it: `WARN` "dSYM upload script present but not wired into the build."
 
 ## Privacy view modifiers
 
@@ -187,9 +184,9 @@ Surface as `WARN` (or `FAIL` if egregious):
 
 | Anti-pattern | Detection | Status |
 | --- | --- | --- |
-| `Luciq.start(...)` called more than once on the same path through launch | Trace init matches through the launch sequence and helpers; mutually exclusive paths (for example separate `#if` branches) may each start once | `WARN` |
-| Another SDK's start call runs before `Luciq.start(...)` in the launch sequence (for example `FirebaseApp.configure()`) | Read the sequence in order (UIKit: the launch callback; SwiftUI: the `App` struct's initialization first, then the delegate callback). Luciq settings directly before the start call are fine, and ordinary app setup before it is not reported | `WARN` — cite the earlier call's file:line; starting another SDK first can interfere with Luciq's automatic network capture; remediation: put Luciq's start and pre-start settings at the top of the delegate's launch callback, and move the other SDK's start into the callback after it |
-| SwiftUI app starts Luciq outside the delegate behind `@UIApplicationDelegateAdaptor` (for example in the `App` struct's initializer, or with no adaptor at all) | Find the `Luciq.start(...)` call and check which type and function contain it | `WARN` — the integration guide starts Luciq from an AppDelegate connected with `@UIApplicationDelegateAdaptor`; remediation: add the delegate and adaptor if missing, and move the start into the delegate's launch callback |
+| `Luciq.start(...)` called more than once | Multiple matches of init pattern across source files | `WARN` |
+| Another SDK starts before `Luciq.start(...)` (for example `FirebaseApp.configure()`) | Read the launch code in order. In SwiftUI, read the `App` struct too. Luciq settings just before the start call are fine | `WARN` — Luciq must start first. If not, it may not capture network requests correctly |
+| SwiftUI app starts Luciq outside the delegate behind `@UIApplicationDelegateAdaptor` | Find the `Luciq.start(...)` call and check what contains it | `WARN` — move it into the delegate's `application(_:didFinishLaunchingWithOptions:)` |
 | `Luciq.start(...)` inside a `#if DEBUG` only | Init in debug-gated block; release builds won't initialize | `FAIL` (unless explicitly debug-only project) |
 | Token detected directly in source (vs. read from env / config) | String literal of length ≥ 32 that looks like a Luciq token argument | `WARN` "credential detected in source — confirm scope" — report masked (first 4 chars + length) |
 | Legacy `Instabug` import alongside `Luciq` | `import Instabug` plus `import LuciqSDK` in the same target | `WARN` — run `luciq-migrate` to finish the rename if mid-migration; long-term coexistence is unsupported |

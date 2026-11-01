@@ -287,7 +287,7 @@ wanted the wins above.*
 ## What was wired (and where)
 
 All four products live in **`eCommerce/AppDelegate.swift`** (one file,
-one launch callback):
+one launch method):
 
 | Product | Code change | Key decision |
 |---|---|---|

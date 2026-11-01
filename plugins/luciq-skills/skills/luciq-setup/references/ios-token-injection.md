@@ -29,17 +29,11 @@ Xcode must be closed (same reason as the package script). The script:
 - sets it as the target's base configuration — or, if the target already has one (CocoaPods does this), adds `#include? "…/Luciq.xcconfig"` to that file. `#include?` means a missing file is not a build error, so a fresh clone still builds, with an empty token;
 - adds `LuciqAppToken = $(LUCIQ_APP_TOKEN)` to the target's `Info.plist`, creating `Config/Info.plist` and pointing `INFOPLIST_FILE` at it when the project had none. `Config/` sits outside the app folder, so an Xcode 16 synchronized folder won't also copy it in as a resource.
 
-Reuse or update existing token configuration and imports, preserving app-specific values and base configurations. Run the script only for missing wiring; do not replace a working token injection path.
-
 It never takes the token. Put the value in `Config/Luciq.xcconfig` yourself (the user gave it to you, or it came from `list_applications`), with a single edit to that file only.
 
 If the script can't run, STOP and give the user these steps to do in Xcode; don't hand-edit `project.pbxproj`.
 
 ## Read it at the entry point
-
-Reuse the file-scope import and place the token lookup and startup statements below at the beginning of the existing app delegate's `application(_:didFinishLaunchingWithOptions:)`, before other app initialization or SDKs, including Firebase. Keep any required pre-start Luciq configuration immediately before `Luciq.start`, then configure network masking after it inside the `else` block. For SwiftUI, reuse the existing `@UIApplicationDelegateAdaptor` and delegate, or add them if missing.
-
-Move an existing startup call and its pre-start configuration here rather than duplicating it. Keep exactly one start on each path the app can take at launch, preserving views, delegate superclass and conformances, other launch work, and the callback's return behavior.
 
 ```swift
 import LuciqSDK
