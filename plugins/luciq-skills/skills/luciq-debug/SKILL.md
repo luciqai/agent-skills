@@ -1,6 +1,6 @@
 ---
 name: luciq-debug
-description: Use when the user wants to investigate a Luciq production signal end to end, propose a code fix, or answer "why is this happening". Triggers include pasting a crash ID, fingerprint, or stack trace; mentioning a Luciq bug number, hang, or ANR; asking "what broke since version X"; flagging a rating drop or review spike; or asking why a session crashed, hung, or terminated. Also covers APM performance signals across all metrics — a slow endpoint, latency/p95 spike, apdex drop, network failure-rate spike, slow app launch, UI jank (frozen / slow frames), slow screen loading, user-flow drop-off, a throughput change, a bottleneck, or "what got slower/flakier since version X". Pulls evidence via the Luciq MCP server, maps it to local source, forms an evidence-cited hypothesis.
+description: Use when the user wants to investigate a Luciq production signal end to end, propose a code fix, or answer "why is this happening". Triggers include pasting a crash ID, fingerprint, or stack trace; mentioning a Luciq bug number, hang, or ANR; asking "what broke since version X"; flagging a rating drop or review spike; or asking why a session crashed, hung, or terminated. Also covers APM performance signals across all metrics — a slow endpoint, latency/p95 spike, apdex drop, network failure-rate spike, slow app launch, UI jank (frozen / slow frames), slow screen loading, user-flow drop-off, a throughput change, a bottleneck, or "what got slower/flakier since version X". Pulls evidence via the Luciq MCP server, maps it to local source, forms an evidence-cited hypothesis. For an app-health summary or report ("how is my app doing", a weekly stability update) use luciq-readout.
 ---
 
 # Luciq Production Debugging
@@ -11,6 +11,7 @@ Investigate a Luciq production signal end to end. Default to evidence-based reas
 
 - First-time SDK install or wiring `Luciq.start(...)`, use `luciq-setup`.
 - Renaming Instabug symbols to Luciq, or upgrading between Luciq SDK versions, use `luciq-migrate`.
+- An app-health summary, status update, or report ("how is my app doing", "crash-free rate this week", "weekly stability report"), use `luciq-readout`. This skill investigates one signal; that one summarizes many for an audience.
 - General mobile debugging where Luciq is not the data source. This skill is grounded in what the Luciq MCP exposes; without that, do not pretend to use it.
 
 If the user's request fits any of the above, STOP and route them to the right skill rather than running this one.
