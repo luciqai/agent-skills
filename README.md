@@ -25,6 +25,7 @@ Skills available after install:
 - `/luciq-skills:luciq-masking-rules`. PII / masking audit and compliance-framework prep (HIPAA / GDPR / PCI / SOC2).
 - `/luciq-skills:luciq-debug`. Production signal investigation.
 - `/luciq-skills:luciq-group-bugs`. Consolidate the bug list by marking duplicates from your own grouping logic.
+- `/luciq-skills:luciq-support-bridge`. Trace a support ticket to the customer's exact Luciq session, crash, or bug report — and link Luciq records back to support.
 - `/luciq-skills:luciq-migrate`. Instabug to Luciq migration and SDK upgrades.
 - `/luciq-skills:luciq-verify`. End-to-end SDK upgrade verification.
 - `/luciq-skills:luciq-alert-config`. Create, change, or inspect a specific alert.
@@ -192,6 +193,22 @@ Consolidate your bug list by marking duplicates according to your **own** groupi
 - `"Consolidate the bug list by tag"`
 
 > **Requires** the Luciq MCP server authenticated **and** the `bugs.list.modify` permission to apply merges. Without the permission it still produces the dry-run plan. This is the one skill that *writes* — it always shows a plan and waits for your approval before any merge.
+
+---
+
+### `luciq-support-bridge`
+
+Join support tickets and Luciq records in both directions. Start from a Zendesk or Jira ticket and end at *that customer's* crash occurrence or bug report, with device, steps, and session replay, then hand off to `luciq-debug` for the root cause. Or start from a Luciq bug or crash and attach it to the customer's existing ticket, with an internal note support can act on. Resolves the requester's email to the SDK user id through session replay (the one lookup that matches on email), never picks silently between candidates, and writes every link on both sides in a fixed format, so a `sync` run can later tell support "fixed" and tell engineering "reopened".
+
+**Try saying:**
+- `"Zendesk ticket 48213 says the app froze at checkout — find it in Luciq"`
+- `"Link Luciq bug 1234 to the customer's support ticket"`
+- `"Which customers who hit crash 88 have open tickets?"`
+- `"Sync our linked tickets with Luciq"`
+
+> **Requires** the Luciq MCP server authenticated. A Zendesk or Jira MCP enables ticket reads and writes; without one, paste the ticket and the skill runs read-only on the ticket side. Works best when the app identifies users with the email support sees.
+>
+> **Writes only after approval**, and only internal notes on the ticket side. It never replies to the customer.
 
 ---
 
