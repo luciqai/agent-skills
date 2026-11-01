@@ -59,7 +59,7 @@ Grouping Progress:
 - [ ] 7. Pick the master per group = oldest bug (overridable by the customer)
 - [ ] 8. Render the dry-run PLAN (groups, master, members, the verbatim key, the skipped list)
 - [ ] 9. ⛔ HARD GATE — wait for explicit customer approval
-- [ ] 10. Snapshot each member's status, priority, assignee and tags, then apply: update_bug action=mark_as_duplicate per member, recording each write
+- [ ] 10. Snapshot each member's status, priority, assignee and tags (skip a member whose snapshot fails), then apply: update_bug action=mark_as_duplicate per member, recording each write
 - [ ] 11. Report results; offer undo-last (detach only, OR detach + restore)
 ```
 
@@ -123,7 +123,7 @@ Present the plan and **wait for explicit approval.** If the token lacks `bugs.li
 Marking a bug as a duplicate **overwrites its status, priority, and assignee** with the master's (`inherit_parent_values` on the server) and adds the `Luciq_Duplicate_report` tag, and unmarking does **not** roll those back. So **right before** marking each member, snapshot it into the session ledger — that snapshot is what makes "detach + restore" possible in undo:
 
 - `status_id` and `priority_id` — already on the candidate's `list_bugs` row.
-- `assignee` (an email, or `null`) and `tags` — call `bug_details` for the member. `list_bugs` carries neither. If the call fails, keep the partial snapshot, merge anyway, and say in the report that undo cannot restore that bug's assignee or tags.
+- `assignee` (an email, or `null`) and `tags` — call `bug_details` for the member. `list_bugs` carries neither. If the call fails, do not merge that member. Record it as skipped with the error, and list it in the report. Undo cannot restore a member without its full snapshot.
 
 Then, for each member in each approved group, call:
 
@@ -134,7 +134,7 @@ update_bug(slug, mode, number: <member>, action: "mark_as_duplicate", original_b
 Apply sequentially and record each result (ok / failure, the bug number, and the pre-merge snapshot) in the session ledger. Guards:
 - **Self-merge guard** — never mark the master as a duplicate of itself.
 - **Already-grouped** — if a candidate is already a duplicate/master, surface it in the plan and exclude it from re-merge by default.
-- **Continue on failure** — if one `update_bug` fails, record it, keep going, and report all failures at the end. Never silently drop a member.
+- **Continue on failure** — if one `update_bug` fails, record it, keep going, and report all failures at the end. Never silently drop a member. If the error says someone else is updating the bug, do not retry: some of the merge may already be applied. Read the member with `bug_details` and report its state.
 
 ### Step 11 — Report and offer undo-last
 
@@ -142,10 +142,10 @@ Summarize what merged (groups, masters, member counts) and list any failures. Th
 
 - **Detach only** — `update_bug(action: "unmark_as_duplicate")` per member. Restores each bug to standalone but leaves the parent's status, priority, and assignee and the `Luciq_Duplicate_report` tag on it (unmark does not roll those back).
 - **Detach + restore** — after unmarking each member, re-apply its snapshot:
-  1. `update_bug(status_id:, priority_id:, assignee:)` — `assignee` is the snapshotted email, or `null` if it had none. `update_bug` checks every field before it writes any, so an assignee who has left the company rejects the whole call ("No teammate with the email …"). Then retry without `assignee` and report that bug as restored except its assignee.
+  1. `update_bug(status_id:, priority_id:, assignee:)` — `assignee` is the snapshotted email, or `null` if it had none. `update_bug` checks every field before it writes any, so an assignee who has left the company rejects the whole call ("No teammate with the email …"). Then retry without `assignee` and report that bug as restored except its assignee. If the error says someone else is updating the bug, some fields may already be applied. Read the bug with `bug_details`, then retry only the fields that did not change.
   2. If the snapshotted `tags` did not include `Luciq_Duplicate_report`, call `update_bug(tags: ["Luciq_Duplicate_report"], tag_action: "remove")`. Keep it a separate call: it needs `bugs.tags.modify`, and a missing permission rejects the whole call. Leave the master's `Luciq_Master_report` tag alone, because other duplicates can still point to it.
 
-Undo restores the assignee and tags only for members whose snapshot has them; say which ones it could not restore. Only offer undo for merges this skill made this session; never unmark pre-existing groups.
+Say which members undo could not restore in full, and why. Only offer undo for merges this skill made this session; never unmark pre-existing groups.
 
 ## Out of scope
 
@@ -168,6 +168,7 @@ If you catch yourself thinking any of these, you are about to ship a wrong or un
 - "The scope is bigger than the cap but I'll just group what I pulled." That's a silent truncation. Warn and offer to narrow or proceed explicitly.
 - "This bug has no network log but it probably belongs with the others." No — missing field means skipped, never catch-all.
 - "I'll quietly skip the member that failed to merge." Surface every failure in the end report.
+- "The `bug_details` snapshot failed, but I'll merge this member anyway." No. Skip it and list it in the report — undo cannot restore a member without its snapshot.
 - "I'll mark the master as a duplicate too." Self-merge guard — the master is never a duplicate of itself.
 - "The token can't write, but I'll try the merges anyway." Stop at the plan stage and tell the customer the permission is missing.
 - "Undo will put everything back the way it was." Unmark alone restores none of status, priority, assignee, or tags — only the snapshot + re-apply does, and only for what the snapshot captured. The occurrences moved into the master's group, and the master's `Luciq_Master_report` tag, stay. Say what undo can and can't restore.

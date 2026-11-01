@@ -62,6 +62,7 @@ After the customer approves and the apply loop runs, report:
 APPLIED — app: acme-shop (production)
 GROUP 1: #4048, #4101 → master #4012   ✅
 GROUP 2: #4090 → master #4077          ✅
+Skipped before merge: none
 Failures: none
 
 Undo (3 bugs merged this session) — choose:
@@ -71,4 +72,4 @@ Undo (3 bugs merged this session) — choose:
      & assignee and remove the Luciq_Duplicate_report tag it did not have before
 ```
 
-If any `update_bug` failed, list each failed member and the error; the rest still applied. Offer undo-last only for merges made this session (from the ledger), never for pre-existing groups.
+If any `update_bug` failed, list each failed member and the error; the rest still applied. If a member's `bug_details` snapshot failed, list it under "Skipped before merge" with the error. It was not merged. Offer undo-last only for merges made this session (from the ledger), never for pre-existing groups.
