@@ -359,7 +359,7 @@ Delegate the actual API calls to the patterns in `luciq-setup` when they exist (
 After applying, three short blocks:
 
 > Done. Here's what I did:
-> - Enabled Bug Reporting in `NotDemoAppApp.swift:14`
+> - Enabled Bug Reporting in `AppDelegate.swift:14`
 > - Set invocation to shake (matched your Sentry's conservative posture)
 > - Masked text inputs on `CheckoutView.swift:42` per your CLAUDE.md line 12
 >

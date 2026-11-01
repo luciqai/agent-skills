@@ -56,21 +56,33 @@ If resolution fails with "no versions match", the `--version` is higher than any
 
 ## Entry point — where the start call goes
 
+Start Luciq at the beginning of `application(_:didFinishLaunchingWithOptions:)`, before any other SDK, such as Firebase. If another SDK starts first, Luciq may not capture network requests correctly.
+
 Pick the first that exists:
 
 1. **UIKit / `AppDelegate`** — `application(_:didFinishLaunchingWithOptions:)`.
 2. **SwiftUI with `@UIApplicationDelegateAdaptor`** — the adaptor's `AppDelegate`, same method.
-3. **SwiftUI `@main struct …: App` only** (the default for new projects) — add an `init()` to the `App` struct and start the SDK there. Don't add an `AppDelegate` just for this.
+3. **SwiftUI `@main struct …: App` only** (the default for new projects) — add an `AppDelegate` and connect it with `@UIApplicationDelegateAdaptor`.
+
+In SwiftUI apps, `App.init()` runs before the delegate's launch method. If another SDK starts in `App.init()`, move its initialization into `application(_:didFinishLaunchingWithOptions:)` of the app delegate, after the Luciq start.
+
+If the app already starts Luciq somewhere else, move that call, and any Luciq settings made just before it, to the beginning of `application(_:didFinishLaunchingWithOptions:)`.
 
 ```swift
 import SwiftUI
 import LuciqSDK
 
+class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        Luciq.start(withToken: <token>, invocationEvents: [.shake, .floatingButton])
+        return true
+    }
+}
+
 @main
 struct MyApp: App {
-    init() {
-        Luciq.start(withToken: <token>, invocationEvents: [.shake, .floatingButton])
-    }
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     var body: some Scene { WindowGroup { ContentView() } }
 }
 ```

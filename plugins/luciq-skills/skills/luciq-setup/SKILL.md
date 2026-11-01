@@ -146,7 +146,7 @@ First check whether a `Package.swift` exists at the project root.
    ```
 2. Run `swift package resolve` to fetch.
 3. Check the resolved `Package.swift` in DerivedData checkouts to confirm the product name and module name — **they are different**: the SPM product may be `Luciq` while the Swift import is `import LuciqSDK`. Use the module name (from the `.xcframework` contents) for `import`, not the product name.
-4. Add the start call at the app's entry point (`AppDelegate`, or an `init()` on the `@main` `App` struct for SwiftUI — see *Entry point* in `references/ios-spm.md`). Verify the exact init signature on the live guide.
+4. Add the start call at the app's entry point, before any other SDK. A SwiftUI app with no `AppDelegate` needs one, connected with `@UIApplicationDelegateAdaptor`. See *Entry point* in `references/ios-spm.md`. Verify the exact init signature on the live guide.
 5. Edit `Info.plist`: add `NSMicrophoneUsageDescription` and `NSPhotoLibraryUsageDescription`.
 
 *Project is `.xcodeproj`-only (no `Package.swift`):*
@@ -158,7 +158,7 @@ Read `references/ios-spm.md` first. **Do not hand-edit `project.pbxproj`** — h
      --url https://github.com/luciqai/luciq-ios-sdk --version <LATEST_TAG> --product Luciq
    ```
    SPM product = `Luciq`; Swift import = `import LuciqSDK`. Get `<LATEST_TAG>` from the repo tags (command in the reference).
-3. Add the start call at the app's entry point — for a SwiftUI app with no `AppDelegate`, that is an `init()` on the `@main` `App` struct. See *Entry point* in `references/ios-spm.md`. Verify the exact init signature on the live guide.
+3. Add the start call at the app's entry point, before any other SDK. A SwiftUI app with no `AppDelegate` needs one, connected with `@UIApplicationDelegateAdaptor`. See *Entry point* in `references/ios-spm.md`. Verify the exact init signature on the live guide.
 4. Edit `Info.plist`: add `NSMicrophoneUsageDescription` and `NSPhotoLibraryUsageDescription`. If the project has no `Info.plist` file (`GENERATE_INFOPLIST_FILE = YES`), add them as `INFOPLIST_KEY_…` build settings instead — see *Projects with no `Info.plist` file* in the reference.
 5. Tell the user they can reopen Xcode. If Xcode then shows `Missing package product`, the fix is **File → Packages → Resolve Package Versions** — resolution is per DerivedData, so the CLI build passing does not fix an open Xcode window.
 
@@ -325,7 +325,7 @@ Verify dependency coordinates, version, and init signatures against the live gui
    initializeLuciq(configuration)
    ```
 
-4. **iOS entry point** — call as early as possible in the app lifecycle (e.g. `application(_:didFinishLaunchingWithOptions:)`); omit `androidApplication`:
+4. **iOS entry point** — start Luciq at the beginning of `application(_:didFinishLaunchingWithOptions:)`, before any other SDK, such as Firebase. If another SDK starts first, Luciq may not capture network requests correctly. In SwiftUI apps, `App.init()` runs before the delegate's launch method. If another SDK starts in `App.init()`, move its initialization into `application(_:didFinishLaunchingWithOptions:)` of the app delegate, after the Luciq start. Omit `androidApplication`:
    ```swift
    let configuration = LuciqConfiguration(
        token: LuciqDefaults.shared.APP_TOKEN,
