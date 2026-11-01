@@ -57,8 +57,13 @@ The same applies to a first page passed off as the whole set. If a scope needs m
 
 | Message | Cause | Fix |
 | --- | --- | --- |
-| `✗ Provide at least one change (…)` | `bugs update` with no change flags | add `--status`, `--priority`, `--tags`, `--clear-tags`, `--duplicate-of`, or `--action` |
-| `✗ Duplicate marking cannot be combined with --status/--priority` | mixed a duplicate action with field edits | run them as two separate commands, or drop one |
+| `✗ Provide at least one change (…)` | `bugs update` with no change flags | add `--status`, `--priority`, `--assignee`, `--unassign`, `--team`, `--clear-team`, `--tags`, `--clear-tags`, `--comment`, `--duplicate-of`, or `--action` |
+| `✗ Duplicate marking cannot be combined with --status/--priority/--assignee/--unassign` | mixed a duplicate action with field edits | run them as two separate commands, or drop one |
+| `✗ Request failed (422): …No teammate with the email … in this company.` or `…No team named … in this company.` | `bugs update --assignee` / `--team` matched no one in the company. Nothing was written | check the email, or take the team name or id from `bugs show` |
+| `✗ --assignee needs a teammate's email…`, `✗ --team needs a team name or id…`, or `✗ --comment needs text` | the flag had no value, or an empty one (often an unset shell variable). Nothing was sent | pass the value, quoted. To clear a field, use `--unassign` or `--clear-team` |
+| `✗ Request failed (422): …Bug is a duplicate: its status, priority and assignee follow its master…` | `bugs update` changed `--status`, `--priority`, `--assignee`, or `--unassign`, or marked it again, on a bug that is a duplicate | update the master (`bugs show` names it in `original_bug_number`), or run `--action unmark_as_duplicate` first. `--tags`, `--team`, and `--comment` work on the duplicate itself |
+| `✗ Request failed (422): …Someone else is updating this bug right now. Some fields may already be applied…` | another update held a lock on the bug or on its master. The checks had passed, so some fields may be written | run `bugs show`, then retry only the fields that did not change |
+| `ERROR: "luciq bugs update" was called with arguments ["--assignee", …]` (or `--unassign`, `--team`, `--clear-team`, `--comment`) | the CLI is 0.3.0, which does not have these flags. Nothing was sent | upgrade the CLI (`gem install luciq-cli`). These flags need a release after 0.3.0 |
 
 `apm funnel-update --events` **replaces** the funnel's entire step set rather than merging it. There is no `--dry-run` and no undo for most writes.
 
@@ -73,7 +78,7 @@ Every command runs as the token owner's dashboard role. `account_management.cli.
 | `crashes show`, `patterns`, `diagnostics` | `crashes.details.view` | `crash_reporting` |
 | `crashes occurrence-tokens`, `occurrence` | `crashes.occurrences.view` | `crash_reporting` |
 | `bugs list`, `bugs show` | `bugs.list.view` | — |
-| `bugs update` | `bugs.list.modify` (+ `bugs.tags.modify` when touching tags) | — |
+| `bugs update` | `bugs.list.modify` (+ `bugs.tags.modify` when touching tags, + `bugs.activity_comments.modify` with `--comment`) | — |
 | `apm groups` | `<metric>.list.view` (`funnels` → `funnels.list.view`) | `apm` |
 | `apm group` | `<metric>.details.view` (`funnels` → `funnels.list.view`) | `apm` |
 | `apm occurrence` | `<metric>.occurrence_details.view` | `apm` |

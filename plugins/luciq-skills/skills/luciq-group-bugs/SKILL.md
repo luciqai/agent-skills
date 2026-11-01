@@ -7,7 +7,7 @@ description: Use when the customer wants to consolidate, group, or deduplicate t
 
 Consolidate a customer's bug list by marking duplicates according to **their own** grouping logic. The mechanism is **filter, then cluster by an explainable key**: compile the customer's logic into (1) a `list_bugs` filter set that bounds the candidate pool and (2) a per-bug **grouping key** built from the exact fields their logic names, then group bugs that share a key and merge each group into one master.
 
-This is the plugin's first **write** skill. `update_bug`'s `mark_as_duplicate` action is destructive (`destructive_hint: true`): the duplicate's occurrences move into the master's group and the duplicate's status, priority, and assignee are **overwritten** by the master's — and are not rolled back when the bug is later unmarked. There is no bulk undo on the server. So the entire spine of this skill is **propose → prove → confirm → write**: the skill computes a dry-run plan, shows the exact key that unites every group, and calls `update_bug` only after the customer approves the plan. It never writes from logic alone.
+This is the plugin's first **write** skill. `update_bug`'s `mark_as_duplicate` action is destructive (`destructive_hint: true`): the duplicate's occurrences move into the master's group, the duplicate's status, priority, and assignee are **overwritten** by the master's, and the server tags the duplicate `Luciq_Duplicate_report` and the master `Luciq_Master_report` — none of which is rolled back when the bug is later unmarked. There is no bulk undo on the server. So the entire spine of this skill is **propose → prove → confirm → write**: the skill computes a dry-run plan, shows the exact key that unites every group, and calls `update_bug` only after the customer approves the plan. It never writes from logic alone.
 
 Every merge in the plan is auditable: the customer can see *why* two bugs grouped (the verbatim key) before a single write happens. A merge the customer didn't approve never happens.
 
@@ -30,10 +30,10 @@ The MCP exposes (verbatim names) — this skill uses exactly four:
 | --- | --- | --- |
 | `list_applications` | Resolve `(slug, mode)`. Never hard-code a slug. | read |
 | `list_bugs` | Fetch the scoped, capped candidate pool using the compiled filter set. | read |
-| `bug_details` | Conditional enrichment — called **only** when the grouping key depends on per-bug logs, user steps, or attributes not returned by `list_bugs`. | read |
-| `update_bug` | The write. `action: mark_as_duplicate` (+ `original_bug_number`) merges a bug into a master; `action: unmark_as_duplicate` powers undo-last. Post-approval only. | **write** |
+| `bug_details` | Enrichment — called when the grouping key depends on per-bug logs, user steps, or attributes not returned by `list_bugs`, and once per approved member right before its merge, to snapshot its `assignee` and `tags` for undo. | read |
+| `update_bug` | The write. `action: mark_as_duplicate` (+ `original_bug_number`) merges a bug into a master; `action: unmark_as_duplicate`, then `status_id` / `priority_id` / `assignee` / `tags`, power undo-last. Post-approval only. | **write** |
 
-**Permission.** `update_bug` requires `bugs.list.modify`. If the authenticated token lacks it, the skill can still fetch candidates and render the dry-run plan, but it CANNOT apply — say so at the plan stage and stop before the write.
+**Permission.** `update_bug` requires `bugs.list.modify`. If the authenticated token lacks it, the skill can still fetch candidates and render the dry-run plan, but it CANNOT apply — say so at the plan stage and stop before the write. Removing the `Luciq_Duplicate_report` tag on undo also needs `bugs.tags.modify`; without it, undo restores status, priority, and assignee and leaves the tag.
 
 **Web-fetch for log-based keys.** Grouping by network failures or user steps additionally needs (a) the `bugs.network_logs.view` / `bugs.user_steps.view` permissions, so `bug_details` includes the archive URLs, and (b) a web-fetch capability to retrieve those signed URLs — the MCP tools return only the URL, not the log contents. Keys built from inline fields (title, category, screen, tag, version, user attribute) need neither. If either is unavailable, the log-based recipes can't run; say so rather than substituting a weaker key.
 
@@ -59,8 +59,8 @@ Grouping Progress:
 - [ ] 7. Pick the master per group = oldest bug (overridable by the customer)
 - [ ] 8. Render the dry-run PLAN (groups, master, members, the verbatim key, the skipped list)
 - [ ] 9. ⛔ HARD GATE — wait for explicit customer approval
-- [ ] 10. Snapshot each member's status/priority, then apply: update_bug action=mark_as_duplicate per member, recording each write
-- [ ] 11. Report results; offer undo-last (detach only, OR detach + restore status/priority)
+- [ ] 10. Snapshot each member's status, priority, assignee and tags (skip a member whose snapshot fails), then apply: update_bug action=mark_as_duplicate per member, recording each write
+- [ ] 11. Report results; offer undo-last (detach only, OR detach + restore)
 ```
 
 ### Step 1 — Resolve app and mode
@@ -95,7 +95,7 @@ Call `list_bugs` with the compiled filter set, scoped to `(slug, mode)`. `list_b
 
 ### Step 5 — Enrich (conditional)
 
-`list_bugs` returns `{"bugs": [...]}`, only a thin object per bug: `title` (can be `null`), `categories`, `type`, `duplicate_type`, `email`, `status_id`, `priority_id`, `number`, `reported_at`, `last_activity`, `duplicated_bugs_count`. Any key field beyond those comes from `bug_details`. Call `bug_details` per candidate only when the key recipe needs it, and only for the candidates in scope. Two tiers of enrichment:
+`list_bugs` returns `{"bugs": [...]}`, only a thin object per bug: `title` (can be `null`), `categories`, `type`, `duplicate_type`, `email`, `status_id`, `priority_id`, `number`, `reported_at`, `last_activity`, `duplicated_bugs_count`. Any key field beyond those comes from `bug_details`. Call `bug_details` per candidate only when the key recipe needs it, and only for the candidates in scope. (Step 10 reads it once more per approved member, for the undo snapshot.) Two tiers of enrichment:
 
 - **Inline fields** — `current_view`, `tags`, `app_version`, and `user_attributes` are returned directly in the `bug_details` response (`state.fields.*` / top-level `tags`). Read them straight off the payload.
 - **Log-archive signals** — the network-log and user-step signals are **not** inline. `bug_details` returns only a **signed archive URL** under `state.logs.network_log.url` / `state.logs.user_steps.url` (and only if the token has `bugs.network_logs.view` / `bugs.user_steps.view`). To build `failed_requests_sig` or `user_steps_sig` you must, per candidate: (1) read the URL from `bug_details`, (2) **fetch** it (plain HTTPS GET — the URL is pre-signed, no auth header), (3) **decompress + parse** the archive (typically base64 → zlib → JSON), then (4) derive the signature. This needs a web-fetch capability alongside the MCP tools; the Claude Code / Cursor host provides one. If the permission is missing, the URL is absent, or the log is empty, the bug is **skipped** (see "missing fields"), never guessed.
@@ -120,29 +120,36 @@ Present the plan and **wait for explicit approval.** If the token lacks `bugs.li
 
 ### Step 10 — Apply
 
-Marking a bug as a duplicate **overwrites its status, priority, and assignee** with the master's (`inherit_parent_values` on the server), and unmarking does **not** roll those back. So **before** marking each member, snapshot its current `status_id` and `priority_id` (already present on the candidate's `list_bugs` row) into the session ledger — that snapshot is what makes "restore status/priority" possible in undo. Then, for each member in each approved group, call:
+Marking a bug as a duplicate **overwrites its status, priority, and assignee** with the master's (`inherit_parent_values` on the server) and adds the `Luciq_Duplicate_report` tag, and unmarking does **not** roll those back. So **right before** marking each member, snapshot it into the session ledger — that snapshot is what makes "detach + restore" possible in undo:
+
+- `status_id` and `priority_id` — already on the candidate's `list_bugs` row.
+- `assignee` (an email, or `null`) and `tags` — call `bug_details` for the member. `list_bugs` carries neither. If the call fails, do not merge that member. Record it as skipped with the error, and list it in the report. Undo cannot restore a member without its full snapshot.
+
+Then, for each member in each approved group, call:
 
 ```
 update_bug(slug, mode, number: <member>, action: "mark_as_duplicate", original_bug_number: <master>)
 ```
 
-Apply sequentially and record each result (ok / failure, the bug number, and the pre-merge status/priority snapshot) in the session ledger. Guards:
+Apply sequentially and record each result (ok / failure, the bug number, and the pre-merge snapshot) in the session ledger. Guards:
 - **Self-merge guard** — never mark the master as a duplicate of itself.
 - **Already-grouped** — if a candidate is already a duplicate/master, surface it in the plan and exclude it from re-merge by default.
-- **Continue on failure** — if one `update_bug` fails, record it, keep going, and report all failures at the end. Never silently drop a member.
+- **Continue on failure** — if one `update_bug` fails, record it, keep going, and report all failures at the end. Never silently drop a member. If the error says someone else is updating the bug, do not retry: some of the merge may already be applied. Read the member with `bug_details` and report its state.
 
 ### Step 11 — Report and offer undo-last
 
 Summarize what merged (groups, masters, member counts) and list any failures. Then offer **undo-last** in two modes, using the session ledger:
 
-- **Detach only** — `update_bug(action: "unmark_as_duplicate")` per member. Restores each bug to standalone but leaves the parent's status/priority on it (unmark does not roll those back).
-- **Detach + restore status/priority** — after unmarking each member, re-apply its snapshotted values via `update_bug(status_id:, priority_id:)`.
+- **Detach only** — `update_bug(action: "unmark_as_duplicate")` per member. Restores each bug to standalone but leaves the parent's status, priority, and assignee and the `Luciq_Duplicate_report` tag on it (unmark does not roll those back).
+- **Detach + restore** — after unmarking each member, re-apply its snapshot:
+  1. `update_bug(status_id:, priority_id:)`, then `update_bug(assignee:)` as a separate call — `assignee` is the snapshotted email, or `null` if it had none. If the assignee call fails (e.g. "No teammate with the email …" when they've left the company), report that bug as restored except its assignee. If an error says someone else is updating the bug, some fields may already be applied. Read the bug with `bug_details`, then retry only the fields that did not change.
+  2. If the snapshotted `tags` did not include `Luciq_Duplicate_report`, call `update_bug(tags: ["Luciq_Duplicate_report"], tag_action: "remove")`. Keep it a separate call: it needs `bugs.tags.modify`, and a missing permission rejects the whole call. Leave the master's `Luciq_Master_report` tag alone, because other duplicates can still point to it.
 
-Tell the customer up front that **assignee cannot be restored** in either mode — `update_bug` has no assignee parameter, so a merge's assignee change is irreversible through this skill. Only offer undo for merges this skill made this session; never unmark pre-existing groups.
+Say which members undo could not restore in full, and why. Only offer undo for merges this skill made this session; never unmark pre-existing groups.
 
 ## Out of scope
 
-This skill is bugs-only and deliberately does not touch `crash_*`, `apm_*`, `list_app_hangs`, `app_insights`, surveys, or reviews. It does not change a bug's status, priority, tags, or assignee except as the unavoidable side effect of `mark_as_duplicate` (which the customer is told about up front, including that assignee can't be restored). It does not regroup across apps/modes, and it does not move bugs between two existing masters (that's beyond v1 — unmark then re-mark instead).
+This skill is bugs-only and deliberately does not touch `crash_*`, `apm_*`, `list_app_hangs`, `app_insights`, surveys, or reviews. It does not change a bug's status, priority, tags, or assignee except as the unavoidable side effect of `mark_as_duplicate` (which the customer is told about up front) and the restore the customer asks for in undo. It does not regroup across apps/modes, and it does not move bugs between two existing masters (that's beyond v1 — unmark then re-mark instead).
 
 ## Style
 
@@ -161,9 +168,10 @@ If you catch yourself thinking any of these, you are about to ship a wrong or un
 - "The scope is bigger than the cap but I'll just group what I pulled." That's a silent truncation. Warn and offer to narrow or proceed explicitly.
 - "This bug has no network log but it probably belongs with the others." No — missing field means skipped, never catch-all.
 - "I'll quietly skip the member that failed to merge." Surface every failure in the end report.
+- "The `bug_details` snapshot failed, but I'll merge this member anyway." No. Skip it and list it in the report — undo cannot restore a member without its snapshot.
 - "I'll mark the master as a duplicate too." Self-merge guard — the master is never a duplicate of itself.
 - "The token can't write, but I'll try the merges anyway." Stop at the plan stage and tell the customer the permission is missing.
-- "Undo will put everything back the way it was." It won't — unmark restores neither status/priority (only the snapshot + re-apply does) nor assignee (not at all). Say what undo can and can't restore.
+- "Undo will put everything back the way it was." Unmark alone restores none of status, priority, assignee, or tags — only the snapshot + re-apply does, and only for what the snapshot captured. The occurrences moved into the master's group, and the master's `Luciq_Master_report` tag, stay. Say what undo can and can't restore.
 - "I'll group by screen / tag / version straight from the list_bugs rows." Those fields aren't in the `list_bugs` response — pull them from `bug_details` first.
 
 The pattern: every shortcut trades "looks done" for "actually correct and reversible". A destructive write the customer didn't approve is the one failure this skill exists to prevent.
