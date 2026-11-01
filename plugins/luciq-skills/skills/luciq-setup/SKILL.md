@@ -325,7 +325,7 @@ Verify dependency coordinates, version, and init signatures against the live gui
    initializeLuciq(configuration)
    ```
 
-4. **iOS entry point** — call as early as possible in the app lifecycle (e.g. `application(_:didFinishLaunchingWithOptions:)`); omit `androidApplication`:
+4. **iOS entry point** — start Luciq at the beginning of `application(_:didFinishLaunchingWithOptions:)`, before any other SDK, such as Firebase. If another SDK starts first, Luciq may not capture network requests correctly. In SwiftUI apps, `App.init()` runs before the delegate's launch method. If another SDK starts in `App.init()`, move its initialization into `application(_:didFinishLaunchingWithOptions:)` of the app delegate, after the Luciq start. Omit `androidApplication`:
    ```swift
    let configuration = LuciqConfiguration(
        token: LuciqDefaults.shared.APP_TOKEN,

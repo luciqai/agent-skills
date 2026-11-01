@@ -64,7 +64,9 @@ Pick the first that exists:
 2. **SwiftUI with `@UIApplicationDelegateAdaptor`** — the adaptor's `AppDelegate`, same method.
 3. **SwiftUI `@main struct …: App` only** (the default for new projects) — add an `AppDelegate` and connect it with `@UIApplicationDelegateAdaptor`.
 
-If the app already starts Luciq somewhere else, move that call into `application(_:didFinishLaunchingWithOptions:)`.
+In SwiftUI apps, `App.init()` runs before the delegate's launch method. If another SDK starts in `App.init()`, move its initialization into `application(_:didFinishLaunchingWithOptions:)` of the app delegate, after the Luciq start.
+
+If the app already starts Luciq somewhere else, move that call, and any Luciq settings made just before it, to the beginning of `application(_:didFinishLaunchingWithOptions:)`.
 
 ```swift
 import SwiftUI

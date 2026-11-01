@@ -185,7 +185,7 @@ Surface as `WARN` (or `FAIL` if egregious):
 | Anti-pattern | Detection | Status |
 | --- | --- | --- |
 | `Luciq.start(...)` called more than once | Multiple matches of init pattern across source files | `WARN` |
-| Another SDK starts before `Luciq.start(...)` (for example `FirebaseApp.configure()`) | Read the launch code in order. In SwiftUI, read the `App` struct too. Luciq settings just before the start call are fine | `WARN` — Luciq must start first. If not, it may not capture network requests correctly |
+| Another SDK starts before `Luciq.start(...)` (for example `FirebaseApp.configure()`) | Read the launch code in order. In SwiftUI, read the `App` struct too. Luciq settings just before the start call are fine | `WARN` — Luciq must start first. If not, it may not capture network requests correctly. In SwiftUI, move that SDK's initialization into `application(_:didFinishLaunchingWithOptions:)` of the app delegate, after the Luciq start |
 | SwiftUI app starts Luciq outside the delegate behind `@UIApplicationDelegateAdaptor` | Find the `Luciq.start(...)` call and check what contains it | `WARN` — move it into the delegate's `application(_:didFinishLaunchingWithOptions:)` |
 | `Luciq.start(...)` inside a `#if DEBUG` only | Init in debug-gated block; release builds won't initialize | `FAIL` (unless explicitly debug-only project) |
 | Token detected directly in source (vs. read from env / config) | String literal of length ≥ 32 that looks like a Luciq token argument | `WARN` "credential detected in source — confirm scope" — report masked (first 4 chars + length) |
