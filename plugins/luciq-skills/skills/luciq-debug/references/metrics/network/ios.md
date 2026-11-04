@@ -95,10 +95,12 @@ record.
 
 Coverage traps worth checking in the codebase:
 
-- **Luciq must start before other SDKs, such as Firebase.** If another SDK starts first, Luciq may not
-  capture network requests correctly. Check that `Luciq.start` runs first in
-  `application(_:didFinishLaunchingWithOptions:)`. In SwiftUI, that method belongs to the delegate behind
-  `@UIApplicationDelegateAdaptor`. If another SDK starts in `App.init()`, move its initialization into that method, after Luciq.
+- **Luciq must start before other SDKs, such as Firebase.** If another SDK starts first, Luciq may miss
+  network requests. Check that `Luciq.start` runs first in `application(_:didFinishLaunchingWithOptions:)`.
+  In SwiftUI, that method belongs to the app delegate connected with `@UIApplicationDelegateAdaptor`.
+  If another SDK starts in `App.init()`, move its initialization into that method, after Luciq. This applies
+  only to apps that call `Luciq.start` in native code. Flutter and React Native apps start Luciq from Dart or
+  JS, so don't add a native start call for them.
 - **Requests whose `User-Agent` contains `AppleWebKit` are dropped.** The test is a case-sensitive
   substring match on the request header, and it drops the request from **both** APM records and
   bug-report/crash network logs. An app setting a browser-like User-Agent on its API client loses **all**

@@ -56,17 +56,17 @@ If resolution fails with "no versions match", the `--version` is higher than any
 
 ## Entry point — where the start call goes
 
-Start Luciq at the beginning of `application(_:didFinishLaunchingWithOptions:)`, before any other SDK, such as Firebase. If another SDK starts first, Luciq may not capture network requests correctly.
+Start Luciq at the beginning of `application(_:didFinishLaunchingWithOptions:)`, before any other SDK, such as Firebase. If another SDK starts first, Luciq may miss network requests.
 
 Pick the first that exists:
 
 1. **UIKit / `AppDelegate`** — `application(_:didFinishLaunchingWithOptions:)`.
 2. **SwiftUI with `@UIApplicationDelegateAdaptor`** — the adaptor's `AppDelegate`, same method.
-3. **SwiftUI `@main struct …: App` only** (the default for new projects) — add an `AppDelegate` and connect it with `@UIApplicationDelegateAdaptor`.
+3. **SwiftUI `@main struct …: App` only** (the default for new projects) — add an `AppDelegate`. Connect it with `@UIApplicationDelegateAdaptor`.
 
-In SwiftUI apps, `App.init()` runs before the delegate's launch method. If another SDK starts in `App.init()`, move its initialization into `application(_:didFinishLaunchingWithOptions:)` of the app delegate, after the Luciq start.
+In SwiftUI apps, `App.init()` runs before the delegate's launch method (observed Oct 2026). If another SDK starts in `App.init()`, move its initialization into `application(_:didFinishLaunchingWithOptions:)` of the app delegate, after the Luciq start.
 
-If the app already starts Luciq somewhere else, move that call, and any Luciq settings made just before it, to the beginning of `application(_:didFinishLaunchingWithOptions:)`.
+If the app already starts Luciq somewhere else, move that call, and any Luciq settings just before or after it, to the beginning of `application(_:didFinishLaunchingWithOptions:)`.
 
 ```swift
 import SwiftUI
