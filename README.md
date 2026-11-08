@@ -24,6 +24,7 @@ Skills available after install:
 - `/luciq-skills:luciq-onboard`. Personalized product walkthrough after the SDK is installed.
 - `/luciq-skills:luciq-masking-rules`. PII / masking audit and compliance-framework prep (HIPAA / GDPR / PCI / SOC2).
 - `/luciq-skills:luciq-debug`. Production signal investigation.
+- `/luciq-skills:luciq-readout`. App-health summaries and reports — how the app is doing, written for your team or leadership.
 - `/luciq-skills:luciq-group-bugs`. Consolidate the bug list by marking duplicates from your own grouping logic.
 - `/luciq-skills:luciq-migrate`. Instabug to Luciq migration and SDK upgrades.
 - `/luciq-skills:luciq-verify`. End-to-end SDK upgrade verification.
@@ -171,9 +172,10 @@ Verify a Luciq SDK upgrade end to end before shipping. Scaffolds a verification 
 
 ### `luciq-readout`
 
-Produce a shareable, audience-tailored readout of an app's health. Pulls headline aggregates from MCP, slices detail across crashes, hangs, bugs, and reviews, then renders the same data at the altitude each audience needs — C-suite, VP, PM, EM, or QA — with every number cited to the tool that produced it. Outputs an HTML + Markdown report you can forward.
+Find out how your app is doing — an app-health summary, a weekly stability update, or a release readout you can share. Pulls headline aggregates from MCP, slices detail across crashes, hangs, bugs, reviews, and NPS/CSAT surveys, then renders the same data at the altitude each audience needs — C-suite, VP, PM, EM, or QA — with every number cited to the tool that produced it. Outputs an HTML + Markdown report you can forward.
 
 **Try saying:**
+- `"How is my app doing this week?"`
 - `"Give me an exec summary of how the iOS app is doing"`
 - `"Build a release readout comparing 3.1.4 to 3.0.4 for a VP"`
 - `"Stability report for leadership, this week vs last"`
