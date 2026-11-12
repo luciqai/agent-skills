@@ -82,7 +82,7 @@ Every command runs as the token owner's dashboard role. `account_management.cli.
 | `apm groups` | `<metric>.list.view` (`funnels` → `funnels.list.view`) | `apm` |
 | `apm group` | `<metric>.details.view` (`funnels` → `funnels.list.view`) | `apm` |
 | `apm occurrence` | `<metric>.occurrence_details.view` | `apm` |
-| `apm funnel-events` | `network.list.view` + `screen_loading.list.view` (or just the `--event-type` given) | `apm` |
+| `apm funnel-events` | `network.list.view` + `screen_loading.list.view` (or just the `--event-type` given; `user_event` → `funnels.list.view`) | `apm` |
 | `apm funnel-create`, `funnel-update` | `funnels.list.modify` | `apm` |
 | `apm funnel-delete` | `funnels.list.delete` | `apm` |
 | `reviews list` | `app_reviews.list.view` | — |
