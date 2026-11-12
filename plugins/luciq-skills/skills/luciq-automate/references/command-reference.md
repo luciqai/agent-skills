@@ -150,7 +150,7 @@ Metrics: `network`, `launch`, `flows`, `screen_loading`, `frame_drop` — plus `
 | `groups` | `--metric` (required), `--sort '{"by":…,"direction":…}'`, page, `--filters` |
 | `group` | `--metric` (required), `--group-uuid` **or** `--group-url`, `--views '<json array>'` (default `["summary"]`), `--method GET\|POST\|…` (network), `--filters` |
 | `occurrence` | `--metric` (required), `--selector worst\|by_token\|list` (required), `--group-uuid`/`--group-url`, `--method`, `--token` (by_token), `--current-token`/`--direction`/`--limit` (list), `--filters` |
-| `funnel-events` | `--event-type network\|screen_loading`, `--q <substring>`, `--limit` (1–25, default 20) |
+| `funnel-events` | `--event-type network\|screen_loading\|user_event`, `--q <substring>`, `--limit` (1–25, default 20) |
 | `funnel-create` | `--name` (required), `--events '<json array>'` (required, 2–20 steps) — **write** |
 | `funnel-update` | `--ulid` (required), `--name`, `--events` — **write**, `--events` replaces the whole set |
 | `funnel-delete` | `--ulid` (required) — **write** |
@@ -164,6 +164,8 @@ Funnel step shapes:
 {"type":"screen_loading","ulid":"<event-ulid>"}
 {"type":"user_event","name":"<event-name>"}
 ```
+
+`funnel-events` returns only `network` and `screen_loading` events unless you pass `--event-type user_event`, so request user events explicitly. User events have no ulid; a funnel step references one by `name`.
 
 `--filters` keys vary by metric; common ones are `date_ms`, `app_version`, `platform ["ios","android"]`, `device`, `os_version`, `country`, `carrier`, `radio`, `failure_name`, `failure_type`, `response_time_ms`, `custom_attributes`, `experiment`, plus `group_name`, `key_metric`, `count`, `dissat_count`, `apdex`, `apdex_change`, `teams` on `groups`.
 
