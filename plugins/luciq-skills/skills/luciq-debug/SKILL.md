@@ -11,6 +11,7 @@ Investigate a Luciq production signal end to end. Default to evidence-based reas
 
 - First-time SDK install or wiring `Luciq.start(...)`, use `luciq-setup`.
 - Renaming Instabug symbols to Luciq, or upgrading between Luciq SDK versions, use `luciq-migrate`.
+- A digest or triage across the app, such as a daily digest of new or regressed issues, standup notes, or "what broke since yesterday", use `luciq-readout`. This skill takes one signal down to its cause.
 - General mobile debugging where Luciq is not the data source. This skill is grounded in what the Luciq MCP exposes; without that, do not pretend to use it.
 
 If the user's request fits any of the above, STOP and route them to the right skill rather than running this one.

@@ -1,6 +1,6 @@
 ---
 name: luciq-readout
-description: Produce a shareable, audience-tailored readout of a Luciq app's health and quality, not a single fix or ship decision. Covers version-vs-version and period-over-period comparisons rendered for a chosen persona: C-suite, VP, PM, EM, or QA. Use whenever the user asks for an exec or leadership summary, a release readout, a stability or quality report, a "how is the app doing this week vs last" rollup, or a "compare version X to version Y for a PM" comparison. Pulls headline aggregates (stability, APM performance) from app_insights and slices detail across crashes, hangs, bugs, reviews, and NPS/CSAT surveys via the Luciq MCP, drilling into per-occurrence stacktraces and diagnostics for the EM tier, then renders the same data at the altitude each audience needs, citing every number to the tool and params that produced it. For root-causing one crash, hang, or bug use luciq-debug; for verifying an SDK upgrade before shipping use luciq-verify; for first-time SDK integration use luciq-setup.
+description: Use when the user wants a summary of a Luciq app's health rather than a fix or a ship decision: a daily or weekly digest of top new or regressed issues, a morning triage, standup notes, "what broke since yesterday", an exec or leadership summary, a release readout, a stability or quality report, a "how is the app doing this week vs last" rollup, or a "compare version X to version Y for a PM" comparison. A digest runs without asking for an audience; a stakeholder readout is rendered for a chosen persona (C-suite, VP, PM, EM, or QA). Pulls headline aggregates (stability, APM performance) from app_insights and slices detail across crashes, hangs, bugs, reviews, and NPS/CSAT surveys via the Luciq MCP, citing every number to the tool and params that produced it. For root-causing one crash, hang, or bug use luciq-debug; for verifying an SDK upgrade before shipping use luciq-verify; for first-time SDK integration use luciq-setup.
 ---
 
 # Luciq Stakeholder Readouts
@@ -18,20 +18,38 @@ The job of this skill is communication, not adjudication. Every number is cited 
 
 If the request fits any of the above, route there and stop. Composing a readout when the user wanted a fix, a verdict, or an investigation wastes the audience's trust on the wrong artifact.
 
+## Digest mode
+
+A **digest** is a recurring "what changed" summary for the people who triage: a daily or weekly digest of new or regressed issues, a morning triage, standup notes, or "what broke since yesterday". It isn't a stakeholder readout. Run it like this instead of the persona workflow below:
+
+- **Don't ask for a persona.** Write at the EM altitude, and skip the persona playbooks and the omit-list.
+- **Pick the windows from the request.** For "daily", "since yesterday", "this morning" or "standup", compare the last 24 hours with the 24 hours before. For "weekly", compare the last 7 days with the 7 before. Use the same `date_ms` length on both sides.
+- **Resolve the app without a round trip** when you can. If `list_applications` returns exactly one app, use it. Use `production` unless the user named another mode, and say which app and mode the digest covers in its first line.
+
+Calls:
+
+1. `app_insights(slug, mode, filters: {date_ms: {gte, lte}})` once per window. This gives the headline stability delta: crash-free sessions, and hang and OOM rates.
+2. `list_issues(slug, mode, filters: {date_ms: {gte, lte}})` over the current window. This gives the worst items across crashes, APM, AI issues and bugs in one ranked list. Its window must be at least 24 hours long.
+3. **New:** `list_crashes(slug, mode, sort_by: "first_occurred_at", direction: "desc", filters: {date_ms: {gte, lte}})`. A group whose `first_occurred_at` falls inside the current window is new.
+4. **Regressed:** the MCP has no regression flag, so derive it and label it as derived. Call `list_crashes` with the same arguments for both windows (to cover hangs, add `"APP_HANG"` to `filters.type` rather than calling the deprecated `list_app_hangs`) and compare each group's `occurrences_counter` and `affected_users_counter`. A group that rose sharply against the previous window is regressed. A group with `status_id` 2 (closed) whose `last_occurred_at` falls inside the current window has returned after a fix. It's unverified whether those counters are scoped to `date_ms`. If both windows return the same counts for every group, say that regressions can't be determined from this data, and don't guess.
+5. Stop there. Don't run the per-occurrence chain (step 4b), reviews or surveys unless the user asks for them.
+
+Output: a three-line headline, then **New**, **Regressed** and **Top by impact** tables, with each row citing the tool and window that produced it. Keep it to one screen, in Markdown in the conversation. Skip the HTML render in step 7. The comparison rules in step 5 still apply.
+
 ## Prerequisites
 
 ### Hard dependencies (skill refuses to run without these)
 
 | Artifact | What for | If missing |
 | --- | --- | --- |
-| **Luciq MCP server, authenticated** | The entire readout is grounded in what the Luciq MCP exposes — `list_applications`, `app_insights` (stability + APM), `list_crashes`, `crash_patterns`, `list_app_hangs`, `list_bugs`, `list_reviews`, `list_surveys` / `survey_details` (NPS/CSAT), and the per-occurrence detail tools (`crash_details`, `list_occurrences_tokens`, `get_occurrence_details`, `crash_diagnostics`). Without it the skill has no data to render. | STOP. Direct the user to `luciq-setup`, or to https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/luciq-mcp-server/setup-by-ide. Do not assemble a readout from memory or from a prior session's numbers — a readout with stale or invented figures is the exact failure this skill exists to prevent. |
+| **Luciq MCP server, authenticated** | The entire readout is grounded in what the Luciq MCP exposes — `list_applications`, `app_insights` (stability + APM), `list_crashes`, `crash_patterns`, `list_app_hangs`, `list_bugs`, `list_reviews`, `list_surveys` / `survey_details` (NPS/CSAT), and the per-occurrence detail tools (`crash_details`, `list_occurrences_tokens`, `get_occurrence_details`, `crash_diagnostics`), and `list_issues` for a digest. Without it the skill has no data to render. | STOP. Direct the user to `luciq-setup`, or to https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/luciq-mcp-server/setup-by-ide. Do not assemble a readout from memory or from a prior session's numbers — a readout with stale or invented figures is the exact failure this skill exists to prevent. |
 | **A resolved app slug and mode** | Every tool keys off `(slug, mode)` | Run `list_applications` and confirm with the user which app and mode (default `production`). |
 
 ### Optional inputs (the readout works without these, sharpens with them)
 
 | Input | What it adds | If missing |
 | --- | --- | --- |
-| **A named persona** | Sets the altitude, the lead metric, the drill-down depth, and the omit-list | If unspecified, ASK. Do not guess the audience — the wrong altitude is the most common way a readout fails. |
+| **A named persona** | Sets the altitude, the lead metric, the drill-down depth, and the omit-list | If unspecified, ASK. Do not guess the audience — the wrong altitude is the most common way a readout fails. Exception: a digest (see [Digest mode](#digest-mode)) never asks. |
 | **A comparison frame** | Version-vs-version or period-over-period gives the readout a "what changed" spine | Default to a single snapshot of the current window, and say so. |
 | **A segment cut** (OS, device, screen, flag, team, geography) | Answers "where is the problem concentrated" instead of just "how big is it" | Skip; report at the version / period level and note that no segment was requested. |
 
@@ -64,7 +82,8 @@ The Luciq MCP surface is broad. A readout uses the tools that aggregate or slice
 | --- | --- | --- |
 | `list_applications` | all | Resolve `(slug, mode)` at the start. Never hard-code a slug. |
 | `app_insights` | all | Headline stability rates (`monitoring`) AND the APM performance section (`apm`: networks, screen loads, cold/hot launches, flows). The single most important call. |
-| `list_crashes` | VP, PM, EM, QA | Top issues by users affected / volume / recency, sliced by version, OS, device, screen, flag, team, type, status. |
+| `list_issues` | Digest | The worst items across crashes, APM, AI issues and bugs in one list, ranked by Apdex impact. The "Top by impact" table of a digest. |
+| `list_crashes` | VP, PM, EM, QA, Digest | Top issues by users affected / volume / recency, sliced by version, OS, device, screen, flag, team, type, status. |
 | `crash_patterns` | VP, EM, QA | Distribution of ONE crash group across versions / OSes / devices / screens / experiments, plus the per-bucket `adoption` signal (on `app_versions`). |
 | `list_app_hangs` | PM, EM, QA | Hang / ANR volume and worst offenders, same slicing as crashes. |
 | `list_bugs` | PM, VP | User-reported bug volume by priority / status / version (the `app_insights.bugs` section commonly errors; this is the real source). |
@@ -89,7 +108,7 @@ The EM tier is the one that earns the per-occurrence chain: `list_crashes` (pick
 
 ## Workflow checklist
 
-Track every step. Stop and ask rather than guess on persona or comparison frame — a readout at the wrong altitude, or one that compares mismatched windows, is worse than no readout.
+Track every step. Stop and ask rather than guess on persona or comparison frame — a readout at the wrong altitude, or one that compares mismatched windows, is worse than no readout. A digest follows [Digest mode](#digest-mode) instead and doesn't ask.
 
 ```
 Readout Progress:
@@ -109,7 +128,7 @@ Call `list_applications` to get the slug. Filter by `platform` if the user named
 
 ## 2. Confirm the audience and the angle
 
-Resolve three things before pulling any data. Ask if any is unspecified — do not guess.
+Resolve three things before pulling any data. Ask if any is unspecified — do not guess. (A digest doesn't ask: [Digest mode](#digest-mode) fixes all three.)
 
 - **Persona.** C-suite, VP (Eng or Product), PM, EM, or QA. This sets the lead metric, the drill-down, and the omit-list. Spec per persona is in `references/persona-playbooks.md`.
 - **Comparison frame.** Version-vs-version, period-over-period, or a single snapshot. This decides how many `app_insights` calls you make and which deltas you can honestly state.
@@ -231,7 +250,7 @@ When new MCP tools land (app-level adoption, release-comparison endpoints, deepe
 
 ## Style
 
-- Pick the persona before composing. If unspecified, ask. Do not guess the audience.
+- Pick the persona before composing. If unspecified, ask. Do not guess the audience. A digest is the exception: it uses [Digest mode](#digest-mode).
 - Honor the persona omit-list. Wrong altitude is a worse readout than a short one.
 - Cite every number to its tool and the params that produced it. Do not paraphrase a source you did not query.
 - Label every comparison's confidence. Low sample and early rollout are caveats, not asterisks to bury.
