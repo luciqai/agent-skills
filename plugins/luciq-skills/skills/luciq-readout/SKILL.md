@@ -1,6 +1,6 @@
 ---
 name: luciq-readout
-description: Use when the user wants a summary of a Luciq app's health rather than a fix or a ship decision: a daily or weekly digest of top new or regressed issues, a morning triage, standup notes, "what broke since yesterday", an exec or leadership summary, a release readout, a stability or quality report, a "how is the app doing this week vs last" rollup, or a "compare version X to version Y for a PM" comparison. A digest runs without asking for an audience; a stakeholder readout is rendered for a chosen persona (C-suite, VP, PM, EM, or QA). Pulls headline aggregates (stability, APM performance) from app_insights and slices detail across crashes, hangs, bugs, reviews, and NPS/CSAT surveys via the Luciq MCP, citing every number to the tool and params that produced it. For root-causing one crash, hang, or bug use luciq-debug; for verifying an SDK upgrade before shipping use luciq-verify; for first-time SDK integration use luciq-setup.
+description: Use when the user wants a summary of a Luciq app's health rather than a fix or a ship decision: a daily or weekly digest of top new or regressed issues, a morning triage, standup notes, "what broke since yesterday", an exec or leadership summary, a release readout, a stability or quality report, a "how is the app doing this week vs last" rollup, or a "compare version X to version Y for a PM" comparison. A digest runs without asking for an audience; a stakeholder readout is rendered for a chosen persona (C-suite, VP, PM, EM, or QA). Pulls headline aggregates (stability, APM performance) from app_insights and slices detail across crashes, hangs, bugs, reviews, and NPS/CSAT surveys via the Luciq MCP, citing every number to the tool and params that produced it. For root-causing one crash, hang, or bug use luciq-debug; for verifying an SDK upgrade before shipping use luciq-verify; for first-time SDK integration use luciq-setup; for a digest that runs on a schedule or lands in a file use luciq-automate.
 ---
 
 # Luciq Stakeholder Readouts
@@ -15,6 +15,7 @@ The job of this skill is communication, not adjudication. Every number is cited 
 - Verifying that an SDK version upgrade did not break the integration before shipping, use `luciq-verify`. That skill audits a synthetic smoke against a contract. This one reports production health.
 - First-time integration of Luciq into a project, use `luciq-setup`.
 - General reporting where Luciq is not the data source. This skill is grounded in what the Luciq MCP exposes; without it, do not pretend to use it.
+- A digest that has to run on a schedule or land in a file or another tool, use `luciq-automate`. This skill writes one digest in the conversation.
 
 If the request fits any of the above, route there and stop. Composing a readout when the user wanted a fix, a verdict, or an investigation wastes the audience's trust on the wrong artifact.
 
@@ -30,8 +31,8 @@ Calls:
 
 1. `app_insights(slug, mode, filters: {date_ms: {gte, lte}})` once per window. This gives the headline stability delta: crash-free sessions, and hang and OOM rates.
 2. `list_issues(slug, mode, filters: {date_ms: {gte, lte}})` over the current window. This gives the worst items across crashes, APM, AI issues and bugs in one ranked list. Its window must be at least 24 hours long.
-3. **New:** `list_crashes(slug, mode, sort_by: "first_occurred_at", direction: "desc", filters: {date_ms: {gte, lte}})`. A group whose `first_occurred_at` falls inside the current window is new.
-4. **Regressed:** the MCP has no regression flag, so derive it and label it as derived. Call `list_crashes` with the same arguments for both windows (to cover hangs, add `"APP_HANG"` to `filters.type` rather than calling the deprecated `list_app_hangs`) and compare each group's `occurrences_counter` and `affected_users_counter`. A group that rose sharply against the previous window is regressed. A group with `status_id` 2 (closed) whose `last_occurred_at` falls inside the current window has returned after a fix. It's unverified whether those counters are scoped to `date_ms`. If both windows return the same counts for every group, say that regressions can't be determined from this data, and don't guess.
+3. **New:** `list_crashes(slug, mode, sort_by: "first_occurred_at", direction: "desc", filters: {date_ms: {gte, lte}})`. A group whose `first_occurred_at` falls inside the current window is new. For app hangs, make the same call again with `filters.type: ["APP_HANG"]` instead of the deprecated `list_app_hangs`. Keep hangs in their own call: `APP_HANG` alone returns only hangs, and on a plan without app hangs the server refuses the whole call. If the hangs call returns a plan error, leave hangs out and say so.
+4. **Regressed:** the MCP has no regression flag, so derive it and label it as derived. Call `list_crashes(slug, mode, sort_by: "occurrences_counter", direction: "desc", limit: 50, filters: {date_ms: {gte, lte}})` once per window. Both counters count only the occurrences inside `date_ms`, so compare each group's `occurrences_counter` and `affected_users_counter` across the two lists. A group that rose sharply is regressed, unless step 3 already listed it as new. A group missing from the previous list had no more occurrences there than that list's last row. For app hangs, make the same two calls with `filters.type: ["APP_HANG"]`; if they return a plan error, leave hangs out and say so. Luciq reopens a closed crash that comes back on a newer app version, so it shows as open and rises like any other regression. Don't report a closed group (`status_id` 2) with recent occurrences as returned: it's only crashing on old versions that don't have the fix.
 5. Stop there. Don't run the per-occurrence chain (step 4b), reviews or surveys unless the user asks for them.
 
 Output: a three-line headline, then **New**, **Regressed** and **Top by impact** tables, with each row citing the tool and window that produced it. Keep it to one screen, in Markdown in the conversation. Skip the HTML render in step 7. The comparison rules in step 5 still apply.
@@ -43,7 +44,7 @@ Output: a three-line headline, then **New**, **Regressed** and **Top by impact**
 | Artifact | What for | If missing |
 | --- | --- | --- |
 | **Luciq MCP server, authenticated** | The entire readout is grounded in what the Luciq MCP exposes — `list_applications`, `app_insights` (stability + APM), `list_crashes`, `crash_patterns`, `list_app_hangs`, `list_bugs`, `list_reviews`, `list_surveys` / `survey_details` (NPS/CSAT), and the per-occurrence detail tools (`crash_details`, `list_occurrences_tokens`, `get_occurrence_details`, `crash_diagnostics`), and `list_issues` for a digest. Without it the skill has no data to render. | STOP. Direct the user to `luciq-setup`, or to https://docs.luciq.ai/product-guides-and-integrations/product-guides/ai-features/luciq-mcp-server/setup-by-ide. Do not assemble a readout from memory or from a prior session's numbers — a readout with stale or invented figures is the exact failure this skill exists to prevent. |
-| **A resolved app slug and mode** | Every tool keys off `(slug, mode)` | Run `list_applications` and confirm with the user which app and mode (default `production`). |
+| **A resolved app slug and mode** | Every tool keys off `(slug, mode)` | Run `list_applications` and confirm with the user which app and mode (default `production`). A digest doesn't ask for the mode: see [Digest mode](#digest-mode). |
 
 ### Optional inputs (the readout works without these, sharpens with them)
 
@@ -124,7 +125,7 @@ Readout Progress:
 
 ## 1. Resolve the app and mode
 
-Call `list_applications` to get the slug. Filter by `platform` if the user named a stack. Confirm the `mode` with the user; default to `production`. An app can have several modes (`production`, `beta`, `staging`, `alpha`, `qa`, `development`) — each is a separate dataset. Never assume; a readout on `beta` data presented as production is a silent error.
+Call `list_applications` to get the slug. Filter by `platform` if the user named a stack. Confirm the `mode` with the user; default to `production`. A digest doesn't ask for the mode: see [Digest mode](#digest-mode). An app can have several modes (`production`, `beta`, `staging`, `alpha`, `qa`, `development`) — each is a separate dataset. Never assume; a readout on `beta` data presented as production is a silent error.
 
 ## 2. Confirm the audience and the angle
 
